@@ -144,10 +144,15 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
       assert equal $chart.sources.0 "https://github.com/spnngl/charts"
       assert equal $chart.kubeVersion ">=1.25.0-0"
       assert ($chart.annotations."artifacthub.io/crds" | str contains "kind: Foo")
-      validate chart $dir $crds | ignore
+      validate chart $dir $crds
+      assert equal (validate size-budget $dir).status "ok"
+      assert ((open --raw ($dir | path join ".helmignore")) | lines | any {|l| $l == "ci/" })
       let readme = (open --raw ($dir | path join "README.md"))
       assert ($readme | str contains "kubectl annotate crd bars.example.io bazs.example.io foos.example.io")
       assert ($readme | str contains "~~**v1beta1**~~")
+      assert (not ($readme | str contains "HELM_DRIVER=sql"))
+      let big = (emit readme $manifest $resolved $crds $f.dropped $license --oversized)
+      assert ($big | str contains "helm upgrade --install fixture oci://ghcr.io/spnngl/charts/fixture-crds --version <version> --history-max=1")
       rm -rf ($dir | path dirname)
     }}
   ]

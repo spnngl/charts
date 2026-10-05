@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for TopoLVM (LogicalVolume, topolvm.io and legacy
   topolvm.cybozu.com groups)
 type: application
-version: 0.41.1
+version: 0.41.2
 appVersion: 0.41.1
 kubeVersion: ">=1.16.0-0"
 home: https://github.com/topolvm/topolvm
@@ -51,4 +51,4 @@ annotations:
   charts.spnngl.io/upstream-tag: v0.41.1
   charts.spnngl.io/upstream-commit: 2d0c5174afb93856d9fc5105e7c04ed50b65628f
   artifacthub.io/changes: |
-    - Initial release, CRDs from upstream v0.41.1
+    - Chart regenerated with updated tooling (upstream unchanged at v0.41.1)

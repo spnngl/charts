@@ -27,5 +27,6 @@ export const INJECTED_ANNOTATION_PATTERNS = [
 
 # Helm stores the release (chart files base64-encoded inside JSON + rendered manifest)
 # gzipped then base64-encoded in one Secret; Kubernetes caps Secret data at 1 MiB.
-export const SIZE_BUDGET_FAIL = 1_000_000
+# Above the cap the chart needs Helm's SQL storage driver (README says so).
+export const SIZE_BUDGET_CAP = 1_000_000
 export const SIZE_BUDGET_WARN = 800_000

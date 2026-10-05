@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for Cluster API core (clusters, machines,
   ClusterClass, IPAM, runtime extensions)
 type: application
-version: 1.14.2
+version: 1.14.3
 appVersion: 1.14.2
 kubeVersion: ">=1.25.0-0"
 home: https://cluster-api.sigs.k8s.io
@@ -110,4 +110,4 @@ annotations:
   charts.spnngl.io/upstream-tag: v1.14.2
   charts.spnngl.io/upstream-commit: 5f7d58c9ad647f31bd342bf8de33092c27f7fc38
   artifacthub.io/changes: |
-    - Initial release, CRDs from upstream v1.14.2
+    - Chart regenerated with updated tooling (upstream unchanged at v1.14.2)

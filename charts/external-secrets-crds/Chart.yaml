@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for External Secrets Operator (stores, external/push
   secrets, generators)
 type: application
-version: 2.11.0
+version: 2.11.1
 appVersion: 2.11.0
 kubeVersion: ">=1.25.0-0"
 home: https://external-secrets.io
@@ -194,4 +194,4 @@ annotations:
   charts.spnngl.io/upstream-tag: v2.11.0
   charts.spnngl.io/upstream-commit: e8f12e1f1646e0ad47966458023ff10c9577f2b0
   artifacthub.io/changes: |
-    - Initial release, CRDs from upstream v2.11.0
+    - Chart regenerated with updated tooling (upstream unchanged at v2.11.0)

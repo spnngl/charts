@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for agentgateway (backends, models, parameters,
   policies)
 type: application
-version: 1.6.0
+version: 1.6.1
 appVersion: 1.6.0
 kubeVersion: ">=1.25.0-0"
 home: https://agentgateway.dev
@@ -63,4 +63,4 @@ annotations:
   charts.spnngl.io/upstream-tag: v1.6.0
   charts.spnngl.io/upstream-commit: ea5608642b9d5c94c5baf5fd9f2f9849b808e963
   artifacthub.io/changes: |
-    - Upstream CRDs updated from v1.5.0 to v1.6.0
+    - Chart regenerated with updated tooling (upstream unchanged at v1.6.0)
