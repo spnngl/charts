@@ -53,7 +53,7 @@ jobs:
         id: app
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          app-id: ${{ secrets.APP_CLIENT_ID }}
+          client-id: ${{ secrets.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -135,7 +135,7 @@ jobs:
           else
             pr="$(gh pr create --title "chore($NAME): sync CRDs to $TO" --body-file body.md --base main --head "$branch" --label sync | grep -o '[0-9]*$')"
           fi
-          gh pr merge "$pr" --auto --squash
+          gh pr merge "$pr" --auto --rebase
 
       - name: Failure issue
         if: steps.regen.outputs.failed == 'true'

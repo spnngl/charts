@@ -152,7 +152,7 @@ makes it public automatically.
 Per manifest: list upstream tags → newest matching `tagPattern` and `allow`
 above `current` → rewrite `current` → run generator → branch
 `sync/<name>/<tag>` → PR (one per chart, updated in place) with CRD diff
-summary → `gh pr merge --auto --squash`. Runs as a GitHub App
+summary → `gh pr merge --auto --rebase`. Runs as a GitHub App
 (`APP_CLIENT_ID`, `APP_PRIVATE_KEY`) so the PR triggers `pr.yml`. Failures
 (path moved, zero CRDs, dedupe conflict) open/update issue
 `sync failure: <name>`.
