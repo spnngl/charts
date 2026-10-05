@@ -1,0 +1,19 @@
+name: topolvm-crds
+description: CustomResourceDefinitions for TopoLVM (LogicalVolume, topolvm.io and legacy topolvm.cybozu.com groups)
+upstream:
+  repo: https://github.com/topolvm/topolvm
+  homepage: https://github.com/topolvm/topolvm
+  icon: https://raw.githubusercontent.com/topolvm/topolvm/main/docs/img/TopoLVM_logo.svg
+  license: Apache-2.0
+version:
+  # Repo also carries `topolvm-chart-v*` tags; this pattern excludes them.
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v0.41.1
+sources:
+  - kind: git-path
+    path: config/crd/bases
+transform:
+  include: []
+  exclude: []
+  patches: []

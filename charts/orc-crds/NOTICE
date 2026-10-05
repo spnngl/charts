@@ -1,0 +1,6 @@
+The CustomResourceDefinition manifests under templates/ were copied from
+  https://github.com/k-orc/openstack-resource-controller
+at tag v2.6.0 (commit 699ab0b3888c33dbf9957b4e47d003b466525a0a), path(s): config/crd/bases
+and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
+added; server-side metadata and upstream Helm release metadata were removed.
+Upstream license: Apache-2.0 (see LICENSE in this directory).

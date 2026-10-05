@@ -1,0 +1,6 @@
+The CustomResourceDefinition manifests under templates/ were copied from
+  https://github.com/vmware-tanzu/velero
+at tag v1.18.4 (commit 4ee1e79a7aed367fd9b767b8219ec65bd0c96892), path(s): config/crd
+and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
+added; server-side metadata and upstream Helm release metadata were removed.
+Upstream license: Apache-2.0 (see LICENSE in this directory).

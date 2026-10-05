@@ -1,0 +1,22 @@
+name: cluster-api-crds
+description: CustomResourceDefinitions for Cluster API core (clusters, machines, ClusterClass, IPAM, runtime extensions)
+upstream:
+  repo: https://github.com/kubernetes-sigs/cluster-api
+  homepage: https://cluster-api.sigs.k8s.io
+  icon: https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/main/docs/logos/kubernetes-cluster-logos_final-02.svg
+  license: Apache-2.0
+version:
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v1.14.2
+sources:
+  # Core CRDs only (not bootstrap/kubeadm, controlplane/kubeadm or clusterctl).
+  # Moved from config/crd/bases to core/config/crd/bases in v1.11.
+  # Bases carry no conversion webhook; upstream adds it via kustomize patches
+  # pointing at the capi-webhook-service installed with the controllers.
+  - kind: git-path
+    path: core/config/crd/bases
+transform:
+  include: []
+  exclude: []
+  patches: []
