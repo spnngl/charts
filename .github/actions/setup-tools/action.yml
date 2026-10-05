@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SchemaStore/schemastore/refs/heads/master/src/schemas/json/github-action.json
+
 name: Set up tools
 description: Install the tool versions pinned in tooling/versions.toml (linux/amd64 runners).
 
@@ -104,7 +106,7 @@ runs:
 
     - name: Expose tools
       shell: bash
-      run: |
+      run: |-
         echo "$HOME/.crdgen-tools" >> "$GITHUB_PATH"
         echo "chart_testing_version=${{ steps.versions.outputs.chart_testing }}" >> "$GITHUB_ENV"
         echo "kind_version=${{ steps.versions.outputs.kind }}" >> "$GITHUB_ENV"
