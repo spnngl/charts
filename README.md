@@ -2,7 +2,7 @@
 
 Public Helm charts, published as OCI artifacts on GHCR, signed with cosign,
 with SBOM and provenance attestations, listed on
-[Artifact Hub](https://artifacthub.io/).
+[Artifact Hub](https://artifacthub.io/packages/search?user=lola.2lannoy).
 
 Two kinds of charts live here:
 
