@@ -1,0 +1,20 @@
+name: argo-cd-crds
+description: CustomResourceDefinitions for Argo CD (Applications, ApplicationSets, AppProjects)
+upstream:
+  repo: https://github.com/argoproj/argo-cd
+  homepage: https://argo-cd.readthedocs.io
+  icon: https://raw.githubusercontent.com/argoproj/argo-cd/master/ui/src/assets/images/argologo.svg
+  license: Apache-2.0
+version:
+  # Pre-releases (-rc) are excluded by the pattern.
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v3.5.3
+sources:
+  # Upstream's CRD-only kustomization, also consumed by manifests/install.yaml.
+  - kind: kustomize
+    path: manifests/crds
+transform:
+  include: []
+  exclude: []
+  patches: []
