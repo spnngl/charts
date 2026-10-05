@@ -74,18 +74,23 @@ resolve → fetch → render → split → filter → sanitize → dedupe → te
 | sanitize | drop `status`, `creationTimestamp`, server-side metadata, Helm labels/annotations; apply patches; keep everything else | — |
 | dedupe | same `metadata.name` from several sources must be identical | content differs |
 | templatize | `to yaml`; escape `{{`/`}}`; inject labels/annotations template via sentinel lines | — |
-| emit | `Chart.yaml` (derived `kubeVersion`, Artifact Hub annotations, `charts.spnngl.io/upstream-{repo,tag,commit}`, `sources[0]` = this repo), `values.yaml`, `values.schema.json`, `ci/ci-values.yaml`, `templates/*.yaml`, `_helpers.tpl`, `LICENSE`, `NOTICE`, `README.md` | — |
-| validate | `helm lint --strict`; `helm template` round-trips to sanitized records; injected labels/keep annotation present; schema negative test; values behaviour; structural CRD check (one storage version, name = plural.group, schemas present); kubeconform against the pinned Kubernetes JSON schemas; release-size budget | any check |
+| emit | `Chart.yaml` (derived `kubeVersion`, Artifact Hub annotations, `charts.spnngl.io/upstream-{repo,tag,commit}`, `sources[0]` = this repo), `values.yaml`, `values.schema.json`, `ci/ci-values.yaml`, `templates/*.yaml`, `_helpers.tpl`, `LICENSE`, `NOTICE`, `README.md`, `.helmignore` (excludes `ci/` and itself from the package); release-size estimate (README SQL-driver note when oversized) | — |
+| validate | `helm lint --strict`; `helm template` round-trips to sanitized records; injected labels/keep annotation present; schema negative test; values behaviour; structural CRD check (one storage version, name = plural.group, schemas present); kubeconform against the pinned Kubernetes JSON schemas | any check |
 
 Only `render` is polymorphic. Only `templatize` touches text; everything
 else is structured records.
 
 Release-size budget: Helm stores the release (chart files base64-encoded
 inside JSON + rendered manifest) gzipped and base64-encoded in one Secret,
-capped at 1 MiB. The estimator mirrors that encoding (within 1 % of a real
-release): warn > 800 kB, fail > 1 000 kB. At v1.6.2: `gateway-api-crds`
-≈ 649 kB, `gateway-api-exp-crds` ≈ 788 kB — one chart holding both channels
-would already exceed the cap, hence two charts.
+capped at 1 MiB (Helm 3 and Helm 4 alike). The estimator mirrors that
+encoding on the packaged chart, so `.helmignore` applies (within 1 % of a real
+release): warning > 800 kB; > 1 000 kB the chart is *oversized*: it still
+ships, its README replaces `helm install` with the SQL storage driver
+(`HELM_DRIVER=sql`, PostgreSQL, no size cap) and `--history-max=1`. At v1.6.2:
+`gateway-api-crds` ≈ 649 kB, `gateway-api-exp-crds` ≈ 788 kB — one chart
+holding both channels would exceed the cap, hence two charts. Prefer such a
+split when it is natural; `chaos-mesh-crds` (≈ 1.1 MB, one API group) is
+oversized instead.
 
 Schema validation: kubeconform's default schema location
 (`<version>-standalone-strict`) has no `CustomResourceDefinition` schema, but
@@ -116,7 +121,9 @@ nu lint/format → manifest validation + naming invariant (`charts/*-crds` ⇔
 `ct lint` (Chart.yaml schema, yamllint, `helm lint --strict`, version
 increment) → `values.schema.json` present (+ kubeconform, kube-linter,
 helm-docs drift for hand-written charts) → `ct install --upgrade` in kind,
-matrix {oldest upstream-supported k8s, latest}. Each CRD chart ships
+matrix {oldest upstream-supported k8s, latest} × {Helm 3, Helm 4 (server-side
+apply)}, releases stored in a PostgreSQL service container (`HELM_DRIVER=sql`,
+so oversized charts install too; `HELM_MAX_HISTORY=1`). Each CRD chart ships
 `ci/ci-values.yaml` with `keepOnUninstall: false` so ct can clean up between
 charts.
 

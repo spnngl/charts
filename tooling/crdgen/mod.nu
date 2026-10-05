@@ -60,7 +60,14 @@ export def generate [manifest: record, --skip-validate]: nothing -> record {
   let base_ref = (version base-ref)
   let v = (version compute $manifest.name $p.resolved.appVersion $p.resolved.tag $dir $chart_record $base_ref)
   emit chart-yaml $chart_record $v.version $v.changes | save -f ($dir | path join "Chart.yaml")
-  let budget = (if $skip_validate { {bytes: 0, status: "skipped"} } else { validate chart $dir $p.crds })
+  # The README depends on the size (SQL driver note), so the size is always
+  # estimated, even with --skip-validate. The note only grows the release.
+  let budget = (validate size-budget $dir)
+  let budget = (if $budget.status != "oversized" { $budget } else {
+    emit readme $manifest $p.resolved $p.crds $p.dropped $p.license --oversized | save -f ($dir | path join "README.md")
+    validate size-budget $dir
+  })
+  if not $skip_validate { validate chart $dir $p.crds }
   {
     dir: $dir
     summary: {

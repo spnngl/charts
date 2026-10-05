@@ -202,6 +202,7 @@ export def "emit readme" [
   crds: list<record>
   dropped: list<string>
   license: record
+  --oversized # projected release above SIZE_BUDGET_CAP (see `validate size-budget`)
 ]: nothing -> string {
   let name = $manifest.name
   let oci = $"($OCI_BASE)/($name)"
@@ -223,6 +224,28 @@ export def "emit readme" [
       ""
     ]
   })
+  let release = ($name | str replace -r '-crds$' '')
+  let install_commands = (if not $oversized {
+    [
+      "```sh"
+      $"helm install ($release) ($oci) --version <version>"
+      "```"
+      ""
+    ]
+  } else {
+    [
+      "> **Too large for Helm's default storage.** Helm stores each release in one Secret"
+      "> \(or ConfigMap\), capped at 1 MiB; this chart's release exceeds it. Use the SQL"
+      "> storage driver \(PostgreSQL\):"
+      ""
+      "```sh"
+      "export HELM_DRIVER=sql"
+      "export HELM_DRIVER_SQL_CONNECTION_STRING='postgresql://<user>:<password>@<host>:5432/<db>'"
+      $"helm upgrade --install ($release) ($oci) --version <version> --history-max=1"
+      "```"
+      ""
+    ]
+  })
   [
     $"# ($name)"
     ""
@@ -240,10 +263,9 @@ export def "emit readme" [
   | append [
     "## Install"
     ""
-    "```sh"
-    $"helm install ($name | str replace -r '-crds$' '') ($oci) --version <version>"
-    "```"
-    ""
+  ]
+  | append $install_commands
+  | append [
     "Chart `version` equals the upstream version it ships; `appVersion` is always the exact upstream version."
     $"Installing requires Kubernetes (emit kube-version $crds | str replace '-0' '')."
     ""
@@ -253,7 +275,7 @@ export def "emit readme" [
     "\"rendered manifests contain a resource that already exists\". Either let Helm adopt them:"
     ""
     "```sh"
-    $"helm install ($name | str replace -r '-crds$' '') ($oci) --version <version> --take-ownership   # Helm >= 3.17"
+    $"helm install ($release) ($oci) --version <version> --take-ownership   # Helm >= 3.17"
     "```"
     ""
     "or, on older Helm, hand them over first \(replace `<release>` and `<namespace>`\):"
@@ -329,5 +351,51 @@ export def "emit chart-files" [
   $license.license_text | save -f ($dir | path join "LICENSE")
   emit notice $manifest $resolved $license | save -f ($dir | path join "NOTICE")
   emit readme $manifest $resolved $crds $dropped $license | save -f ($dir | path join "README.md")
-  "# Keep generated chart lean.\n.DS_Store\n*.swp\n" | save -f ($dir | path join ".helmignore")
+  emit helmignore | save -f ($dir | path join ".helmignore")
+}
+
+# Standard `helm create` patterns plus `ci/`: ct reads ci/*-values.yaml from the
+# chart directory, the packaged chart (and therefore the release) does not need it.
+export def "emit helmignore" []: nothing -> string {
+  [
+    "# Patterns to ignore when building packages."
+    "# This supports shell glob matching, relative path matching, and"
+    "# negation \(prefixed with !\). Only one pattern per line."
+    "# This file is only needed to package; keep it out of the release."
+    ".helmignore"
+    ".DS_Store"
+    "Thumbs.db"
+    "# Common VCS dirs"
+    ".git/"
+    ".gitignore"
+    ".bzr/"
+    ".bzrignore"
+    ".hg/"
+    ".hgignore"
+    ".svn/"
+    "# Common backup files"
+    "*.swp"
+    "*.bak"
+    "*.tmp"
+    "*~"
+    "# Various IDEs"
+    ".project"
+    ".idea/"
+    "*.tmproj"
+    "# Ignore local testing values or charts"
+    "*.local.*"
+    "*.tgz"
+    "# helm/charts"
+    "OWNERS"
+    "hack/"
+    "ci/"
+    ""
+    "unittests/"
+    "files/dashboards/"
+    ""
+    "UPGRADE.md"
+    "CONTRIBUTING.md"
+    ".editorconfig"
+    ""
+  ] | str join "\n"
 }

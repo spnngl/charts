@@ -82,8 +82,11 @@ Never hand-edit `charts/`. Everything there comes from the generator.
    `regen` already runs helm lint, render round-trip, schema negative tests,
    structural checks, kubeconform and the release-Secret size budget. A
    `::warning::` about the size budget means the chart is above 800 kB of
-   Helm's 1 MiB cap: mention it in the commit body. A failure above 1 MB
-   means the chart cannot ship as one piece: stop and ask.
+   Helm's 1 MiB cap: mention it in the commit body. A warning above 1 MB
+   means the chart is oversized: Helm's default Secret storage cannot hold
+   it and the README tells users to use `HELM_DRIVER=sql`. Stop and ask
+   whether to ship it like that or split it (`include`/`exclude` across two
+   manifests).
 
 5. **Review the output**: `charts/<name>-crds/README.md` — CRD count and
    names match upstream, versions/storage look right, the "Not included"

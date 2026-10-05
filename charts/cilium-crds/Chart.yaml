@@ -4,7 +4,7 @@ apiVersion: v2
 name: cilium-crds
 description: CustomResourceDefinitions for Cilium (cilium.io v2 and v2alpha1)
 type: application
-version: 1.20.2
+version: 1.20.3
 appVersion: 1.20.2
 kubeVersion: ">=1.25.0-0"
 home: https://cilium.io
@@ -168,4 +168,4 @@ annotations:
   charts.spnngl.io/upstream-tag: v1.20.2
   charts.spnngl.io/upstream-commit: e0dc92bd6dac33d7ba3b5eace82a0448bbb13aac
   artifacthub.io/changes: |
-    - Initial release, CRDs from upstream v1.20.2
+    - Chart regenerated with updated tooling (upstream unchanged at v1.20.2)

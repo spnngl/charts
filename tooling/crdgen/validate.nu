@@ -131,12 +131,20 @@ def gzip-size [text: string]: nothing -> int {
 # Projected Helm release Secret payload. Mirrors what Helm stores: a JSON release
 # object whose chart templates/files are base64 strings, plus the rendered
 # manifest, gzipped, then base64-encoded into Secret.data.release. Measured
-# within 1% of a real release.
+# within 1% of a real release. Files come from the packaged chart, so
+# .helmignore applies exactly as it does for Helm.
+# Status: ok | warn (> SIZE_BUDGET_WARN) | oversized (> SIZE_BUDGET_CAP: the
+# default Secret/ConfigMap storage cannot hold it, the SQL driver can).
 export def "validate size-budget" [dir: path]: nothing -> record<bytes: int, status: string> {
   let dir = ($dir | path expand)
-  let b64 = {|f| {name: ($f | path relative-to $dir), data: (open --raw $f | encode base64)} }
-  let templates = (glob ($dir | path join "templates" "*") --no-dir | sort | each $b64)
-  let files = (glob ($dir | path join "**" "*") --no-dir | where {|f| ($f | path relative-to $dir) !~ '^(templates/|Chart\.yaml$|values\.yaml$)' } | sort | each $b64)
+  let tmp = (mktemp -d -t crdgen-size.XXXXXX)
+  run-checked { ^helm package $dir -d $tmp } $"helm package ($dir)" | ignore
+  ^tar -xzf (glob ($tmp | path join "*.tgz") | first) -C $tmp
+  let chart = ($tmp | path join (open ($dir | path join "Chart.yaml")).name)
+  let b64 = {|f| {name: ($f | path relative-to $chart), data: (open --raw $f | encode base64)} }
+  let templates = (glob ($chart | path join "templates" "*") --no-dir | sort | each $b64)
+  let files = (glob ($chart | path join "**" "*") --no-dir | where {|f| ($f | path relative-to $chart) !~ '^(templates/|Chart\.yaml$|values\.yaml$)' } | sort | each $b64)
+  rm -rf $tmp
   let manifest = (validate helm-template $dir)
   let release = {
     name: "release-name"
@@ -152,22 +160,20 @@ export def "validate size-budget" [dir: path]: nothing -> record<bytes: int, sta
     namespace: "release-namespace"
   }
   let bytes = ((gzip-size ($release | to json -r)) * 4 / 3 | math round | into int)
-  let status = (if $bytes > $SIZE_BUDGET_FAIL { "fail" } else if $bytes > $SIZE_BUDGET_WARN { "warn" } else { "ok" })
-  if $status == "fail" {
-    error make {msg: $"($dir): projected release Secret ($bytes | into filesize) exceeds budget ($SIZE_BUDGET_FAIL | into filesize); Helm caps releases at 1 MiB"}
-  }
-  if $status == "warn" {
-    print -e $"::warning::($dir): projected release Secret ($bytes | into filesize) above ($SIZE_BUDGET_WARN | into filesize)"
+  let status = (if $bytes > $SIZE_BUDGET_CAP { "oversized" } else if $bytes > $SIZE_BUDGET_WARN { "warn" } else { "ok" })
+  match $status {
+    "oversized" => { print -e $"::warning::($dir): projected release Secret ($bytes | into filesize) above the ($SIZE_BUDGET_CAP | into filesize) cap; needs HELM_DRIVER=sql" }
+    "warn" => { print -e $"::warning::($dir): projected release Secret ($bytes | into filesize) above ($SIZE_BUDGET_WARN | into filesize)" }
+    _ => {}
   }
   {bytes: $bytes, status: $status}
 }
 
-export def "validate chart" [dir: path, crds: list<record>]: nothing -> record {
+export def "validate chart" [dir: path, crds: list<record>]: nothing -> nothing {
   validate helm-lint $dir
   validate round-trip $dir $crds
   validate schema-negative $dir
   validate values-behaviour $dir
   validate structure $crds
   validate kubeconform $dir
-  validate size-budget $dir
 }
