@@ -58,12 +58,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-tools
         with:
-          tools: nushell helm cosign oras syft
+          tools: nushell helm cosign syft
 
       - name: Registry login
         run: |
           echo "${{ github.token }}" | helm registry login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
-          echo "${{ github.token }}" | oras login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
 
       - name: Package
         id: package
@@ -112,12 +111,6 @@ jobs:
           sbom-path: dist/sbom.spdx.json
           push-to-registry: true
 
-      - name: Artifact Hub
-        env:
-          AH_API_KEY_ID: ${{ secrets.AH_API_KEY_ID }}
-          AH_API_KEY_SECRET: ${{ secrets.AH_API_KEY_SECRET }}
-        run: nu tooling/release/artifacthub.nu "${{ matrix.chart.name }}"
-
       - name: GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -150,6 +143,29 @@ jobs:
           if [[ "$vis" != "public" ]]; then
             echo "::warning::GHCR package charts/${{ matrix.chart.name }} is '$vis'. Make it public once: https://github.com/users/${{ github.repository_owner }}/packages/container/$pkg/settings"
           fi
+
+  artifacthub:
+    # Runs for every published chart on every release run (idempotent), so
+    # charts published before the Artifact Hub secrets existed get registered too.
+    name: Artifact Hub
+    needs: [plan, publish]
+    if: always() && needs.plan.result == 'success' && needs.publish.result != 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write        # push the artifacthub.io metadata tag
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-tools
+        with:
+          tools: nushell oras
+      - name: Registry login
+        run: echo "${{ github.token }}" | oras login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
+      - name: Register repositories and push metadata
+        env:
+          AH_API_KEY_ID: ${{ secrets.AH_API_KEY_ID }}
+          AH_API_KEY_SECRET: ${{ secrets.AH_API_KEY_SECRET }}
+        run: nu tooling/release/artifacthub.nu --all
 
   verify:
     name: Verify ${{ matrix.chart.name }} ${{ matrix.chart.version }}
