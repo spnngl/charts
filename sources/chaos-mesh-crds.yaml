@@ -1,0 +1,21 @@
+name: chaos-mesh-crds
+description: CustomResourceDefinitions for Chaos Mesh (chaos experiments, schedules, workflows)
+upstream:
+  repo: https://github.com/chaos-mesh/chaos-mesh
+  homepage: https://chaos-mesh.org
+  icon: https://raw.githubusercontent.com/chaos-mesh/chaos-mesh/master/static/logo.svg
+  license: Apache-2.0
+version:
+  # Repo also carries `chart-*` tags and pre-releases; this pattern excludes them.
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v2.8.4
+sources:
+  # controller-gen output. helm/chaos-mesh/crds and manifests/crd.yaml are
+  # copies; config/crd/kustomization.yaml only adds commented-out webhook patches.
+  - kind: git-path
+    path: config/crd/bases
+transform:
+  include: []
+  exclude: []
+  patches: []

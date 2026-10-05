@@ -23,6 +23,7 @@ Two kinds of charts live here:
 | [`agentgateway-crds`](./charts/agentgateway-crds) | [agentgateway/agentgateway](https://github.com/agentgateway/agentgateway) | backends, models, parameters, policies |
 | [`argo-cd-crds`](./charts/argo-cd-crds) | [argoproj/argo-cd](https://github.com/argoproj/argo-cd) | Application, ApplicationSet, AppProject |
 | [`cert-manager-crds`](./charts/cert-manager-crds) | [cert-manager/cert-manager](https://github.com/cert-manager/cert-manager) | certificates, (Cluster)Issuer, ACME orders and challenges |
+| [`chaos-mesh-crds`](./charts/chaos-mesh-crds) | [chaos-mesh/chaos-mesh](https://github.com/chaos-mesh/chaos-mesh) | chaos experiments, schedules, workflows (needs `HELM_DRIVER=sql`, see below) |
 | [`cilium-crds`](./charts/cilium-crds) | [cilium/cilium](https://github.com/cilium/cilium) | cilium.io v2 + v2alpha1 |
 | [`cluster-api-crds`](./charts/cluster-api-crds) | [kubernetes-sigs/cluster-api](https://github.com/kubernetes-sigs/cluster-api) | core CRDs (clusters, machines, ClusterClass, IPAM, runtime) |
 | [`orc-crds`](./charts/orc-crds) | [k-orc/openstack-resource-controller](https://github.com/k-orc/openstack-resource-controller) | OpenStack resources |
@@ -71,6 +72,14 @@ or the chart's Artifact Hub page.
 - `gateway-api-crds` (standard channel) and `gateway-api-exp-crds`
   (experimental channel) define the same CRD names and cannot be installed
   together.
+- `chaos-mesh-crds` is too large for Helm's default release storage (one
+  Secret, 1 MiB). Store the release in PostgreSQL instead:
+
+  ```sh
+  export HELM_DRIVER=sql
+  export HELM_DRIVER_SQL_CONNECTION_STRING='postgresql://<user>:<password>@<host>:5432/<db>'
+  helm upgrade --install <release> oci://ghcr.io/spnngl/charts/chaos-mesh-crds --version <version> --history-max=1
+  ```
 
 ## Verifying what you install
 
