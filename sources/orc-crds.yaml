@@ -1,0 +1,17 @@
+name: orc-crds
+description: CustomResourceDefinitions for the OpenStack Resource Controller (ORC)
+upstream:
+  repo: https://github.com/k-orc/openstack-resource-controller
+  homepage: https://k-orc.cloud/
+  license: Apache-2.0
+version:
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v2.6.0
+sources:
+  - kind: git-path
+    path: config/crd/bases
+transform:
+  include: []
+  exclude: []
+  patches: []

@@ -1,0 +1,19 @@
+name: cilium-crds
+description: CustomResourceDefinitions for Cilium (cilium.io v2 and v2alpha1)
+upstream:
+  repo: https://github.com/cilium/cilium
+  homepage: https://cilium.io
+  icon: https://raw.githubusercontent.com/cilium/cilium/main/Documentation/images/logo-solo.svg
+  license: Apache-2.0
+version:
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v1.20.2
+sources:
+  # Generated CRDs embedded in the Cilium operator binary; v2/ and v2alpha1/.
+  - kind: git-path
+    path: pkg/k8s/apis/cilium.io/client/crds
+transform:
+  include: []
+  exclude: []
+  patches: []

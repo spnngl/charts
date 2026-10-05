@@ -1,0 +1,20 @@
+name: velero-crds
+description: CustomResourceDefinitions for Velero (backups, restores, schedules, locations, data movers)
+upstream:
+  repo: https://github.com/vmware-tanzu/velero
+  homepage: https://velero.io
+  icon: https://raw.githubusercontent.com/vmware-tanzu/velero/main/assets/stacked/199150-vmw-os-lgo-velero-final_stacked-gry.png
+  license: Apache-2.0
+version:
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v1.18.4
+sources:
+  # controller-gen output for both API versions (v1 and v2alpha1); the
+  # vmware-tanzu/helm-charts chart copies these into its crds/ directory.
+  - kind: git-path
+    path: config/crd
+transform:
+  include: []
+  exclude: []
+  patches: []

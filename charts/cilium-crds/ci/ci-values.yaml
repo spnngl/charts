@@ -1,0 +1,3 @@
+# Used by chart-testing (ct install) only: let ct clean up CRDs between charts
+# sharing a kind cluster. Not a recommended production setting.
+keepOnUninstall: false
