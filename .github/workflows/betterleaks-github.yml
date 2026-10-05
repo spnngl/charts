@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SchemaStore/schemastore/refs/heads/master/src/schemas/json/github-workflow.json
+
+name: Secret Scanning (betterleaks-github)
+
+on:
+  schedule:
+    - cron: "42 8 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  betterleaks-github:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install betterleaks
+        env:
+          BETTERLEAKS_VERSION: "1.9.0"
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+
+          curl -sSfL --proto '=https' --proto-redir '=https' -o betterleaks.tar.gz \
+            "https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}/betterleaks_${BETTERLEAKS_VERSION}_linux_x64.tar.gz"
+
+          export BETTERLEAKS_SHA256=$(curl -sSfL --proto '=https' --proto-redir '=https' "https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}/checksums.txt" | grep ${BETTERLEAKS_VERSION}_linux_x64 | cut -d' ' -f1)
+
+          echo "${BETTERLEAKS_SHA256}  betterleaks.tar.gz" | sha256sum -c -
+
+          tar -xzf betterleaks.tar.gz betterleaks
+          sudo install -m 0755 betterleaks /usr/local/bin/betterleaks
+
+          betterleaks version
+
+      - name: Run betterleaks
+        run: |
+          betterleaks github \
+            --verbose \
+            --redact \
+            --validation \
+            --timeout=300 \
+            --confidence=medium \
+            --include=prs,issues,issue-comments \
+            --report-format sarif \
+            --report-path betterleaks.sarif \
+            --exit-code 2 \
+            "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+
+      - name: Upload SARIF to code scanning
+        if: always() && hashFiles('betterleaks-github.sarif') != ''
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: betterleaks.sarif
+          category: betterleaks
