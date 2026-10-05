@@ -127,11 +127,13 @@ so oversized charts install too; `HELM_MAX_HISTORY=1`). Each CRD chart ships
 `ci/ci-values.yaml` with `keepOnUninstall: false` so ct can clean up between
 charts.
 
-### `release.yml` (push to `main`, serialised)
+### `release.yml` (push to `main`, runs serialised)
 
 `tooling/release/plan.nu` lists charts whose GitHub Release `<name>-<version>`
 does not exist yet (the Release is the last step, hence the completion
-marker), then per chart (matrix, serialised):
+marker), then per chart (matrix, in parallel: legs share no state, each owns
+its package, tag and Release; the `release` concurrency group serialises whole
+runs so `plan.nu` never races itself):
 `helm package` → `helm push` (digest) → `cosign sign` (keyless) by digest →
 `syft` SBOM → `cosign attest --type spdxjson` (keyless) → `actions/attest` twice
 (SLSA provenance, then SBOM; push-to-registry) → GitHub Release `<name>-<version>`
@@ -143,7 +145,7 @@ missing, `oras push` `artifacthub-repo.yml` with the `repositoryID` to
 `<chart>:artifacthub.io`; idempotent, skipped with a warning without AH
 secrets, so it also catches charts published before the secrets existed), and
 `tooling/release/verify.nu` running the documented verify commands from a job
-without repo secrets. `workflow_dispatch` with nothing to publish still runs
+without repo secrets (matrix, in parallel). `workflow_dispatch` with nothing to publish still runs
 the Artifact Hub job.
 
 Published versions are immutable: if the registry tag already exists (a
