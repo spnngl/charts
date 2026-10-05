@@ -1,0 +1,21 @@
+name: agentgateway-crds
+description: CustomResourceDefinitions for agentgateway (backends, models, parameters, policies)
+upstream:
+  repo: https://github.com/agentgateway/agentgateway
+  homepage: https://agentgateway.dev
+  icon: https://raw.githubusercontent.com/agentgateway/website/refs/heads/main/static/favicon.svg
+  license: Apache-2.0
+version:
+  # Pre-releases (-alpha, -beta, -rc) are excluded by the pattern.
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v1.5.0
+sources:
+  # Upstream's own agentgateway-crds chart keeps plain (untemplated) CRD YAML
+  # under templates/; read it as files rather than rendering the chart.
+  - kind: git-path
+    path: controller/install/helm/agentgateway-crds/templates
+transform:
+  include: []
+  exclude: []
+  patches: []
