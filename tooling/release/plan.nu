@@ -1,13 +1,15 @@
 #!/usr/bin/env nu
-# List charts whose Chart.yaml version is not yet published in GHCR.
+# List charts whose Chart.yaml version has not been fully published.
 # Output: JSON array of {name, version, dir} (for a GitHub Actions matrix).
-#   nu tooling/release/plan.nu [--all]      --all ignores the registry check
-
-use ../crdgen/config.nu [OCI_BASE]
+#   nu tooling/release/plan.nu [--all]      --all ignores the completion check
+#
+# "Published" means the GitHub Release <name>-<version> exists: it is created
+# as the last step of the publish job, so a run that failed after `helm push`
+# (unsigned, unattested) is picked up again. The publish job never re-pushes
+# an existing registry tag; it resumes from the digest already there.
 
 def published [name: string, version: string]: nothing -> bool {
-  # `helm show chart` succeeds only if that exact version exists (anonymous read on public GHCR).
-  (^helm show chart $"($OCI_BASE)/($name)" --version $version | complete | get exit_code) == 0
+  (^gh release view $"($name)-($version)" --json tagName | complete | get exit_code) == 0
 }
 
 def main [--all]: nothing -> nothing {
