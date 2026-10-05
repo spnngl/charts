@@ -1,0 +1,79 @@
+# AGENTS.md
+
+Rules for AI agents working in this repository. Read `ARCHITECTURE.md` first.
+
+## Non-negotiable
+
+- **Never edit `charts/*-crds/**` by hand.** They are generated from
+  `sources/*.yaml` by `tooling/crdgen`. Edit the manifest or the generator,
+  then regenerate: `nu tooling/crdgen/mod.nu regen --all`. CI drift-check
+  fails otherwise.
+- **Never commit `PLAN*.md`, `*.key`.** They are git-ignored on purpose.
+- **Never change `version.current` in `sources/*.yaml` manually** unless
+  asked. The sync workflow owns that line.
+- **Never re-push, re-tag or delete a published chart version.** Fix forward
+  with a new version.
+- **Never add non-CRD resources to a CRD chart.** CRD charts ship
+  `CustomResourceDefinition` objects only.
+- **Never widen the CRD chart values interface** (`annotations`, `labels`,
+  `keepOnUninstall`). Consistency across charts is a feature.
+- **Never pin a GitHub Action by tag.** SHA + version comment.
+- Chart names ending in `-crds` are reserved for generated charts; every
+  `charts/<x>-crds` must have `sources/<x>-crds.yaml` and vice versa.
+- English only, in code, comments, commits, docs.
+
+## Toolchain
+
+- Generator and scripts: **nushell**. Typed `def` signatures, one pipeline
+  step per file under `tooling/crdgen/`, text manipulation only in
+  `templatize.nu`. Run `nu --ide-check 10 <file>` and `nufmt` before
+  committing.
+- Tool versions live in `tooling/versions.toml`. Do not hardcode versions
+  elsewhere (workflows read this file through `.github/actions/setup-tools`).
+- Tests: `nu tooling/crdgen/tests/run.nu`. Add a fixture when adding a
+  renderer or sanitizer rule.
+- `nu tooling/crdgen/mod.nu check --all` is what CI runs: manifests, naming
+  invariant, drift. Run it before pushing.
+- Release helpers live in `tooling/release/` (`plan.nu`, `artifacthub.nu`,
+  `verify.nu`); they are called by `release.yml` only.
+- Chart linting/testing in CI: `ct lint`, `ct install --upgrade` (config
+  `ct.yaml`). Reproduce locally with the same `ct` version.
+
+## Adding a CRD chart
+
+1. Create `sources/<upstream>-crds.yaml` (copy an existing one; fields are
+   documented in `ARCHITECTURE.md`). `upstream.license` must be in the
+   allowlist.
+2. `nu tooling/crdgen/mod.nu regen <upstream>-crds`.
+3. Review `charts/<upstream>-crds/README.md` — CRD count and dropped kinds
+   must make sense.
+4. Commit manifest + generated chart together: `feat(<upstream>-crds): add chart`.
+
+## Changing the generator
+
+- Any change under `tooling/` must be followed by `regen --all`; expect many
+  charts to change and their `version` PATCH to bump (the generator does
+  it). Commit tooling and regenerated charts in the same PR.
+- Keep `sanitize.nu` rules generic. Per-upstream quirks go into the manifest
+  (`include`/`exclude`/`patches` with a `reason:`), not into code.
+
+## Commits and PRs
+
+- Conventional commits, scope = chart name or `tooling`/`ci`/`docs`:
+  `chore(external-dns-crds): sync CRDs to v0.23.0`,
+  `fix(tooling): escape `}}` in descriptions`.
+- One concern per PR. Sync PRs are bot-owned; do not push to `sync/*`
+  branches.
+- Do not force-merge or bypass branch protection.
+
+## Security
+
+- Secrets (`COSIGN_*`, `APP_*`, `AH_*`) are repo secrets. Never print them,
+  never write them to files, never request new ones without stating why.
+- `pr.yml` must stay secret-free (it runs on fork PRs).
+- Report suspected key compromise immediately; follow `SECURITY.md`.
+
+## When unsure
+
+Prefer deleting code over adding it. Prefer a manifest field over a code
+branch. Ask before introducing a new tool, workflow, or chart value.
