@@ -1,0 +1,49 @@
+# Mixed-kind install manifest (layout C): only the CRD must survive filtering.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: example-system
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: foos.example.io
+spec:
+  group: example.io
+  names:
+    kind: Foo
+    plural: foos
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example-controller
+  namespace: example-system
+spec:
+  selector:
+    matchLabels: {app: example}
+  template:
+    metadata:
+      labels: {app: example}
+    spec:
+      containers:
+        - name: c
+          image: example:1
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: example-safe-upgrade
+spec:
+  matchConstraints:
+    resourceRules: []
+  validations:
+    - expression: "true"
