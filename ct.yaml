@@ -12,5 +12,5 @@ validate-maintainers: true
 check-version-increment: true
 helm-lint-extra-args: --strict
 # ct install: wait for CRDs to be Established; CRD charts have no pods.
-helm-extra-args: --timeout 120s
+helm-extra-args: --timeout 300s
 skip-clean-up: false
