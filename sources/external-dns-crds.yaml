@@ -1,0 +1,20 @@
+name: external-dns-crds
+description: CustomResourceDefinitions for ExternalDNS (DNSEndpoint, DNSRecord)
+upstream:
+  repo: https://github.com/kubernetes-sigs/external-dns
+  homepage: https://kubernetes-sigs.github.io/external-dns/
+  icon: https://raw.githubusercontent.com/kubernetes-sigs/external-dns/master/docs/img/external-dns.png
+  license: Apache-2.0
+version:
+  # Repo also carries `external-dns-helm-chart-*` tags; this pattern excludes them.
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v0.23.0
+sources:
+  # Authoritative location. The in-tree chart's crds/ dir lagged behind it at v0.22.0.
+  - kind: git-path
+    path: config/crd/standard
+transform:
+  include: []
+  exclude: []
+  patches: []

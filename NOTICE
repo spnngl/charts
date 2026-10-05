@@ -1,0 +1,12 @@
+spnngl/charts
+Copyright (c) spnngl. Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This repository redistributes modified copies of CustomResourceDefinition
+manifests from the following upstream projects. Each chart directory contains
+the upstream LICENSE, a NOTICE stating the pinned tag/commit and the
+modifications made, and attribution in its README.
+
+- external-dns-crds: CRDs from https://github.com/kubernetes-sigs/external-dns (Apache-2.0)
+- external-secrets-crds: CRDs from https://github.com/external-secrets/external-secrets (Apache-2.0)
+- gateway-api-crds: CRDs from https://github.com/kubernetes-sigs/gateway-api (Apache-2.0)
+- gateway-api-exp-crds: CRDs from https://github.com/kubernetes-sigs/gateway-api (Apache-2.0)

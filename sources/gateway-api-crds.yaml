@@ -1,0 +1,22 @@
+name: gateway-api-crds
+description: CustomResourceDefinitions for Kubernetes Gateway API, standard channel
+upstream:
+  repo: https://github.com/kubernetes-sigs/gateway-api
+  homepage: https://gateway-api.sigs.k8s.io
+  icon: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/site/assets/icons/logo.svg
+  license: Apache-2.0
+version:
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v1.6.2
+sources:
+  # Upstream's definition of the standard channel. Also lists
+  # vap_safeupgrades.yaml (ValidatingAdmissionPolicy), dropped by the CRD filter.
+  - kind: kustomize
+    path: config/crd
+conflictsWith:
+  - gateway-api-exp-crds
+transform:
+  include: []
+  exclude: []
+  patches: []

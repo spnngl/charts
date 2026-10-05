@@ -1,0 +1,6 @@
+The CustomResourceDefinition manifests under templates/ were copied from
+  https://github.com/kubernetes-sigs/gateway-api
+at tag v1.6.2 (commit ca6c2a65454737236fb7a937bd9b17e42b07e9de), path(s): config/crd/experimental
+and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
+added; server-side metadata and upstream Helm release metadata were removed.
+Upstream license: Apache-2.0 (see LICENSE in this directory).

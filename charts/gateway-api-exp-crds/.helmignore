@@ -1,0 +1,3 @@
+# Keep generated chart lean.
+.DS_Store
+*.swp

@@ -1,0 +1,22 @@
+name: gateway-api-exp-crds
+description: CustomResourceDefinitions for Kubernetes Gateway API, experimental channel
+upstream:
+  repo: https://github.com/kubernetes-sigs/gateway-api
+  homepage: https://gateway-api.sigs.k8s.io
+  icon: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/site/assets/icons/logo.svg
+  license: Apache-2.0
+version:
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v1.6.2
+sources:
+  # Upstream's definition of the experimental channel: same CRD names as the
+  # standard channel with superset schemas, plus gateway.networking.x-k8s.io CRDs.
+  - kind: kustomize
+    path: config/crd/experimental
+conflictsWith:
+  - gateway-api-crds
+transform:
+  include: []
+  exclude: []
+  patches: []
