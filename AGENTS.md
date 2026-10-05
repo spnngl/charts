@@ -41,6 +41,8 @@ Rules for AI agents working in this repository. Read `ARCHITECTURE.md` first.
 
 ## Adding a CRD chart
 
+Full procedure: `.agents/skills/add-crd-chart/SKILL.md`. Short version:
+
 1. Create `sources/<upstream>-crds.yaml` (copy an existing one; fields are
    documented in `ARCHITECTURE.md`). `upstream.license` must be in the
    allowlist.
