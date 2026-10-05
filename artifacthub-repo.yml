@@ -1,0 +1,7 @@
+# Artifact Hub repository metadata template.
+# `repositoryID` is filled per chart at release time by tooling/release/artifacthub.nu
+# (one Artifact Hub repository per OCI chart) and pushed as an OCI artifact at
+# ghcr.io/spnngl/charts/<chart>:artifacthub.io. Never commit a repositoryID here.
+repositoryID: ""
+owners:
+  - name: spnngl

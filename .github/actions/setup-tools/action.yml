@@ -1,0 +1,104 @@
+name: Set up tools
+description: Install the tool versions pinned in tooling/versions.toml (linux/amd64 runners).
+
+inputs:
+  tools:
+    description: Space-separated subset of tools to install (default all).
+    default: "nushell helm kustomize kubeconform cosign oras syft kube-linter helm-docs"
+
+runs:
+  using: composite
+  steps:
+    - name: Read pinned versions
+      id: versions
+      shell: bash
+      run: |
+        set -euo pipefail
+        # versions.toml is flat: `name = "x.y.z"` under [tools]. Parse without nushell (not installed yet).
+        while IFS='=' read -r key value; do
+          key="$(echo "$key" | tr -d '[:space:]')"
+          value="$(echo "$value" | tr -d '[:space:]"')"
+          [[ -z "$key" || "$key" == \#* || "$key" == \[* ]] && continue
+          echo "${key//-/_}=$value" >> "$GITHUB_OUTPUT"
+        done < tooling/versions.toml
+
+    - name: Restore tool cache
+      id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.crdgen-tools
+        key: tools-${{ runner.os }}-${{ hashFiles('tooling/versions.toml') }}-${{ inputs.tools }}
+
+    - name: Install tools
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        NU_VERSION: ${{ steps.versions.outputs.nushell }}
+        HELM_VERSION: ${{ steps.versions.outputs.helm }}
+        KUSTOMIZE_VERSION: ${{ steps.versions.outputs.kustomize }}
+        KUBECONFORM_VERSION: ${{ steps.versions.outputs.kubeconform }}
+        COSIGN_VERSION: ${{ steps.versions.outputs.cosign }}
+        ORAS_VERSION: ${{ steps.versions.outputs.oras }}
+        SYFT_VERSION: ${{ steps.versions.outputs.syft }}
+        KUBE_LINTER_VERSION: ${{ steps.versions.outputs.kube_linter }}
+        HELM_DOCS_VERSION: ${{ steps.versions.outputs.helm_docs }}
+        TOOLS: ${{ inputs.tools }}
+      run: |
+        set -euo pipefail
+        bin="$HOME/.crdgen-tools"
+        mkdir -p "$bin"
+        tmp="$(mktemp -d)"
+        fetch() { curl -fsSL --retry 3 -o "$2" "$1"; }
+        want() { [[ " $TOOLS " == *" $1 "* ]]; }
+
+        if want nushell; then
+          fetch "https://github.com/nushell/nushell/releases/download/${NU_VERSION}/nu-${NU_VERSION}-x86_64-unknown-linux-gnu.tar.gz" "$tmp/nu.tgz"
+          tar -xzf "$tmp/nu.tgz" -C "$tmp"
+          install -m 0755 "$tmp/nu-${NU_VERSION}-x86_64-unknown-linux-gnu/nu" "$bin/nu"
+        fi
+        if want helm; then
+          fetch "https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz" "$tmp/helm.tgz"
+          tar -xzf "$tmp/helm.tgz" -C "$tmp"
+          install -m 0755 "$tmp/linux-amd64/helm" "$bin/helm"
+        fi
+        if want kustomize; then
+          fetch "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" "$tmp/kustomize.tgz"
+          tar -xzf "$tmp/kustomize.tgz" -C "$tmp"
+          install -m 0755 "$tmp/kustomize" "$bin/kustomize"
+        fi
+        if want kubeconform; then
+          fetch "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" "$tmp/kubeconform.tgz"
+          tar -xzf "$tmp/kubeconform.tgz" -C "$tmp"
+          install -m 0755 "$tmp/kubeconform" "$bin/kubeconform"
+        fi
+        if want cosign; then
+          fetch "https://github.com/sigstore/cosign/releases/download/v${COSIGN_VERSION}/cosign-linux-amd64" "$tmp/cosign"
+          install -m 0755 "$tmp/cosign" "$bin/cosign"
+        fi
+        if want oras; then
+          fetch "https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_amd64.tar.gz" "$tmp/oras.tgz"
+          tar -xzf "$tmp/oras.tgz" -C "$tmp"
+          install -m 0755 "$tmp/oras" "$bin/oras"
+        fi
+        if want syft; then
+          fetch "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_linux_amd64.tar.gz" "$tmp/syft.tgz"
+          tar -xzf "$tmp/syft.tgz" -C "$tmp"
+          install -m 0755 "$tmp/syft" "$bin/syft"
+        fi
+        if want kube-linter; then
+          fetch "https://github.com/stackrox/kube-linter/releases/download/v${KUBE_LINTER_VERSION}/kube-linter-linux.tar.gz" "$tmp/kube-linter.tgz"
+          tar -xzf "$tmp/kube-linter.tgz" -C "$tmp"
+          install -m 0755 "$tmp/kube-linter" "$bin/kube-linter"
+        fi
+        if want helm-docs; then
+          fetch "https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.tar.gz" "$tmp/helm-docs.tgz"
+          tar -xzf "$tmp/helm-docs.tgz" -C "$tmp"
+          install -m 0755 "$tmp/helm-docs" "$bin/helm-docs"
+        fi
+
+    - name: Expose tools
+      shell: bash
+      run: |
+        echo "$HOME/.crdgen-tools" >> "$GITHUB_PATH"
+        echo "chart_testing_version=${{ steps.versions.outputs.chart_testing }}" >> "$GITHUB_ENV"
+        echo "kind_version=${{ steps.versions.outputs.kind }}" >> "$GITHUB_ENV"

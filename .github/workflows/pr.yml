@@ -1,0 +1,132 @@
+name: PR
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generator:
+    name: Generator (lint, tests, drift)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-tools
+        with:
+          tools: nushell helm kustomize
+
+      - name: nu --ide-check
+        run: |
+          set -euo pipefail
+          while IFS= read -r f; do
+            if nu --ide-check 10 "$f" | grep -q '"type":"diagnostic"'; then
+              echo "::error file=$f::nushell diagnostics"; nu --ide-check 10 "$f"; exit 1
+            fi
+          done < <(find tooling -name '*.nu')
+
+      - name: Unit tests
+        run: nu tooling/crdgen/tests/run.nu
+
+      - name: Manifests, naming invariant, drift check
+        env:
+          CRDGEN_BASE_REF: origin/${{ github.base_ref || 'main' }}
+        run: nu tooling/crdgen/mod.nu check --all
+
+  lint:
+    name: ct lint + checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-tools
+        with:
+          tools: nushell helm kubeconform kube-linter helm-docs
+      - uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f # v2.8.0
+        with:
+          version: v${{ env.chart_testing_version }}
+
+      - name: Changed charts
+        id: changed
+        run: |
+          set -euo pipefail
+          changed="$(ct list-changed --config ct.yaml --target-branch "${{ github.base_ref || 'main' }}" || true)"
+          {
+            echo "list<<EOF"; echo "$changed"; echo "EOF"
+            if [[ -n "$changed" ]]; then echo "any=true"; else echo "any=false"; fi
+          } >> "$GITHUB_OUTPUT"
+
+      - name: ct lint
+        if: steps.changed.outputs.any == 'true'
+        run: ct lint --config ct.yaml --target-branch "${{ github.base_ref || 'main' }}"
+
+      - name: values.schema.json present, kubeconform / kube-linter / helm-docs on hand-written charts
+        if: steps.changed.outputs.any == 'true'
+        env:
+          CHANGED: ${{ steps.changed.outputs.list }}
+        run: |
+          set -euo pipefail
+          for dir in $CHANGED; do
+            name="$(basename "$dir")"
+            [[ -f "$dir/values.schema.json" ]] || { echo "::error::$dir has no values.schema.json"; exit 1; }
+            if [[ "$name" != *-crds ]]; then
+              # hand-written chart: standard workload checks
+              helm template "$name" "$dir" | kubeconform -strict -summary -ignore-missing-schemas -schema-location default
+              helm template "$name" "$dir" | kube-linter lint --config .kube-linter.yaml -
+              if [[ -f "$dir/README.md.gotmpl" ]]; then
+                helm-docs --chart-search-root "$dir"
+                git diff --exit-code -- "$dir/README.md" || { echo "::error::$dir/README.md is out of date, run helm-docs"; exit 1; }
+              fi
+            fi
+          done
+
+  install:
+    name: ct install (kind ${{ matrix.k8s.name }})
+    runs-on: ubuntu-latest
+    needs: [lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        k8s:
+          # Oldest upstream-supported Kubernetes release and the latest stable.
+          # renovate: datasource=docker depName=kindest/node
+          - { name: "1.35", image: "kindest/node:v1.35.8@sha256:07b2536e30b803ed61d1677a79df6115f798ce64c80f9e22f6ed45afd09323c0" }
+          # renovate: datasource=docker depName=kindest/node
+          - { name: "1.37", image: "kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5" }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-tools
+        with:
+          tools: helm
+      - uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f # v2.8.0
+        with:
+          version: v${{ env.chart_testing_version }}
+
+      - name: Changed charts
+        id: changed
+        run: |
+          changed="$(ct list-changed --config ct.yaml --target-branch "${{ github.base_ref || 'main' }}" || true)"
+          if [[ -n "$changed" ]]; then echo "any=true" >> "$GITHUB_OUTPUT"; else echo "any=false" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: helm/kind-action@06c1ae10762d3b9c1644e7fe69596ae519e015a2 # v1.15.0
+        if: steps.changed.outputs.any == 'true'
+        with:
+          version: v${{ env.kind_version }}
+          node_image: ${{ matrix.k8s.image }}
+          cluster_name: ct-${{ matrix.k8s.name }}
+          wait: 120s
+
+      - name: ct install --upgrade
+        if: steps.changed.outputs.any == 'true'
+        run: ct install --config ct.yaml --target-branch "${{ github.base_ref || 'main' }}" --upgrade

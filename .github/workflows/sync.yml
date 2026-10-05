@@ -1,0 +1,156 @@
+name: Sync CRDs
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      charts:
+        description: Space-separated chart names (empty = all)
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    name: Discover upstream updates
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+      any: ${{ steps.discover.outputs.any }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-tools
+        with:
+          tools: nushell
+      - id: discover
+        run: |
+          set -euo pipefail
+          if [[ -n "${{ inputs.charts }}" ]]; then args=(${{ inputs.charts }}); else args=(--all); fi
+          nu tooling/crdgen/mod.nu sync "${args[@]}" --dry-run --json > dry-run.json
+          matrix="$(nu -c 'open dry-run.json | where to != null | select name to | to json -r')"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          if [[ "$matrix" == "[]" ]]; then echo "any=false" >> "$GITHUB_OUTPUT"; else echo "any=true" >> "$GITHUB_OUTPUT"; fi
+          echo "$matrix"
+
+  sync:
+    name: Sync ${{ matrix.target.name }} → ${{ matrix.target.to }}
+    needs: [discover]
+    if: needs.discover.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        target: ${{ fromJson(needs.discover.outputs.matrix) }}
+    steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app.outputs.token }}
+      - uses: ./.github/actions/setup-tools
+        with:
+          tools: nushell helm kustomize
+
+      - name: Regenerate at ${{ matrix.target.to }}
+        id: regen
+        env:
+          CRDGEN_BASE_REF: origin/main
+        run: |
+          set -euo pipefail
+          set +e
+          nu tooling/crdgen/mod.nu sync "${{ matrix.target.name }}" --json > sync.json 2> sync.err
+          rc=$?
+          set -e
+          cat sync.err >&2
+          if [[ $rc -ne 0 ]]; then
+            echo "failed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          {
+            echo "failed=false"
+            echo "version=$(nu -c 'open sync.json | get 0.version')"
+            echo "from=$(nu -c 'open sync.json | get 0.from')"
+          } >> "$GITHUB_OUTPUT"
+          rm sync.json
+
+      - name: Pull request
+        if: steps.regen.outputs.failed == 'false'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          NAME: ${{ matrix.target.name }}
+          TO: ${{ matrix.target.to }}
+          FROM: ${{ steps.regen.outputs.from }}
+          VERSION: ${{ steps.regen.outputs.version }}
+        run: |
+          set -euo pipefail
+          branch="sync/$NAME/$TO"
+          git config user.name "${{ steps.app.outputs.app-slug }}[bot]"
+          git config user.email "${{ steps.app.outputs.app-slug }}[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add "sources/$NAME.yaml" "charts/$NAME" NOTICE
+          if git diff --cached --quiet; then echo "nothing to commit"; exit 0; fi
+          git commit -q -m "chore($NAME): sync CRDs to $TO" -m "Upstream $FROM -> $TO. Chart version $VERSION."
+          git push -f origin "$branch"
+
+          crd_diff="$(git diff --stat origin/main -- "charts/$NAME/templates" | tail -n 20)"
+          readme_dropped="$(sed -n '/^## Not included/,/^## /p' "charts/$NAME/README.md" | grep '^- ' || true)"
+          repo_url="$(nu -c "open sources/$NAME.yaml | get upstream.repo")"
+          cat > body.md <<EOF
+          Automated sync of **$NAME** to upstream **$TO** (was $FROM). Chart version: **$VERSION**.
+
+          - Upstream release: $repo_url/releases/tag/$TO
+          - Diff: $repo_url/compare/$FROM...$TO
+
+          <details><summary>Template changes</summary>
+
+          \`\`\`
+          $crd_diff
+          \`\`\`
+          </details>
+
+          Non-CRD resources dropped by design:
+          ${readme_dropped:-"- none"}
+
+          Merges automatically once checks pass.
+          EOF
+
+          existing="$(gh pr list --head "$branch" --json number -q '.[0].number' || true)"
+          if [[ -n "$existing" ]]; then
+            gh pr edit "$existing" --title "chore($NAME): sync CRDs to $TO" --body-file body.md
+            pr="$existing"
+          else
+            pr="$(gh pr create --title "chore($NAME): sync CRDs to $TO" --body-file body.md --base main --head "$branch" --label sync | grep -o '[0-9]*$')"
+          fi
+          gh pr merge "$pr" --auto --squash
+
+      - name: Failure issue
+        if: steps.regen.outputs.failed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          NAME: ${{ matrix.target.name }}
+          TO: ${{ matrix.target.to }}
+        run: |
+          set -euo pipefail
+          title="sync failure: $NAME"
+          body="$(printf 'Syncing **%s** to upstream **%s** failed.\n\nRun: %s/actions/runs/%s\n\n```\n%s\n```\n\nLikely causes: upstream moved the CRD path, zero CRDs after filtering, or two sources disagree. Fix `sources/%s.yaml`.' \
+            "$NAME" "$TO" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$(tail -n 60 sync.err)" "$NAME")"
+          existing="$(gh issue list --state open --search "\"$title\" in:title" --json number -q '.[0].number' || true)"
+          if [[ -n "$existing" ]]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body" --label upstream-change
+          fi
+          exit 1

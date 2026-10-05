@@ -1,0 +1,9 @@
+# kube-linter configuration for hand-written charts (CRD charts have no workloads).
+checks:
+  addAllBuiltIn: true
+  exclude:
+    # Charts cannot know the consumer's resource budget; requests/limits are user values.
+    - unset-cpu-requirements
+    - unset-memory-requirements
+    # Helm-managed workloads commonly rely on default service accounts; judged per chart.
+    - default-service-account

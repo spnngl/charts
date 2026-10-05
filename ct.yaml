@@ -1,0 +1,16 @@
+# chart-testing configuration (ct lint / ct install).
+remote: origin
+target-branch: main
+chart-dirs:
+  - charts
+# Chart.yaml schema (yamale) + yamllint on Chart.yaml/values.yaml: ct defaults.
+validate-chart-schema: true
+validate-yaml: true
+# Maintainer names are GitHub accounts; keep validation on.
+validate-maintainers: true
+# Every change must bump version (generator does it for CRD charts).
+check-version-increment: true
+helm-lint-extra-args: --strict
+# ct install: wait for CRDs to be Established; CRD charts have no pods.
+helm-extra-args: --timeout 120s
+skip-clean-up: false
