@@ -47,9 +47,17 @@
             "enabled": false
         },
         {
-            "description": "Keep Helm on 3.x until the repo is validated against Helm 4.",
+            "description": "Helm is pinned twice in tooling/versions.toml: keep `helm` on 3.x (generator, release, Helm 3 install tests).",
             "matchDepNames": ["helm/helm"],
+            "matchCurrentValue": "/^3\\./",
             "allowedVersions": "<4.0.0",
+            "automerge": true
+        },
+        {
+            "description": "Keep `helm4` on 4.x (Helm 4 install tests).",
+            "matchDepNames": ["helm/helm"],
+            "matchCurrentValue": "/^4\\./",
+            "allowedVersions": "<5.0.0",
             "automerge": true
         },
         {
