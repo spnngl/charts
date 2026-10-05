@@ -31,8 +31,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-tools
         with:
-          tools: nushell helm
+          tools: nushell
       - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           matrix="$(nu tooling/release/plan.nu)"
@@ -58,11 +60,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-tools
         with:
-          tools: nushell helm cosign syft
+          tools: nushell helm cosign oras syft
 
       - name: Registry login
+        # helm uses its own credential store (~/.config/helm/registry); cosign and the
+        # GitHub attestation actions read ~/.docker/config.json. Both are needed.
         run: |
           echo "${{ github.token }}" | helm registry login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
+          echo "${{ github.token }}" | docker login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
 
       - name: Package
         id: package
@@ -71,15 +76,27 @@ jobs:
           helm package "${{ matrix.chart.dir }}" -d dist
           echo "tgz=dist/${{ matrix.chart.name }}-${{ matrix.chart.version }}.tgz" >> "$GITHUB_OUTPUT"
 
-      - name: Push
+      - name: Push (or resume from the existing tag)
         id: push
         run: |
           set -euo pipefail
-          out="$(helm push "${{ steps.package.outputs.tgz }}" "oci://$OCI_PATH" 2>&1 | tee /dev/stderr)"
-          digest="$(sed -n 's/^Digest: //p' <<<"$out")"
-          [[ "$digest" == sha256:* ]] || { echo "::error::could not parse digest from helm push output"; exit 1; }
-          echo "digest=$digest" >> "$GITHUB_OUTPUT"
-          echo "ref=$OCI_PATH/${{ matrix.chart.name }}@$digest" >> "$GITHUB_OUTPUT"
+          tag_ref="$OCI_PATH/${{ matrix.chart.name }}:${{ matrix.chart.version }}"
+          if digest="$(oras resolve "$tag_ref" 2>/dev/null)"; then
+            # A previous run pushed this version but failed later: never overwrite a
+            # published tag, resume signing/attesting/releasing from its digest.
+            echo "::notice::$tag_ref already exists ($digest); resuming"
+            # SBOM and release asset must describe the bytes actually in the registry.
+            rm -f "${{ steps.package.outputs.tgz }}"
+            helm pull "oci://$OCI_PATH/${{ matrix.chart.name }}" --version "${{ matrix.chart.version }}" -d dist
+          else
+            out="$(helm push "${{ steps.package.outputs.tgz }}" "oci://$OCI_PATH" 2>&1 | tee /dev/stderr)"
+            digest="$(sed -n 's/^Digest: //p' <<<"$out")"
+          fi
+          [[ "$digest" == sha256:* ]] || { echo "::error::could not determine chart digest"; exit 1; }
+          {
+            echo "digest=$digest"
+            echo "ref=$OCI_PATH/${{ matrix.chart.name }}@$digest"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Sign (cosign, key)
         env:
@@ -185,7 +202,9 @@ jobs:
         with:
           tools: nushell helm cosign
       - name: Registry login (read; package may still be private on first publish)
-        run: echo "${{ github.token }}" | helm registry login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
+        run: |
+          echo "${{ github.token }}" | helm registry login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
+          echo "${{ github.token }}" | docker login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
       - name: Smoke test with the documented verify commands
         env:
           GH_TOKEN: ${{ github.token }}

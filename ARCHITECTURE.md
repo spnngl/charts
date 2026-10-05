@@ -122,8 +122,9 @@ charts.
 
 ### `release.yml` (push to `main`, serialised)
 
-`tooling/release/plan.nu` lists charts whose `version` is absent from GHCR
-(`helm show chart`), then per chart (matrix, serialised):
+`tooling/release/plan.nu` lists charts whose GitHub Release `<name>-<version>`
+does not exist yet (the Release is the last step, hence the completion
+marker), then per chart (matrix, serialised):
 `helm package` → `helm push` (digest) → `cosign sign --key` by digest →
 `syft` SBOM → `cosign attest --type spdxjson` → `actions/attest-build-provenance`
 + `actions/attest-sbom` (push-to-registry) → GitHub Release `<name>-<version>`
@@ -138,7 +139,11 @@ secrets, so it also catches charts published before the secrets existed), and
 without repo secrets. `workflow_dispatch` with nothing to publish still runs
 the Artifact Hub job.
 
-Published versions are immutable. GHCR package is linked to this repo via
+Published versions are immutable: if the registry tag already exists (a
+previous run failed after `helm push`), the job resolves its digest and
+resumes signing/attesting/releasing instead of pushing again. Logins: `helm
+registry login` for helm, `docker login` for cosign and the attestation
+actions (they read `~/.docker/config.json`). GHCR package is linked to this repo via
 `Chart.yaml` `sources[0]` → `org.opencontainers.image.source`, which also
 makes it public automatically.
 
