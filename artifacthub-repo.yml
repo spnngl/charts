@@ -1,7 +1,5 @@
 # Artifact Hub repository metadata template.
-# `repositoryID` is filled per chart at release time by tooling/release/artifacthub.nu
-# (one Artifact Hub repository per OCI chart) and pushed as an OCI artifact at
-# ghcr.io/spnngl/charts/<chart>:artifacthub.io. Never commit a repositoryID here.
-repositoryID: ""
+# See: https://github.com/artifacthub/hub/blob/master/docs/metadata/artifacthub-repo.yml
+repositoryID: "b1f6cf12-0dd9-48fd-aa70-a982cd5c6b94"
 owners:
-  - name: spnngl
+  - name: "Lola Delannoy"

@@ -126,15 +126,21 @@ charts.
 (`helm show chart`), then per chart (matrix, serialised):
 `helm package` → `helm push` (digest) → `cosign sign --key` by digest →
 `syft` SBOM → `cosign attest --type spdxjson` → `actions/attest-build-provenance`
-+ `actions/attest-sbom` (push-to-registry) → `tooling/release/artifacthub.nu`
-(search AH repository by OCI URL, create if missing, `oras push`
-`artifacthub-repo.yml` with the `repositoryID`; skipped with a warning if AH
-secrets are absent) → GitHub Release `<name>-<version>` with `.tgz` + SBOM →
-package visibility check (warning if not public) → `tooling/release/verify.nu`
-runs the documented verify commands from a job without repo secrets.
++ `actions/attest-sbom` (push-to-registry) → GitHub Release `<name>-<version>`
+with `.tgz` + SBOM → package visibility check (warning if not public).
+
+Then two jobs: `tooling/release/artifacthub.nu --all` for **every** published
+chart (search the AH repository by OCI URL, create it as `spnngl-<chart>` if
+missing, `oras push` `artifacthub-repo.yml` with the `repositoryID` to
+`<chart>:artifacthub.io`; idempotent, skipped with a warning without AH
+secrets, so it also catches charts published before the secrets existed), and
+`tooling/release/verify.nu` running the documented verify commands from a job
+without repo secrets. `workflow_dispatch` with nothing to publish still runs
+the Artifact Hub job.
 
 Published versions are immutable. GHCR package is linked to this repo via
-`Chart.yaml` `sources[0]` → `org.opencontainers.image.source`.
+`Chart.yaml` `sources[0]` → `org.opencontainers.image.source`, which also
+makes it public automatically.
 
 ### `sync.yml` (daily + manual)
 
