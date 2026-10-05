@@ -20,6 +20,7 @@ Two kinds of charts live here:
 | [`external-secrets-crds`](./charts/external-secrets-crds) | [external-secrets/external-secrets](https://github.com/external-secrets/external-secrets) | stores, (Cluster)ExternalSecret, (Cluster)PushSecret, generators |
 | [`gateway-api-crds`](./charts/gateway-api-crds) | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | standard channel |
 | [`gateway-api-exp-crds`](./charts/gateway-api-exp-crds) | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | experimental channel (mutually exclusive with the standard chart) |
+| [`agentgateway-crds`](./charts/agentgateway-crds) | [agentgateway/agentgateway](https://github.com/agentgateway/agentgateway) | backends, models, parameters, policies |
 | [`cilium-crds`](./charts/cilium-crds) | [cilium/cilium](https://github.com/cilium/cilium) | cilium.io v2 + v2alpha1 |
 | [`cluster-api-crds`](./charts/cluster-api-crds) | [kubernetes-sigs/cluster-api](https://github.com/kubernetes-sigs/cluster-api) | core CRDs (clusters, machines, ClusterClass, IPAM, runtime) |
 | [`orc-crds`](./charts/orc-crds) | [k-orc/openstack-resource-controller](https://github.com/k-orc/openstack-resource-controller) | OpenStack resources |
