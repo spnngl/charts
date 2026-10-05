@@ -5,7 +5,7 @@
 CustomResourceDefinitions for agentgateway (backends, models, parameters, policies).
 
 CRDs are copied verbatim from [agentgateway/agentgateway](https://github.com/agentgateway/agentgateway)
-at tag [`v1.5.0`](https://github.com/agentgateway/agentgateway/tree/v1.5.0) (commit `fe6732474a96a0363dfb9822859af4e9bab360fa`),
+at tag [`v1.6.0`](https://github.com/agentgateway/agentgateway/tree/v1.6.0) (commit `ea5608642b9d5c94c5baf5fd9f2f9849b808e963`),
 path(s) `controller/install/helm/agentgateway-crds/templates`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 

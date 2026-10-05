@@ -1,6 +1,6 @@
 The CustomResourceDefinition manifests under templates/ were copied from
   https://github.com/agentgateway/agentgateway
-at tag v1.5.0 (commit fe6732474a96a0363dfb9822859af4e9bab360fa), path(s): controller/install/helm/agentgateway-crds/templates
+at tag v1.6.0 (commit ea5608642b9d5c94c5baf5fd9f2f9849b808e963), path(s): controller/install/helm/agentgateway-crds/templates
 and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
 added; server-side metadata and upstream Helm release metadata were removed.
 Upstream license: Apache-2.0 (see LICENSE in this directory).
