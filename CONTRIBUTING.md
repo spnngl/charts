@@ -5,7 +5,10 @@
 - `charts/*-crds/` is **generated**. Never edit it by hand; CI rejects drift.
   Edit `sources/<name>-crds.yaml` or `tooling/crdgen/`, then regenerate.
 - Hand-written charts live in `charts/<name>/` without the `-crds` suffix.
-- Conventional commits: `feat(<chart>): ...`, `fix(tooling): ...`, `chore(ci): ...`.
+- Conventional commits, CI-enforced on every PR commit. Types: `feat`, `fix`,
+  `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`,
+  `revert` (write reverts as `revert: <subject>`, not git'"'"'s default
+  `Revert "..."`). Examples: `feat(<chart>): ...`, `fix(tooling): ...`.
 - One concern per pull request.
 
 ## Prerequisites
