@@ -98,7 +98,7 @@ runs:
 
     - name: Expose tools
       shell: bash
-      run: |
+      run: |-
         echo "$HOME/.crdgen-tools" >> "$GITHUB_PATH"
         echo "chart_testing_version=${{ steps.versions.outputs.chart_testing }}" >> "$GITHUB_ENV"
         echo "kind_version=${{ steps.versions.outputs.kind }}" >> "$GITHUB_ENV"
