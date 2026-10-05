@@ -1,0 +1,6 @@
+The CustomResourceDefinition manifests under templates/ were copied from
+  https://github.com/cert-manager/cert-manager
+at tag v1.21.2 (commit 922a06aa49ee4bb802db268ef72a174af70edd32), path(s): deploy/crds
+and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
+added; server-side metadata and upstream Helm release metadata were removed.
+Upstream license: Apache-2.0 (see LICENSE in this directory).

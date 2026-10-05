@@ -1,0 +1,21 @@
+name: cert-manager-crds
+description: CustomResourceDefinitions for cert-manager (certificates, issuers, ACME orders and challenges)
+upstream:
+  repo: https://github.com/cert-manager/cert-manager
+  homepage: https://cert-manager.io
+  icon: https://raw.githubusercontent.com/cert-manager/cert-manager/master/logo/logo.svg
+  license: Apache-2.0
+version:
+  # Repo also carries `cmd/ctl/v*` tags; this pattern excludes them.
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v1.21.2
+sources:
+  # controller-gen output. The in-tree chart's templates/crd-*.yaml are
+  # derived from it and wrapped in `{{ if .Values.crds.enabled }}`.
+  - kind: git-path
+    path: deploy/crds
+transform:
+  include: []
+  exclude: []
+  patches: []
