@@ -36,8 +36,22 @@ def ah-post [path: string, body: record]: nothing -> nothing {
   }
 }
 
+# Artifact Hub caches search responses per query string, so a lookup made
+# before creation would keep returning [] afterwards: bust it with a nonce.
 def find-repository [url: string]: nothing -> any {
-  ah-get $"/repositories/search?url=($url)&limit=10" | where url == $url | get 0?
+  let nonce = (date now | format date %s%f)
+  ah-get $"/repositories/search?url=($url)&limit=10&nonce=($nonce)" | where url == $url | get 0?
+}
+
+# Creation is asynchronous on the AH side; poll a few times.
+def find-repository-retry [url: string]: nothing -> any {
+  for attempt in 1..6 {
+    sleep 5sec
+    let found = (find-repository $url)
+    if $found != null { return $found }
+    print $"  waiting for Artifact Hub to list ($url) \(attempt ($attempt)/6\)"
+  }
+  null
 }
 
 def is-published [chart: string]: nothing -> bool {
@@ -51,7 +65,7 @@ def ensure [chart: string, template: record]: nothing -> string {
   let repo = (if $existing == null {
     print $"  registering ($url) as ($chart)"
     ah-post "/repositories/user" {kind: 0, name: (ah-repo-name $chart), display_name: $chart, url: $url}
-    find-repository $url
+    find-repository-retry $url
   } else {
     $existing
   })
