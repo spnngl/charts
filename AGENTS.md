@@ -70,7 +70,8 @@ Full procedure: `.agents/skills/add-crd-chart/SKILL.md`. Short version:
 
 ## Security
 
-- Secrets (`COSIGN_*`, `APP_*`, `AH_*`) are repo secrets. Never print them,
+- Secrets (`APP_*`, `AH_*`) are repo secrets. Signing is cosign keyless
+  (GitHub Actions OIDC); never reintroduce a signing key secret. Never print them,
   never write them to files, never request new ones without stating why.
 - `pr.yml` must stay secret-free (it runs on fork PRs).
 - Report suspected key compromise immediately; follow `SECURITY.md`.

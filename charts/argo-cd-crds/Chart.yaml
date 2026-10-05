@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for Argo CD (Applications, ApplicationSets,
   AppProjects)
 type: application
-version: 3.5.3
+version: 3.5.4
 appVersion: 3.5.3
 kubeVersion: ">=1.16.0-0"
 home: https://argo-cd.readthedocs.io
@@ -50,11 +50,8 @@ annotations:
       url: https://github.com/spnngl/charts/tree/main/charts/argo-cd-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
-  artifacthub.io/signKey: |
-    fingerprint: 91e5d5ec8bed1b3ba3041aa69fdbabc62dd5ee4b874cc31b6502a01b402910ef
-    url: https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub
   charts.spnngl.io/upstream-repo: https://github.com/argoproj/argo-cd
   charts.spnngl.io/upstream-tag: v3.5.3
   charts.spnngl.io/upstream-commit: c9c369efcc5b2a0bd720803f8d14a1c3eaddf579
   artifacthub.io/changes: |
-    - Initial release, CRDs from upstream v3.5.3
+    - Chart regenerated with updated tooling (upstream unchanged at v3.5.3)

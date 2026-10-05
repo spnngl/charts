@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for TopoLVM (LogicalVolume, topolvm.io and legacy
   topolvm.cybozu.com groups)
 type: application
-version: 0.41.2
+version: 0.41.3
 appVersion: 0.41.1
 kubeVersion: ">=1.16.0-0"
 home: https://github.com/topolvm/topolvm
@@ -44,9 +44,6 @@ annotations:
       url: https://github.com/spnngl/charts/tree/main/charts/topolvm-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
-  artifacthub.io/signKey: |
-    fingerprint: 91e5d5ec8bed1b3ba3041aa69fdbabc62dd5ee4b874cc31b6502a01b402910ef
-    url: https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub
   charts.spnngl.io/upstream-repo: https://github.com/topolvm/topolvm
   charts.spnngl.io/upstream-tag: v0.41.1
   charts.spnngl.io/upstream-commit: 2d0c5174afb93856d9fc5105e7c04ed50b65628f

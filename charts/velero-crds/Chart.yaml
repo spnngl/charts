@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for Velero (backups, restores, schedules, locations,
   data movers)
 type: application
-version: 1.18.5
+version: 1.18.6
 appVersion: 1.18.4
 kubeVersion: ">=1.16.0-0"
 home: https://velero.io
@@ -114,9 +114,6 @@ annotations:
       url: https://github.com/spnngl/charts/tree/main/charts/velero-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
-  artifacthub.io/signKey: |
-    fingerprint: 91e5d5ec8bed1b3ba3041aa69fdbabc62dd5ee4b874cc31b6502a01b402910ef
-    url: https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub
   charts.spnngl.io/upstream-repo: https://github.com/vmware-tanzu/velero
   charts.spnngl.io/upstream-tag: v1.18.4
   charts.spnngl.io/upstream-commit: 4ee1e79a7aed367fd9b767b8219ec65bd0c96892

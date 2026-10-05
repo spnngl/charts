@@ -50,13 +50,11 @@ export def pipeline [manifest: record]: nothing -> record {
 
 # Generate a chart into a fresh temp dir; returns {dir, summary}.
 export def generate [manifest: record, --skip-validate]: nothing -> record {
-  let root = (repo-root)
   let p = (pipeline $manifest)
   let tmp = (mktemp -d -t $"crdgen-($manifest.name).XXXXXX")
   let dir = ($tmp | path join $manifest.name)
   emit chart-files $dir $manifest $p.resolved $p.crds $p.dropped $p.license
-  let cosign_pub = (open --raw ($root | path join "cosign.pub"))
-  let chart_record = (emit chart-record $manifest $p.resolved $p.crds $p.license $cosign_pub)
+  let chart_record = (emit chart-record $manifest $p.resolved $p.crds $p.license)
   let base_ref = (version base-ref)
   let v = (version compute $manifest.name $p.resolved.appVersion $p.resolved.tag $dir $chart_record $base_ref)
   emit chart-yaml $chart_record $v.version $v.changes | save -f ($dir | path join "Chart.yaml")

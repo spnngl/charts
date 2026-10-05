@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for agentgateway (backends, models, parameters,
   policies)
 type: application
-version: 1.6.1
+version: 1.6.2
 appVersion: 1.6.0
 kubeVersion: ">=1.25.0-0"
 home: https://agentgateway.dev
@@ -56,9 +56,6 @@ annotations:
       url: https://github.com/spnngl/charts/tree/main/charts/agentgateway-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
-  artifacthub.io/signKey: |
-    fingerprint: 91e5d5ec8bed1b3ba3041aa69fdbabc62dd5ee4b874cc31b6502a01b402910ef
-    url: https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub
   charts.spnngl.io/upstream-repo: https://github.com/agentgateway/agentgateway
   charts.spnngl.io/upstream-tag: v1.6.0
   charts.spnngl.io/upstream-commit: ea5608642b9d5c94c5baf5fd9f2f9849b808e963

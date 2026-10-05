@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for Chaos Mesh (chaos experiments, schedules,
   workflows)
 type: application
-version: 2.8.4
+version: 2.8.5
 appVersion: 2.8.4
 kubeVersion: ">=1.16.0-0"
 home: https://chaos-mesh.org
@@ -149,11 +149,8 @@ annotations:
       url: https://github.com/spnngl/charts/tree/main/charts/chaos-mesh-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
-  artifacthub.io/signKey: |
-    fingerprint: 91e5d5ec8bed1b3ba3041aa69fdbabc62dd5ee4b874cc31b6502a01b402910ef
-    url: https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub
   charts.spnngl.io/upstream-repo: https://github.com/chaos-mesh/chaos-mesh
   charts.spnngl.io/upstream-tag: v2.8.4
   charts.spnngl.io/upstream-commit: 0bfee5d117f859ab0e3f433a370e622283badd91
   artifacthub.io/changes: |
-    - Initial release, CRDs from upstream v2.8.4
+    - Chart regenerated with updated tooling (upstream unchanged at v2.8.4)

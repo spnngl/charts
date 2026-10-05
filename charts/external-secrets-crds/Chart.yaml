@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for External Secrets Operator (stores, external/push
   secrets, generators)
 type: application
-version: 2.11.1
+version: 2.11.2
 appVersion: 2.11.0
 kubeVersion: ">=1.25.0-0"
 home: https://external-secrets.io
@@ -187,9 +187,6 @@ annotations:
       url: https://github.com/spnngl/charts/tree/main/charts/external-secrets-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
-  artifacthub.io/signKey: |
-    fingerprint: 91e5d5ec8bed1b3ba3041aa69fdbabc62dd5ee4b874cc31b6502a01b402910ef
-    url: https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub
   charts.spnngl.io/upstream-repo: https://github.com/external-secrets/external-secrets
   charts.spnngl.io/upstream-tag: v2.11.0
   charts.spnngl.io/upstream-commit: e8f12e1f1646e0ad47966458023ff10c9577f2b0

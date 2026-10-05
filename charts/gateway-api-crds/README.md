@@ -77,8 +77,14 @@ CustomResourceDefinitions only:
 
 ```sh
 REF=ghcr.io/spnngl/charts/gateway-api-crds:<version>
-cosign verify --key https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub $REF
-cosign verify-attestation --key https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub --type spdxjson $REF
+cosign verify \
+  --certificate-identity-regexp '^https://github\.com/spnngl/charts/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  $REF
+cosign verify-attestation --type spdxjson \
+  --certificate-identity-regexp '^https://github\.com/spnngl/charts/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  $REF
 gh attestation verify oci://$REF --owner spnngl
 ```
 

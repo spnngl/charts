@@ -83,21 +83,33 @@ or the chart's Artifact Hub page.
 
 ## Verifying what you install
 
-Every chart version is signed with the key in [`cosign.pub`](./cosign.pub)
-and carries SBOM and SLSA provenance attestations.
+Every chart version is signed with cosign keyless (Sigstore): the signing
+certificate is issued by Fulcio to this repository's `release.yml` workflow
+through GitHub Actions OIDC, and the signature is logged in Rekor. No
+long-lived key exists. Each version also carries SBOM and SLSA provenance
+attestations.
 
 ```sh
 REF=ghcr.io/spnngl/charts/<chart>:<version>
 
 # signature
-cosign verify --key https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub $REF
+cosign verify \
+  --certificate-identity-regexp '^https://github\.com/spnngl/charts/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  $REF
 
-# SBOM attestation (cosign, key-based)
-cosign verify-attestation --key https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub --type spdxjson $REF
+# SBOM attestation (cosign, keyless)
+cosign verify-attestation --type spdxjson \
+  --certificate-identity-regexp '^https://github\.com/spnngl/charts/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  $REF
 
 # build provenance (GitHub artifact attestations, Sigstore)
 gh attestation verify oci://$REF --owner spnngl
 ```
+
+Versions published before the switch to keyless were signed with the retired
+key [`cosign.pub`](./cosign.pub); see [`SECURITY.md`](./SECURITY.md#previous-keys).
 
 ## How CRD charts are built
 

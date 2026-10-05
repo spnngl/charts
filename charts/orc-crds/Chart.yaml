@@ -4,7 +4,7 @@ apiVersion: v2
 name: orc-crds
 description: CustomResourceDefinitions for the OpenStack Resource Controller (ORC)
 type: application
-version: 2.6.1
+version: 2.6.2
 appVersion: 2.6.0
 kubeVersion: ">=1.25.0-0"
 home: https://k-orc.cloud/
@@ -152,9 +152,6 @@ annotations:
       url: https://github.com/spnngl/charts/tree/main/charts/orc-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
-  artifacthub.io/signKey: |
-    fingerprint: 91e5d5ec8bed1b3ba3041aa69fdbabc62dd5ee4b874cc31b6502a01b402910ef
-    url: https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub
   charts.spnngl.io/upstream-repo: https://github.com/k-orc/openstack-resource-controller
   charts.spnngl.io/upstream-tag: v2.6.0
   charts.spnngl.io/upstream-commit: 699ab0b3888c33dbf9957b4e47d003b466525a0a

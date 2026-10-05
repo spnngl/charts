@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for cert-manager (certificates, issuers, ACME orders
   and challenges)
 type: application
-version: 1.21.2
+version: 1.21.3
 appVersion: 1.21.2
 kubeVersion: ">=1.25.0-0"
 home: https://cert-manager.io
@@ -73,11 +73,8 @@ annotations:
       url: https://github.com/spnngl/charts/tree/main/charts/cert-manager-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
-  artifacthub.io/signKey: |
-    fingerprint: 91e5d5ec8bed1b3ba3041aa69fdbabc62dd5ee4b874cc31b6502a01b402910ef
-    url: https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub
   charts.spnngl.io/upstream-repo: https://github.com/cert-manager/cert-manager
   charts.spnngl.io/upstream-tag: v1.21.2
   charts.spnngl.io/upstream-commit: 922a06aa49ee4bb802db268ef72a174af70edd32
   artifacthub.io/changes: |
-    - Initial release, CRDs from upstream v1.21.2
+    - Chart regenerated with updated tooling (upstream unchanged at v1.21.2)

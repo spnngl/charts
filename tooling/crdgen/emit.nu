@@ -68,7 +68,6 @@ export def "emit chart-record" [
   resolved: record
   crds: list<record>
   license: record
-  cosign_pub: string
 ]: nothing -> record {
   let links = (
     [
@@ -85,7 +84,6 @@ export def "emit chart-record" [
     "artifacthub.io/license": $license.spdx
     "artifacthub.io/crds": (ah-crds-annotation $crds)
     "artifacthub.io/links": ($links | to yaml)
-    "artifacthub.io/signKey": ({fingerprint: ($cosign_pub | hash sha256), url: $COSIGN_PUB_URL} | to yaml)
     $"($ANNOTATION_PREFIX)/upstream-repo": $manifest.upstream.repo
     $"($ANNOTATION_PREFIX)/upstream-tag": $resolved.tag
     $"($ANNOTATION_PREFIX)/upstream-commit": $resolved.sha
@@ -312,8 +310,14 @@ export def "emit readme" [
     ""
     "```sh"
     $"REF=($OCI_HOST_PATH)/($name):<version>"
-    $"cosign verify --key ($COSIGN_PUB_URL) $REF"
-    $"cosign verify-attestation --key ($COSIGN_PUB_URL) --type spdxjson $REF"
+    "cosign verify \\"
+    $"  --certificate-identity-regexp '($COSIGN_IDENTITY_REGEXP)' \\"
+    $"  --certificate-oidc-issuer ($COSIGN_OIDC_ISSUER) \\"
+    "  $REF"
+    "cosign verify-attestation --type spdxjson \\"
+    $"  --certificate-identity-regexp '($COSIGN_IDENTITY_REGEXP)' \\"
+    $"  --certificate-oidc-issuer ($COSIGN_OIDC_ISSUER) \\"
+    "  $REF"
     $"gh attestation verify oci://$REF --owner ($OWNER)"
     "```"
     ""

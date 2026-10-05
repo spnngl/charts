@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for Cluster API core (clusters, machines,
   ClusterClass, IPAM, runtime extensions)
 type: application
-version: 1.14.3
+version: 1.14.4
 appVersion: 1.14.2
 kubeVersion: ">=1.25.0-0"
 home: https://cluster-api.sigs.k8s.io
@@ -103,9 +103,6 @@ annotations:
       url: https://github.com/spnngl/charts/tree/main/charts/cluster-api-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
-  artifacthub.io/signKey: |
-    fingerprint: 91e5d5ec8bed1b3ba3041aa69fdbabc62dd5ee4b874cc31b6502a01b402910ef
-    url: https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub
   charts.spnngl.io/upstream-repo: https://github.com/kubernetes-sigs/cluster-api
   charts.spnngl.io/upstream-tag: v1.14.2
   charts.spnngl.io/upstream-commit: 5f7d58c9ad647f31bd342bf8de33092c27f7fc38

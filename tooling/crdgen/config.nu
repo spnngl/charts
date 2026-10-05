@@ -5,7 +5,9 @@ export const REPO_SLUG = "spnngl/charts"
 export const OWNER = "spnngl"
 export const OCI_BASE = "oci://ghcr.io/spnngl/charts"
 export const OCI_HOST_PATH = "ghcr.io/spnngl/charts"
-export const COSIGN_PUB_URL = "https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub"
+# Keyless (Sigstore/Fulcio) signer: `release.yml` of this repo, any ref, via GitHub Actions OIDC.
+export const COSIGN_IDENTITY_REGEXP = '^https://github\.com/spnngl/charts/\.github/workflows/release\.yml@'
+export const COSIGN_OIDC_ISSUER = "https://token.actions.githubusercontent.com"
 export const ANNOTATION_PREFIX = "charts.spnngl.io"
 
 # Licenses the generator accepts without a human decision (SPDX ids).
