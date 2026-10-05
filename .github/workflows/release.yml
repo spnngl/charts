@@ -1,8 +1,11 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SchemaStore/schemastore/refs/heads/master/src/schemas/json/github-workflow.json
+
 name: Release
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - "charts/**"
       - ".github/workflows/release.yml"
@@ -43,14 +46,15 @@ jobs:
 
   publish:
     name: Publish ${{ matrix.chart.name }} ${{ matrix.chart.version }}
-    needs: [plan]
+    needs:
+      - plan
     if: needs.plan.outputs.any == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: write        # GitHub Release
-      packages: write        # GHCR push
-      id-token: write        # Sigstore (GitHub attestations)
-      attestations: write    # GitHub attestations store
+      contents: write # GitHub Release
+      packages: write # GHCR push
+      id-token: write # Sigstore (GitHub attestations)
+      attestations: write # GitHub attestations store
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -165,12 +169,14 @@ jobs:
     # Runs for every published chart on every release run (idempotent), so
     # charts published before the Artifact Hub secrets existed get registered too.
     name: Artifact Hub
-    needs: [plan, publish]
+    needs:
+      - plan
+      - publish
     if: always() && needs.plan.result == 'success' && needs.publish.result != 'failure'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write        # push the artifacthub.io metadata tag
+      packages: write # push the artifacthub.io metadata tag
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-tools
@@ -186,7 +192,9 @@ jobs:
 
   verify:
     name: Verify ${{ matrix.chart.name }} ${{ matrix.chart.version }}
-    needs: [plan, publish]
+    needs:
+      - plan
+      - publish
     if: needs.plan.outputs.any == 'true'
     runs-on: ubuntu-latest
     permissions:
