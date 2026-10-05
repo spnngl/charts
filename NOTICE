@@ -16,6 +16,7 @@ modifications made, and attribution in its README.
 - external-secrets-crds: CRDs from https://github.com/external-secrets/external-secrets (Apache-2.0)
 - gateway-api-crds: CRDs from https://github.com/kubernetes-sigs/gateway-api (Apache-2.0)
 - gateway-api-exp-crds: CRDs from https://github.com/kubernetes-sigs/gateway-api (Apache-2.0)
+- kyverno-crds: CRDs from https://github.com/kyverno/kyverno (Apache-2.0)
 - orc-crds: CRDs from https://github.com/k-orc/openstack-resource-controller (Apache-2.0)
 - topolvm-crds: CRDs from https://github.com/topolvm/topolvm (Apache-2.0)
 - traefik-crds: CRDs from https://github.com/traefik/traefik (MIT)

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/spnngl/charts/values.schema.json",
+  "title": "CRD chart values",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "annotations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Extra annotations added to every CRD."
+    },
+    "labels": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Extra labels added to every CRD."
+    },
+    "keepOnUninstall": {
+      "type": "boolean",
+      "description": "Add helm.sh/resource-policy: keep so CRDs survive helm uninstall."
+    }
+  }
+}

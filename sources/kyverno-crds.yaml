@@ -1,0 +1,24 @@
+name: kyverno-crds
+description: CustomResourceDefinitions for Kyverno (policies, CEL policies, exceptions, policy reports)
+upstream:
+  repo: https://github.com/kyverno/kyverno
+  homepage: https://kyverno.io
+  icon: https://raw.githubusercontent.com/kyverno/kyverno/main/img/logo.png
+  license: Apache-2.0
+version:
+  # Repo also carries `kyverno-policies-chart-v*` and `test-dev` tags;
+  # pre-releases (-rc, -beta) are excluded by the pattern.
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v1.19.1
+sources:
+  # controller-gen output (Makefile CRDS_PATH): kyverno.io, policies.kyverno.io
+  # (generated from github.com/kyverno/api), reports.kyverno.io, wgpolicyk8s.io.
+  # The in-tree chart's `crds` subchart is a templated copy and lacks
+  # policies.kyverno.io (shipped by the separate kyverno-api chart).
+  - kind: git-path
+    path: config/crds
+transform:
+  include: []
+  exclude: []
+  patches: []
