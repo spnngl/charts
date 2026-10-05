@@ -17,4 +17,5 @@ modifications made, and attribution in its README.
 - gateway-api-exp-crds: CRDs from https://github.com/kubernetes-sigs/gateway-api (Apache-2.0)
 - orc-crds: CRDs from https://github.com/k-orc/openstack-resource-controller (Apache-2.0)
 - topolvm-crds: CRDs from https://github.com/topolvm/topolvm (Apache-2.0)
+- traefik-crds: CRDs from https://github.com/traefik/traefik (MIT)
 - velero-crds: CRDs from https://github.com/vmware-tanzu/velero (Apache-2.0)

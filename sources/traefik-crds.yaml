@@ -1,0 +1,21 @@
+name: traefik-crds
+description: CustomResourceDefinitions for Traefik Proxy (IngressRoutes, Middlewares, TLS options, transports)
+upstream:
+  repo: https://github.com/traefik/traefik
+  homepage: https://traefik.io
+  icon: https://raw.githubusercontent.com/traefik/traefik/master/docs/content/assets/img/traefikproxy-icon-color.png
+  license: MIT
+version:
+  # Pre-releases (-rc, -ea, -beta) are excluded by the pattern.
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v3.7.13
+sources:
+  # Concatenated controller-gen output (script/code-gen.sh); the per-CRD files
+  # are not committed. integration/fixtures/k8s/01-traefik-crd.yml is a copy.
+  - kind: git-path
+    path: docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml
+transform:
+  include: []
+  exclude: []
+  patches: []

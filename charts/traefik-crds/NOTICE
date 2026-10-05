@@ -1,0 +1,6 @@
+The CustomResourceDefinition manifests under templates/ were copied from
+  https://github.com/traefik/traefik
+at tag v3.7.13 (commit fc92cc118a0557a029c7019d5ee06665127b0f13), path(s): docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml
+and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
+added; server-side metadata and upstream Helm release metadata were removed.
+Upstream license: MIT (see LICENSE in this directory).

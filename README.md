@@ -27,6 +27,7 @@ Two kinds of charts live here:
 | [`cluster-api-crds`](./charts/cluster-api-crds) | [kubernetes-sigs/cluster-api](https://github.com/kubernetes-sigs/cluster-api) | core CRDs (clusters, machines, ClusterClass, IPAM, runtime) |
 | [`orc-crds`](./charts/orc-crds) | [k-orc/openstack-resource-controller](https://github.com/k-orc/openstack-resource-controller) | OpenStack resources |
 | [`topolvm-crds`](./charts/topolvm-crds) | [topolvm/topolvm](https://github.com/topolvm/topolvm) | LogicalVolume |
+| [`traefik-crds`](./charts/traefik-crds) | [traefik/traefik](https://github.com/traefik/traefik) | traefik.io (IngressRoutes, Middlewares, TLS options, transports) |
 | [`velero-crds`](./charts/velero-crds) | [vmware-tanzu/velero](https://github.com/vmware-tanzu/velero) | backups, restores, schedules, locations, data movers |
 
 Each chart README lists the exact CRDs, versions and the pinned upstream tag/commit.
