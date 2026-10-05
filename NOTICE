@@ -19,3 +19,4 @@ modifications made, and attribution in its README.
 - topolvm-crds: CRDs from https://github.com/topolvm/topolvm (Apache-2.0)
 - traefik-crds: CRDs from https://github.com/traefik/traefik (MIT)
 - velero-crds: CRDs from https://github.com/vmware-tanzu/velero (Apache-2.0)
+- vertical-pod-autoscaler-crds: CRDs from https://github.com/kubernetes/autoscaler (Apache-2.0)

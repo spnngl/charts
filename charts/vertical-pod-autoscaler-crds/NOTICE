@@ -1,0 +1,6 @@
+The CustomResourceDefinition manifests under templates/ were copied from
+  https://github.com/kubernetes/autoscaler
+at tag vertical-pod-autoscaler-1.8.0 (commit 238579734e73e4a263d1ab75a44353e58eeee3ea), path(s): vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
+and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
+added; server-side metadata and upstream Helm release metadata were removed.
+Upstream license: Apache-2.0 (see LICENSE in this directory).
