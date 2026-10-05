@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for Traefik Proxy (IngressRoutes, Middlewares, TLS
   options, transports)
 type: application
-version: 3.7.13
+version: 3.7.14
 appVersion: 3.7.13
 kubeVersion: ">=1.25.0-0"
 home: https://traefik.io
@@ -90,11 +90,8 @@ annotations:
       url: https://github.com/spnngl/charts/tree/main/charts/traefik-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
-  artifacthub.io/signKey: |
-    fingerprint: 91e5d5ec8bed1b3ba3041aa69fdbabc62dd5ee4b874cc31b6502a01b402910ef
-    url: https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub
   charts.spnngl.io/upstream-repo: https://github.com/traefik/traefik
   charts.spnngl.io/upstream-tag: v3.7.13
   charts.spnngl.io/upstream-commit: fc92cc118a0557a029c7019d5ee06665127b0f13
   artifacthub.io/changes: |
-    - Initial release, CRDs from upstream v3.7.13
+    - Chart regenerated with updated tooling (upstream unchanged at v3.7.13)

@@ -53,7 +53,7 @@ jobs:
     permissions:
       contents: write # GitHub Release
       packages: write # GHCR push
-      id-token: write # Sigstore (GitHub attestations)
+      id-token: write # Sigstore keyless: cosign (Fulcio cert) and GitHub attestations
       attestations: write # GitHub attestations store
     strategy:
       fail-fast: false
@@ -102,20 +102,14 @@ jobs:
             echo "ref=$OCI_PATH/${{ matrix.chart.name }}@$digest"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Sign (cosign, key)
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: cosign sign --yes --key env://COSIGN_PRIVATE_KEY "${{ steps.push.outputs.ref }}"
+      - name: Sign (cosign, keyless)
+        run: cosign sign --oidc-provider=github-actions --yes "${{ steps.push.outputs.ref }}"
 
       - name: SBOM (syft)
         run: syft scan "file:${{ steps.package.outputs.tgz }}" -o spdx-json=dist/sbom.spdx.json
 
-      - name: Attest SBOM (cosign, key)
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: cosign attest --yes --key env://COSIGN_PRIVATE_KEY --type spdxjson --predicate dist/sbom.spdx.json "${{ steps.push.outputs.ref }}"
+      - name: Attest SBOM (cosign, keyless)
+        run: cosign attest --oidc-provider=github-actions --yes --type spdxjson --predicate dist/sbom.spdx.json "${{ steps.push.outputs.ref }}"
 
       - name: Attest provenance (GitHub)
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
@@ -148,7 +142,7 @@ jobs:
           helm install ${{ matrix.chart.name }} oci://$OCI_PATH/${{ matrix.chart.name }} --version ${{ matrix.chart.version }}
           \`\`\`
 
-          Digest: \`${{ steps.push.outputs.digest }}\` — verify with \`cosign verify --key cosign.pub\` and \`gh attestation verify --owner ${{ github.repository_owner }}\`.
+          Digest: \`${{ steps.push.outputs.digest }}\` — verify with \`cosign verify\` (keyless) and \`gh attestation verify\`: see https://github.com/${{ github.repository }}#verifying-what-you-install.
           EOF
           gh release create "$tag" "${{ steps.package.outputs.tgz }}" dist/sbom.spdx.json \
             --title "$tag" --notes-file notes.md --target "$GITHUB_SHA"

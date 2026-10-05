@@ -4,7 +4,7 @@ apiVersion: v2
 name: gateway-api-exp-crds
 description: CustomResourceDefinitions for Kubernetes Gateway API, experimental channel
 type: application
-version: 1.6.3
+version: 1.6.4
 appVersion: 1.6.2
 kubeVersion: ">=1.25.0-0"
 home: https://gateway-api.sigs.k8s.io
@@ -116,9 +116,6 @@ annotations:
       url: https://github.com/spnngl/charts/tree/main/charts/gateway-api-exp-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
-  artifacthub.io/signKey: |
-    fingerprint: 91e5d5ec8bed1b3ba3041aa69fdbabc62dd5ee4b874cc31b6502a01b402910ef
-    url: https://raw.githubusercontent.com/spnngl/charts/main/cosign.pub
   charts.spnngl.io/upstream-repo: https://github.com/kubernetes-sigs/gateway-api
   charts.spnngl.io/upstream-tag: v1.6.2
   charts.spnngl.io/upstream-commit: ca6c2a65454737236fb7a937bd9b17e42b07e9de

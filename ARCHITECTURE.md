@@ -8,7 +8,7 @@ Helm charts repository. Two chart kinds, one release pipeline.
 | Hand-written charts | `charts/<name>/` | the chart itself | manual bump, CI-enforced |
 
 Output for both: OCI chart at `oci://ghcr.io/spnngl/charts/<name>`, cosign
-key signature, SBOM + SLSA provenance attestations, Artifact Hub listing.
+keyless signature, SBOM + SLSA provenance attestations, Artifact Hub listing.
 
 ## Layout
 
@@ -28,7 +28,7 @@ ct.yaml                    chart-testing config (lint + install)
 renovate.json              our own dependency updates (tool pins, Actions SHAs, kind images)
 .kube-linter.yaml          hand-written charts only
 artifacthub-repo.yml       Artifact Hub metadata template; repositoryID injected at release
-cosign.pub                 public signing key (private key: repo secret, never committed)
+cosign.pub                 retired signing key, kept to verify versions signed before keyless
 NOTICE                     generated: redistributed upstreams + licenses (no versions)
 LICENSE, README.md, CONTRIBUTING.md, SECURITY.md, AGENTS.md
 ```
@@ -132,8 +132,8 @@ charts.
 `tooling/release/plan.nu` lists charts whose GitHub Release `<name>-<version>`
 does not exist yet (the Release is the last step, hence the completion
 marker), then per chart (matrix, serialised):
-`helm package` → `helm push` (digest) → `cosign sign --key` by digest →
-`syft` SBOM → `cosign attest --type spdxjson` → `actions/attest` twice
+`helm package` → `helm push` (digest) → `cosign sign` (keyless) by digest →
+`syft` SBOM → `cosign attest --type spdxjson` (keyless) → `actions/attest` twice
 (SLSA provenance, then SBOM; push-to-registry) → GitHub Release `<name>-<version>`
 with `.tgz` + SBOM → package visibility check (warning if not public).
 
@@ -170,11 +170,21 @@ conflict.
 
 ## Trust
 
-- Signature: `cosign verify --key cosign.pub ghcr.io/spnngl/charts/<name>:<version>`
-- SBOM: `cosign verify-attestation --key cosign.pub --type spdxjson <ref>@<digest>`
+- Signing: cosign keyless. `release.yml` (`id-token: write`) gets a GitHub
+  Actions OIDC token, Fulcio issues a short-lived certificate whose identity
+  is `https://github.com/spnngl/charts/.github/workflows/release.yml@<ref>`
+  (issuer `https://token.actions.githubusercontent.com`), and the signature
+  goes to Rekor. Identity and issuer live in `tooling/crdgen/config.nu`
+  (`COSIGN_IDENTITY_REGEXP`, `COSIGN_OIDC_ISSUER`) and feed the chart READMEs
+  and `verify.nu`. Any ref is accepted: the workflow identity, not the
+  branch, is the trust anchor.
+- Signature: `cosign verify --certificate-identity-regexp <regexp> --certificate-oidc-issuer <issuer> <ref>`
+- SBOM: `cosign verify-attestation --type spdxjson --certificate-identity-regexp <regexp> --certificate-oidc-issuer <issuer> <ref>`
 - Provenance: `gh attestation verify oci://<ref>@<digest> --owner spnngl`
-- Secrets: `COSIGN_PRIVATE_KEY`, `COSIGN_PASSWORD`, `APP_CLIENT_ID`,
-  `APP_PRIVATE_KEY`, `AH_API_KEY_ID`, `AH_API_KEY_SECRET`. `pr.yml` uses none.
+- Artifact Hub detects the cosign signature in the registry on its own; no
+  `artifacthub.io/signKey` annotation (it requires a public key URL).
+- Secrets: `APP_CLIENT_ID`, `APP_PRIVATE_KEY`, `AH_API_KEY_ID`,
+  `AH_API_KEY_SECRET`. `pr.yml` uses none.
 
 ## Licensing
 
