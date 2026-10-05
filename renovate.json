@@ -6,25 +6,38 @@
     ":semanticCommits",
     "helpers:pinGitHubActionDigests"
   ],
-  "baseBranchPatterns": ["main"],
+  "baseBranchPatterns": [
+    "main"
+  ],
   "timezone": "Europe/Paris",
-  "schedule": ["before 6am on monday"],
-  "labels": ["dependencies"],
-  "enabledManagers": ["github-actions", "custom.regex"],
+  "schedule": [
+    "before 6am on monday"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "enabledManagers": [
+    "github-actions",
+    "custom.regex"
+  ],
   "customManagers": [
     {
       "customType": "regex",
       "description": "Tool versions in tooling/versions.toml, annotated with `# renovate:` comments.",
-      "managerFilePatterns": ["/^tooling/versions\\.toml$/"],
+      "managerFilePatterns": [
+        "/^tooling/versions\\.toml$/"
+      ],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)(?: extractVersion=(?<extractVersion>[^\\s]+))?\\s*\\n[a-z-]+ = \"(?<currentValue>[^\"]+)\""
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)(?: extractVersion=(?<extractVersion>[^\\s]+))?\\s*\\n[a-z0-9-]+ = \"(?<currentValue>[^\"]+)\""
       ],
       "extractVersionTemplate": "{{#if extractVersion}}{{{extractVersion}}}{{else}}^v?(?<version>.*)${{/if}}"
     },
     {
       "customType": "regex",
       "description": "kind node images in the PR workflow matrix.",
-      "managerFilePatterns": ["/^\\.github/workflows/pr\\.yml$/"],
+      "managerFilePatterns": [
+        "/^\\.github/workflows/pr\\.yml$/"
+      ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>docker) depName=(?<depName>kindest/node)\\s*\\n\\s*- \\{ name: \"[^\"]+\", image: \"kindest/node:(?<currentValue>v[^@\"]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?\" \\}"
       ],
@@ -35,19 +48,35 @@
   "packageRules": [
     {
       "description": "Tool and Action updates: automerge minor/patch once CI is green.",
-      "matchManagers": ["github-actions", "custom.regex"],
-      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
+      "matchManagers": [
+        "github-actions",
+        "custom.regex"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest",
+        "pin",
+        "pinDigest"
+      ],
       "automerge": true
     },
     {
       "description": "kind node images: only patch bumps within the same minor automatically (the matrix minors are chosen by hand).",
-      "matchDepNames": ["kindest/node"],
-      "matchUpdateTypes": ["minor", "major"],
+      "matchDepNames": [
+        "kindest/node"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
       "enabled": false
     },
     {
       "description": "Keep Helm on 3.x until the repo is validated against Helm 4.",
-      "matchDepNames": ["helm/helm"],
+      "matchDepNames": [
+        "helm/helm"
+      ],
       "allowedVersions": "<4.0.0"
     }
   ]

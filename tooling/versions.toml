@@ -10,6 +10,9 @@ helm = "3.20.1"
 kustomize = "5.8.1"
 # renovate: datasource=github-releases depName=yannh/kubeconform
 kubeconform = "0.8.0"
+# Kubernetes version whose OpenAPI-derived JSON schemas validate rendered CRDs (kubeconform).
+# renovate: datasource=github-tags depName=yannh/kubernetes-json-schema
+k8s-json-schema = "1.37.1"
 # renovate: datasource=github-releases depName=helm/chart-testing
 chart-testing = "3.14.0"
 # renovate: datasource=github-releases depName=sigstore/cosign

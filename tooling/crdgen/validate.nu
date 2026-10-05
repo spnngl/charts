@@ -84,9 +84,26 @@ export def "validate values-behaviour" [dir: path]: nothing -> nothing {
   }
 }
 
-# Structural sanity of each CRD. (kubeconform cannot do this: the public
-# kubernetes-json-schema set ships no CustomResourceDefinition schema. Full
-# API-server validation happens in `ct install` against kind.)
+# Validate rendered CRDs against the Kubernetes OpenAPI-derived JSON schema.
+# kubeconform's default location (`-standalone-strict`) has no
+# CustomResourceDefinition schema; the plain per-version directory of
+# yannh/kubernetes-json-schema does (with absolute $refs to _definitions.json).
+# Env: CRDGEN_OFFLINE=1 skips; CRDGEN_SCHEMA_LOCATION overrides the template
+# (e.g. a local clone); CRDGEN_K8S_SCHEMA_VERSION overrides versions.toml.
+export def "validate kubeconform" [dir: path]: nothing -> nothing {
+  if ($env.CRDGEN_OFFLINE? | default "" | is-not-empty) { return }
+  let root = (^git rev-parse --show-toplevel | str trim)
+  let version = ($env.CRDGEN_K8S_SCHEMA_VERSION? | default (open ($root | path join "tooling" "versions.toml") | get tools.k8s-json-schema))
+  let location = ($env.CRDGEN_SCHEMA_LOCATION? | default "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ .NormalizedKubernetesVersion }}/{{ .ResourceKind }}{{ .KindSuffix }}.json")
+  let out = (validate helm-template $dir | ^kubeconform -summary -kubernetes-version $version -schema-location $location | complete)
+  if $out.exit_code != 0 {
+    error make {msg: $"kubeconform ($dir) \(Kubernetes ($version) schemas\) failed:\n($out.stdout)\n($out.stderr)"}
+  }
+}
+
+# Structural sanity of each CRD: cheap, offline, and covers what the OpenAPI
+# schema does not (one storage version, name == plural.group). Full API-server
+# validation happens in `ct install` against kind.
 export def "validate structure" [crds: list<record>]: nothing -> nothing {
   for c in $crds {
     let name = ($c | get -o metadata.name | default "<unnamed>")
@@ -151,5 +168,6 @@ export def "validate chart" [dir: path, crds: list<record>]: nothing -> record {
   validate schema-negative $dir
   validate values-behaviour $dir
   validate structure $crds
+  validate kubeconform $dir
   validate size-budget $dir
 }

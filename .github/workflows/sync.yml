@@ -62,7 +62,7 @@ jobs:
           token: ${{ steps.app.outputs.token }}
       - uses: ./.github/actions/setup-tools
         with:
-          tools: nushell helm kustomize
+          tools: nushell helm kustomize kubeconform
 
       - name: Regenerate at ${{ matrix.target.to }}
         id: regen

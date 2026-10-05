@@ -75,7 +75,7 @@ resolve → fetch → render → split → filter → sanitize → dedupe → te
 | dedupe | same `metadata.name` from several sources must be identical | content differs |
 | templatize | `to yaml`; escape `{{`/`}}`; inject labels/annotations template via sentinel lines | — |
 | emit | `Chart.yaml` (derived `kubeVersion`, Artifact Hub annotations, `charts.spnngl.io/upstream-{repo,tag,commit}`, `sources[0]` = this repo), `values.yaml`, `values.schema.json`, `ci/ci-values.yaml`, `templates/*.yaml`, `_helpers.tpl`, `LICENSE`, `NOTICE`, `README.md` | — |
-| validate | `helm lint --strict`; `helm template` round-trips to sanitized records; injected labels/keep annotation present; schema negative test; values behaviour; structural CRD check (one storage version, name = plural.group, schemas present); release-size budget | any check |
+| validate | `helm lint --strict`; `helm template` round-trips to sanitized records; injected labels/keep annotation present; schema negative test; values behaviour; structural CRD check (one storage version, name = plural.group, schemas present); kubeconform against the pinned Kubernetes JSON schemas; release-size budget | any check |
 
 Only `render` is polymorphic. Only `templatize` touches text; everything
 else is structured records.
@@ -85,10 +85,15 @@ inside JSON + rendered manifest) gzipped and base64-encoded in one Secret,
 capped at 1 MiB. The estimator mirrors that encoding (within 1 % of a real
 release): warn > 800 kB, fail > 1 000 kB. At v1.6.2: `gateway-api-crds`
 ≈ 649 kB, `gateway-api-exp-crds` ≈ 788 kB — one chart holding both channels
-would already exceed the cap, hence two charts. kubeconform is **not** used
-for CRD charts: the public kubernetes-json-schema set has no
-`CustomResourceDefinition` schema; `ct install` against kind is the real
-API-server validation.
+would already exceed the cap, hence two charts.
+
+Schema validation: kubeconform's default schema location
+(`<version>-standalone-strict`) has no `CustomResourceDefinition` schema, but
+the plain per-version directory of yannh/kubernetes-json-schema does. The
+generator validates rendered CRDs against it for the Kubernetes version pinned
+as `k8s-json-schema` in `tooling/versions.toml` (`CRDGEN_SCHEMA_LOCATION`
+points it at a local clone; `CRDGEN_OFFLINE=1` skips). `ct install` against
+kind remains the real API-server validation.
 
 Chart `version` rule: `appVersion` = upstream version. `version` =
 `appVersion` if it is greater than the previously published version, else

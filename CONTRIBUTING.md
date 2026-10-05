@@ -11,9 +11,11 @@
 ## Prerequisites
 
 Versions are pinned in `tooling/versions.toml`. Locally you need at least:
-`nu` (nushell), `helm`, `kustomize`, `git`, `gzip`; for the full CI experience
-also `ct` (chart-testing, with `yamllint` and `yamale`), `kind`, `kubeconform`,
-`kube-linter`, `helm-docs`.
+`nu` (nushell), `helm`, `kustomize`, `kubeconform`, `git`, `gzip`; for the full
+CI experience also `ct` (chart-testing, with `yamllint` and `yamale`), `kind`,
+`kube-linter`, `helm-docs`. Offline? `CRDGEN_OFFLINE=1` skips the kubeconform
+step; `CRDGEN_SCHEMA_LOCATION` can point at a local clone of
+yannh/kubernetes-json-schema.
 
 ## Adding a CRD chart
 

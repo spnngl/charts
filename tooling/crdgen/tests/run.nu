@@ -1,5 +1,6 @@
 #!/usr/bin/env nu
-# Unit tests for crdgen. No network. Needs `helm` on PATH for the templating tests.
+# Unit tests for crdgen. No network (kubeconform is skipped via CRDGEN_OFFLINE).
+# Needs `helm` on PATH for the templating tests.
 #   nu tooling/crdgen/tests/run.nu
 
 use std/assert
@@ -153,6 +154,7 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
 }
 
 def main []: nothing -> nothing {
+  $env.CRDGEN_OFFLINE = "1"
   let results = (tests | each {|t|
     let r = (try { do $t.run; {name: $t.name, ok: true, error: ""} } catch {|e| {name: $t.name, ok: false, error: $e.msg} })
     print $"(if $r.ok { 'PASS' } else { 'FAIL' })  ($r.name)"
