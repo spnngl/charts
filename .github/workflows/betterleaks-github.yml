@@ -17,6 +17,8 @@ jobs:
 
     permissions:
       contents: read
+      issues: read
+      pull-requests: read
       security-events: write
 
     steps:
@@ -51,6 +53,8 @@ jobs:
           betterleaks version
 
       - name: Run betterleaks
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           betterleaks github \
             --verbose \
