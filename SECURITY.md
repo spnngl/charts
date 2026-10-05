@@ -7,7 +7,7 @@ Every chart version published to `oci://ghcr.io/spnngl/charts/<chart>` is:
 - signed with cosign using the key whose public half is [`cosign.pub`](./cosign.pub);
 - accompanied by an SPDX SBOM, attested with the same key (`cosign attest --type spdxjson`);
 - accompanied by SLSA build provenance and an SBOM attestation issued by GitHub
-  (`actions/attest-build-provenance`, `actions/attest-sbom`), bound to the
+  (`actions/attest`, provenance and SBOM modes), bound to the
   `release.yml` workflow identity of this repository.
 
 ```sh
