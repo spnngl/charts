@@ -1,0 +1,21 @@
+name: vertical-pod-autoscaler-crds
+description: CustomResourceDefinitions for the Kubernetes Vertical Pod Autoscaler (VerticalPodAutoscaler, checkpoints)
+upstream:
+  repo: https://github.com/kubernetes/autoscaler
+  homepage: https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler
+  license: Apache-2.0
+version:
+  # Monorepo: also tags cluster-autoscaler-*, addon-resizer-* and
+  # vertical-pod-autoscaler-chart-*; this pattern keeps VPA releases only.
+  tagPattern: '^vertical-pod-autoscaler-(\d+\.\d+\.\d+)$'
+  allow: all
+  current: vertical-pod-autoscaler-1.8.0
+sources:
+  # controller-gen output (hack/generate-crd-yaml.sh). The in-tree chart's
+  # templates/crds/vpa-v1-crd-gen.yaml is a Helm-templated copy of it.
+  - kind: git-path
+    path: vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
+transform:
+  include: []
+  exclude: []
+  patches: []

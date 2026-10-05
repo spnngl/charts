@@ -29,6 +29,7 @@ Two kinds of charts live here:
 | [`topolvm-crds`](./charts/topolvm-crds) | [topolvm/topolvm](https://github.com/topolvm/topolvm) | LogicalVolume |
 | [`traefik-crds`](./charts/traefik-crds) | [traefik/traefik](https://github.com/traefik/traefik) | traefik.io (IngressRoutes, Middlewares, TLS options, transports) |
 | [`velero-crds`](./charts/velero-crds) | [vmware-tanzu/velero](https://github.com/vmware-tanzu/velero) | backups, restores, schedules, locations, data movers |
+| [`vertical-pod-autoscaler-crds`](./charts/vertical-pod-autoscaler-crds) | [kubernetes/autoscaler](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) | VerticalPodAutoscaler, VerticalPodAutoscalerCheckpoint |
 
 Each chart README lists the exact CRDs, versions and the pinned upstream tag/commit.
 Versions follow upstream (`gateway-api-crds 1.6.2` ships gateway-api `v1.6.2`).
