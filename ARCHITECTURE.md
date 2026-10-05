@@ -155,7 +155,7 @@ conflict.
 - Signature: `cosign verify --key cosign.pub ghcr.io/spnngl/charts/<name>:<version>`
 - SBOM: `cosign verify-attestation --key cosign.pub --type spdxjson <ref>@<digest>`
 - Provenance: `gh attestation verify oci://<ref>@<digest> --owner spnngl`
-- Secrets: `COSIGN_PRIVATE_KEY`, `APP_CLIENT_ID`,
+- Secrets: `COSIGN_PRIVATE_KEY`, `COSIGN_PASSWORD`, `APP_CLIENT_ID`,
   `APP_PRIVATE_KEY`, `AH_API_KEY_ID`, `AH_API_KEY_SECRET`. `pr.yml` uses none.
 
 ## Licensing

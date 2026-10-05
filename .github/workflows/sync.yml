@@ -40,8 +40,7 @@ jobs:
 
   sync:
     name: Sync ${{ matrix.target.name }} → ${{ matrix.target.to }}
-    needs:
-      - discover
+    needs: [discover]
     if: needs.discover.outputs.any == 'true'
     runs-on: ubuntu-latest
     strategy:
@@ -143,7 +142,7 @@ jobs:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           NAME: ${{ matrix.target.name }}
           TO: ${{ matrix.target.to }}
-        run: |-
+        run: |
           set -euo pipefail
           title="sync failure: $NAME"
           body="$(printf 'Syncing **%s** to upstream **%s** failed.\n\nRun: %s/actions/runs/%s\n\n```\n%s\n```\n\nLikely causes: upstream moved the CRD path, zero CRDs after filtering, or two sources disagree. Fix `sources/%s.yaml`.' \
