@@ -1,0 +1,6 @@
+# Check https://github.com/betterleaks/betterleaks/blob/main/docs/config.md
+title = "Betterleaks charts releases"
+minVersion="1.9.0"
+
+[extend]
+useDefault = true
