@@ -2,8 +2,7 @@ name: PR
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -93,17 +92,16 @@ jobs:
   install:
     name: ct install (kind ${{ matrix.k8s.name }})
     runs-on: ubuntu-latest
-    needs:
-      - lint
+    needs: [lint]
     strategy:
       fail-fast: false
       matrix:
         k8s:
           # Oldest upstream-supported Kubernetes release and the latest stable.
           # renovate: datasource=docker depName=kindest/node
-          - {name: "1.35", image: "kindest/node:v1.35.8@sha256:07b2536e30b803ed61d1677a79df6115f798ce64c80f9e22f6ed45afd09323c0"}
+          - { name: "1.35", image: "kindest/node:v1.35.8@sha256:07b2536e30b803ed61d1677a79df6115f798ce64c80f9e22f6ed45afd09323c0" }
           # renovate: datasource=docker depName=kindest/node
-          - {name: "1.37", image: "kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5"}
+          - { name: "1.37", image: "kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5" }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

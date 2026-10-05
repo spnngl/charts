@@ -2,8 +2,7 @@ name: Release
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - "charts/**"
       - ".github/workflows/release.yml"
@@ -42,15 +41,14 @@ jobs:
 
   publish:
     name: Publish ${{ matrix.chart.name }} ${{ matrix.chart.version }}
-    needs:
-      - plan
+    needs: [plan]
     if: needs.plan.outputs.any == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: write # GitHub Release
-      packages: write # GHCR push
-      id-token: write # Sigstore (GitHub attestations)
-      attestations: write # GitHub attestations store
+      contents: write        # GitHub Release
+      packages: write        # GHCR push
+      id-token: write        # Sigstore (GitHub attestations)
+      attestations: write    # GitHub attestations store
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -87,6 +85,7 @@ jobs:
       - name: Sign (cosign, key)
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: cosign sign --yes --key env://COSIGN_PRIVATE_KEY "${{ steps.push.outputs.ref }}"
 
       - name: SBOM (syft)
@@ -95,6 +94,7 @@ jobs:
       - name: Attest SBOM (cosign, key)
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: cosign attest --yes --key env://COSIGN_PRIVATE_KEY --type spdxjson --predicate dist/sbom.spdx.json "${{ steps.push.outputs.ref }}"
 
       - name: Attest provenance (GitHub)
@@ -153,9 +153,7 @@ jobs:
 
   verify:
     name: Verify ${{ matrix.chart.name }} ${{ matrix.chart.version }}
-    needs:
-      - plan
-      - publish
+    needs: [plan, publish]
     if: needs.plan.outputs.any == 'true'
     runs-on: ubuntu-latest
     permissions:
