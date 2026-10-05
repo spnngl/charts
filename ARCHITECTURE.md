@@ -126,8 +126,8 @@ charts.
 does not exist yet (the Release is the last step, hence the completion
 marker), then per chart (matrix, serialised):
 `helm package` → `helm push` (digest) → `cosign sign --key` by digest →
-`syft` SBOM → `cosign attest --type spdxjson` → `actions/attest-build-provenance`
-+ `actions/attest-sbom` (push-to-registry) → GitHub Release `<name>-<version>`
+`syft` SBOM → `cosign attest --type spdxjson` → `actions/attest` twice
+(SLSA provenance, then SBOM; push-to-registry) → GitHub Release `<name>-<version>`
 with `.tgz` + SBOM → package visibility check (warning if not public).
 
 Then two jobs: `tooling/release/artifacthub.nu --all` for **every** published
