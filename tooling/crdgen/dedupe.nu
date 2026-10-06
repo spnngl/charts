@@ -8,5 +8,5 @@ export def "dedupe crds" [crds: list<record>]: nothing -> list<record> {
   }
   $groups
   | each {|g| $g.items.0 }
-  | sort-by {|c| $c.metadata.name }
+  | sort-by metadata.name
 }

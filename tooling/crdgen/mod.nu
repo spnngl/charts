@@ -113,6 +113,23 @@ export def "main regen" [...names: string, --all, --skip-validate, --json]: noth
   emit-result $results $json
 }
 
+# Does the root NOTICE differ from a fresh render?
+def notice-drift []: nothing -> bool {
+  let notice = ($REPO_ROOT | path join "NOTICE")
+  let have = (if ($notice | path exists) { open --raw $notice } else { "" })
+  (notice-text) != $have
+}
+
+# Naming invariant: `-crds` charts without a manifest, and manifests without a chart.
+def naming-violations []: nothing -> record<orphans: list<string>, missing: list<string>> {
+  let chart_dirs = (ls ($REPO_ROOT | path join "charts") | where type == dir | get name | path basename)
+  let manifests = (manifest list ($REPO_ROOT | path join "sources") | get name)
+  {
+    orphans: ($chart_dirs | where {|d| ($d | str ends-with "-crds") and $d not-in $manifests })
+    missing: ($manifests | where {|n| $n not-in $chart_dirs })
+  }
+}
+
 # Drift check: regenerate into temp and compare with the committed chart, byte for byte.
 export def "main check" [...names: string, --all]: nothing -> nothing {
   let drift = (select-manifests $names $all | each {|m|
@@ -131,18 +148,11 @@ export def "main check" [...names: string, --all]: nothing -> nothing {
       }
     } finally { rm -rf ($g.dir | path dirname) }
   } | compact)
-  # root NOTICE
-  let want = (notice-text)
-  let have = (if ($REPO_ROOT | path join "NOTICE" | path exists) { open --raw ($REPO_ROOT | path join "NOTICE") } else { "" })
-  let drift = (if $want != $have { print "DRIFT NOTICE differs from regeneration"; $drift | append "NOTICE" } else { $drift })
-  # naming invariant
-  let chart_dirs = (ls ($REPO_ROOT | path join "charts") | where type == dir | get name | path basename)
-  let manifests = (manifest list ($REPO_ROOT | path join "sources") | get name)
-  let orphans = ($chart_dirs | where {|d| ($d | str ends-with "-crds") and $d not-in $manifests })
-  let missing = ($manifests | where {|n| $n not-in $chart_dirs })
-  if not ($orphans | is-empty) { print $"charts without manifest: ($orphans | str join ', ')" }
-  if not ($missing | is-empty) { print $"manifests without chart: ($missing | str join ', ')" }
-  if not ($drift | append $orphans | append $missing | is-empty) {
+  let drift = (if (notice-drift) { print "DRIFT NOTICE differs from regeneration"; $drift | append "NOTICE" } else { $drift })
+  let naming = (naming-violations)
+  if not ($naming.orphans | is-empty) { print $"charts without manifest: ($naming.orphans | str join ', ')" }
+  if not ($naming.missing | is-empty) { print $"manifests without chart: ($naming.missing | str join ', ')" }
+  if not ($drift | append $naming.orphans | append $naming.missing | is-empty) {
     error make {msg: "drift detected; run `nu tooling/crdgen/mod.nu regen --all` and commit"}
   }
 }
@@ -168,10 +178,11 @@ export def "main sync" [...names: string, --all, --dry-run, --json]: nothing -> 
       let fresh = (manifest load ($REPO_ROOT | path join "sources" $"($m.name).yaml"))
       let g = (generate $fresh)
       install $g.dir $m.name
-      main notice
       {name: $m.name, from: $m.version.current, to: $latest.tag, updated: true, version: $g.summary.version}
     }
   })
+  # NOTICE depends only on the set of manifests, which sync never changes.
+  if not $dry_run { main notice }
   emit-result $rows $json
 }
 

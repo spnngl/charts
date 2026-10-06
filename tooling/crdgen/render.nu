@@ -63,13 +63,10 @@ def render-release-asset [source: record, chart: record]: nothing -> list<any> {
   let file = (fetch release-asset $chart $source.asset)
   let extracted = (mktemp -d -t crdgen-extract.XXXXXX)
   try {
-    let inner = ($extracted | path join ($source | get -o archivePath | default ""))
-    if ($file =~ '\.(tar\.gz|tgz)$') {
-      run-checked $"tar -xzf ($file)" { ^tar -xzf $file -C $extracted } | ignore
-      read-yaml-path $inner $extracted
-    } else if ($file =~ '\.zip$') {
-      run-checked $"unzip ($file)" { ^unzip -q $file -d $extracted } | ignore
-      read-yaml-path $inner $extracted
+    let is_zip = ($file =~ '\.zip$')
+    if $is_zip or ($file =~ '\.(tar\.gz|tgz)$') {
+      run-checked $"extract ($file)" { if $is_zip { ^unzip -q $file -d $extracted } else { ^tar -xzf $file -C $extracted } } | ignore
+      read-yaml-path ($extracted | path join ($source | get -o archivePath | default "")) $extracted
     } else {
       read-yaml-path $file ($file | path dirname)
     }
