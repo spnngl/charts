@@ -1,6 +1,6 @@
 # Load and validate sources/<name>-crds.yaml manifests.
 
-use config.nu [LICENSE_ALLOWLIST SOURCE_KINDS ALLOW_VALUES]
+use config.nu [LICENSE_ALLOWLIST SOURCE_PATH_FIELD ALLOW_VALUES]
 
 def fail [name: string, msg: string] {
   error make {msg: $"manifest ($name): ($msg)"}
@@ -19,20 +19,12 @@ def validate-source [name: string, s: any, idx: int] {
     fail $name $"sources[($idx)] must be a record"
   }
   let kind = ($s | get -o kind)
-  if $kind not-in $SOURCE_KINDS {
-    fail $name $"sources[($idx)].kind must be one of ($SOURCE_KINDS | str join ', '), got '($kind)'"
+  let kinds = ($SOURCE_PATH_FIELD | columns)
+  if $kind not-in $kinds {
+    fail $name $"sources[($idx)].kind must be one of ($kinds | str join ', '), got '($kind)'"
   }
-  match $kind {
-    "git-path" | "kustomize" => {
-      if ($s | get -o path | default "" | is-empty) { fail $name $"sources[($idx)].path is required for ($kind)" }
-    }
-    "helm-template" => {
-      if ($s | get -o chartPath | default "" | is-empty) { fail $name $"sources[($idx)].chartPath is required for helm-template" }
-    }
-    "release-asset" => {
-      if ($s | get -o asset | default "" | is-empty) { fail $name $"sources[($idx)].asset is required for release-asset" }
-    }
-  }
+  let field = ($SOURCE_PATH_FIELD | get $kind)
+  if ($s | get -o $field | default "" | is-empty) { fail $name $"sources[($idx)].($field) is required for ($kind)" }
 }
 
 # Validate a manifest record. `name` is the file stem; must equal manifest.name.

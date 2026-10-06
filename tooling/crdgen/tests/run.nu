@@ -98,6 +98,8 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
       expect-error { manifest validate ($good | upsert upstream.license "GPL-3.0") "x-crds" } "allowlist"
       expect-error { manifest validate ($good | upsert version.current "1.0.0") "x-crds" } "does not match"
       expect-error { manifest validate ($good | upsert sources [{kind: "ftp"}]) "x-crds" } "kind must be one of"
+      expect-error { manifest validate ($good | upsert sources [{kind: "helm-template"}]) "x-crds" } 'sources\[0\]\.chartPath is required for helm-template'
+      expect-error { manifest validate ($good | upsert sources [{kind: "release-asset", path: "p"}]) "x-crds" } 'sources\[0\]\.asset is required'
       expect-error { manifest validate ($good | upsert transform {patches: [{op: add, path: "/a"}]}) "x-crds" } "reason"
       expect-error { manifest validate ($good | upsert name "x") "x" } "must end with '-crds'"
       expect-error { manifest validate ($good | upsert transform {stripDocs: "yes"}) "x-crds" } "stripDocs.*boolean"

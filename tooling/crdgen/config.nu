@@ -12,7 +12,8 @@ export const ANNOTATION_PREFIX = "charts.spnngl.io"
 
 # Licenses the generator accepts without a human decision (SPDX ids).
 export const LICENSE_ALLOWLIST = ["Apache-2.0" "MIT" "BSD-2-Clause" "BSD-3-Clause"]
-export const SOURCE_KINDS = ["git-path" "kustomize" "helm-template" "release-asset"]
+# Source kinds, each with the manifest field that holds its path.
+export const SOURCE_PATH_FIELD = {git-path: path, kustomize: path, helm-template: chartPath, release-asset: asset}
 export const ALLOW_VALUES = ["all" "minor" "patch"]
 
 # Labels/annotations injected by the chart template; stripped from upstream

@@ -28,7 +28,7 @@ security checklists. The project rules below take precedence.
   step logic. A new step means a new file, a row in the root ARCHITECTURE
   pipeline table, and a row in the Modules table of `ARCHITECTURE.md`.
 - Only `render.nu` behaves differently per source kind. Elsewhere, a kind
-  only selects which field holds its path. Only `templatize.nu` rewrites
+  only selects which field holds its path (`SOURCE_PATH_FIELD` in `config.nu`). Only `templatize.nu` rewrites
   serialized text.
 - Keep the pure modules pure (`filter`, `sanitize`, `dedupe`, `templatize`,
   `emit` except `emit chart-files`, `config`). I/O belongs in
