@@ -14,6 +14,8 @@ crdgen/mod.nu            CLI (`main regen|check|sync|notice|list`); orchestratio
 crdgen/config.nu         repo identity + policy constants + `REPO_ROOT` (the one repo root); no logic
 crdgen/exec.nu           `run-checked`: run an external command, fail with its output
 crdgen/<step>.nu         one pipeline step per file (see Modules)
+crdgen/static/           verbatim chart files: values.yaml, ci-values.yaml, helmignore,
+                         _helpers.tpl (`<chart>` placeholder); shared by every chart
 crdgen/tests/run.nu      unit + end-to-end tests; fixtures/ holds one directory per case
 release/plan.nu          which charts still need publishing (release.yml)
 release/artifacthub.nu   Artifact Hub registration + metadata push (release.yml)
@@ -80,7 +82,7 @@ Chart.yaml. The comment in `generate` explains this.
 | Module | Exports (callers) | Uses | External tools | Pure |
 |--------|-------------------|------|----------------|------|
 | `config.nu` | constants | — | — | yes |
-| `exec.nu` | `run-checked` (all modules that run a command that must succeed, and the release scripts) | — | — | no (runs the given closure) |
+| `exec.nu` | `run-checked` (modules and release scripts) | — | — | no (runs the given closure) |
 | `manifest.nu` | `manifest validate/defaults/load/list/gh-slug` | config | — | reads files |
 | `resolve.nu` | `resolve tags/current/allowed/latest`, `parse-tags` | — | `git ls-remote` | no |
 | `fetch.nu` | `fetch repo/release-asset/license`, `license detect` | manifest | `git clone/rev-parse`, `gh release download` | no |
@@ -89,12 +91,12 @@ Chart.yaml. The comment in `generate` explains this.
 | `sanitize.nu` | `sanitize crd/strip-injected` | config | — | yes |
 | `dedupe.nu` | `dedupe crds` | — | — | yes |
 | `templatize.nu` | `templatize crd/helpers`, `template escape` | — | — | yes |
-| `emit.nu` | `emit *` | config, templatize | — | yes, except `emit chart-files` (writes the chart dir) |
+| `emit.nu` | `emit *` | config, templatize, `static/` | — | yes, except `emit chart-files` (reads `static/`, writes the chart dir) |
 | `version.nu` | `version base-ref/previous/tree-hashes/dir-hashes/decide/compute` | config | `git` | no |
 | `validate.nu` | `validate chart/size-budget` | config, exec, render, sanitize | `helm`, `kubeconform`, `gzip`, `tar`, `git` | no |
 
-The release scripts use only `crdgen/config.nu` and `crdgen/exec.nu`. Tests import the step
-modules directly. They never import `mod.nu`.
+The release scripts use only `crdgen/config.nu` and `crdgen/exec.nu`. Tests
+import the step modules directly. They never import `mod.nu`.
 
 ## Shared records
 
@@ -166,8 +168,9 @@ Use `CRDGEN_SCHEMA_LOCATION` for a fixed local copy.
 - **Upstream content** (git checkout, release assets, `helm template` /
   `kustomize build` output): untrusted data. It is parsed into records and
   never executed. `kustomize build` runs without exec functions or plugins,
-  and `helm template` without a post-renderer. Files read from a checkout or archive must resolve (symlinks followed) inside it (`render.nu`). `sync.yml` handles this content
-  while holding GitHub App credentials.
+  and `helm template` without a post-renderer. Files read from a checkout or
+  archive must resolve (symlinks followed) inside it (`render.nu`). `sync.yml`
+  handles this content while holding GitHub App credentials.
 - **Secrets**: only `artifacthub.nu` reads them (`AH_*`). They go into
   in-process HTTP headers. They are never in argv, never printed, never
   written to disk.

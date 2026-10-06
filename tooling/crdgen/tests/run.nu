@@ -195,6 +195,9 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
       assert equal (template escape "x{}}y") 'x{{ "{}}" }}y'
       assert equal (template escape "{a}{}") "{a}{}"
     }}
+    {name: "templatize helpers fills every chart placeholder", run: {
+      assert equal ('{{- define "<chart>.name" -}}{{ include "<chart>.chart" . }}' | templatize helpers "x-crds") '{{- define "x-crds.name" -}}{{ include "x-crds.chart" . }}'
+    }}
     {name: "templatize escapes braces and injects template blocks", run: {
       let foo = (sanitize crd (fixture-docs "layout-a" | where metadata.name == "foos.example.io" | get 0) $NO_TRANSFORM)
       let t = (templatize crd $foo "x-crds")
