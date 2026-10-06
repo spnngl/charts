@@ -1,5 +1,5 @@
 name: kyverno-crds
-description: CustomResourceDefinitions for Kyverno (policies, CEL policies, exceptions, policy reports)
+description: CustomResourceDefinitions for Kyverno (kyverno.io policies, exceptions, reports, wgpolicyk8s.io policy reports)
 upstream:
   repo: https://github.com/kyverno/kyverno
   homepage: https://kyverno.io
@@ -12,13 +12,13 @@ version:
   allow: all
   current: v1.19.1
 sources:
-  # controller-gen output (Makefile CRDS_PATH): kyverno.io, policies.kyverno.io
-  # (generated from github.com/kyverno/api), reports.kyverno.io, wgpolicyk8s.io.
-  # The in-tree chart's `crds` subchart is a templated copy and lacks
-  # policies.kyverno.io (shipped by the separate kyverno-api chart).
+  # controller-gen output (Makefile CRDS_PATH): kyverno.io, reports.kyverno.io,
+  # wgpolicyk8s.io; same set as the in-tree chart's `crds` subchart.
   - kind: git-path
     path: config/crds
 transform:
   include: []
-  exclude: []
+  # policies.kyverno.io ships in kyverno-api-crds, mirroring upstream's
+  # `kyverno-api` subchart; together they exceed Helm's 1 MiB release Secret.
+  exclude: ['\.policies\.kyverno\.io$']
   patches: []
