@@ -14,7 +14,10 @@ kustomize = "5.8.2"
 # renovate: datasource=github-releases depName=yannh/kubeconform
 kubeconform = "0.8.0"
 # Kubernetes version whose OpenAPI-derived JSON schemas validate rendered CRDs (kubeconform).
-# renovate: datasource=github-tags depName=yannh/kubernetes-json-schema
+# Tracks Kubernetes releases. The schemas are read from the `master` branch of
+# yannh/kubernetes-json-schema, which has no such release tags: when it lags
+# behind, the Renovate PR stays red until it catches up.
+# renovate: datasource=github-releases depName=kubernetes/kubernetes
 k8s-json-schema = "1.37.1"
 # renovate: datasource=github-releases depName=helm/chart-testing
 chart-testing = "3.14.0"
