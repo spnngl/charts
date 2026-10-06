@@ -11,7 +11,7 @@ the release-size budget, the workflows and the trust model.
 versions.toml            pinned tool versions; read by .github/actions/setup-tools
                          with bash, so keep it flat: `name = "x.y.z"` under [tools]
 crdgen/mod.nu            CLI (`main regen|check|sync|notice|list`); orchestration only
-crdgen/config.nu         repo identity + policy constants; no logic
+crdgen/config.nu         repo identity + policy constants + `REPO_ROOT` (the one repo root); no logic
 crdgen/<step>.nu         one pipeline step per file (see Modules)
 crdgen/tests/run.nu      unit + end-to-end tests; fixtures/ holds one directory per case
 release/plan.nu          which charts still need publishing (release.yml)

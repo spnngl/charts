@@ -92,8 +92,7 @@ def "validate values-behaviour" [dir: path]: nothing -> nothing {
 # (e.g. a local clone); CRDGEN_K8S_SCHEMA_VERSION overrides versions.toml.
 def "validate kubeconform" [dir: path]: nothing -> nothing {
   if ($env.CRDGEN_OFFLINE? | default "" | is-not-empty) { return }
-  let root = (^git rev-parse --show-toplevel | str trim)
-  let version = ($env.CRDGEN_K8S_SCHEMA_VERSION? | default (open ($root | path join "tooling" "versions.toml") | get tools.k8s-json-schema))
+  let version = ($env.CRDGEN_K8S_SCHEMA_VERSION? | default (open ($REPO_ROOT | path join "tooling" "versions.toml") | get tools.k8s-json-schema))
   let location = ($env.CRDGEN_SCHEMA_LOCATION? | default "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ .NormalizedKubernetesVersion }}/{{ .ResourceKind }}{{ .KindSuffix }}.json")
   let out = (validate helm-template $dir | ^kubeconform -summary -kubernetes-version $version -schema-location $location | complete)
   if $out.exit_code != 0 {

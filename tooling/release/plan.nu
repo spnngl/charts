@@ -8,18 +8,19 @@
 # (unsigned, unattested) is picked up again. The publish job never re-pushes
 # an existing registry tag; it resumes from the digest already there.
 
+use ../crdgen/config.nu [REPO_ROOT]
+
 def published [name: string, version: string]: nothing -> bool {
   (^gh release view $"($name)-($version)" --json tagName | complete | get exit_code) == 0
 }
 
 def main [--all]: nothing -> nothing {
-  let root = (^git rev-parse --show-toplevel | str trim)
   let charts = (
-    glob ($root | path join "charts" "*" "Chart.yaml")
+    glob ($REPO_ROOT | path join "charts" "*" "Chart.yaml")
     | sort
     | each {|f|
         let c = (open $f)
-        {name: $c.name, version: ($c.version | into string), dir: ($f | path dirname | path relative-to $root)}
+        {name: $c.name, version: ($c.version | into string), dir: ($f | path dirname | path relative-to $REPO_ROOT)}
       }
   )
   let todo = (if $all { $charts } else { $charts | where {|c| not (published $c.name $c.version) } })

@@ -7,7 +7,7 @@
 # Env: AH_API_KEY_ID, AH_API_KEY_SECRET (skips with a warning when absent).
 # Needs `oras` logged in to the registry.
 
-use ../crdgen/config.nu [OCI_BASE OCI_HOST_PATH OWNER]
+use ../crdgen/config.nu [OCI_BASE OCI_HOST_PATH OWNER REPO_ROOT]
 
 const AH_API = "https://artifacthub.io/api/v1"
 const METADATA_LAYER_TYPE = "application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml"
@@ -88,10 +88,9 @@ def main [...charts: string, --all]: nothing -> nothing {
     print "::warning::Artifact Hub secrets not set, skipping registration"
     return
   }
-  let root = (^git rev-parse --show-toplevel | str trim)
-  let template = (open ($root | path join "artifacthub-repo.yml"))
+  let template = (open ($REPO_ROOT | path join "artifacthub-repo.yml"))
   let selected = (if $all {
-    glob ($root | path join "charts" "*" "Chart.yaml") | each {|f| open $f | get name } | sort
+    glob ($REPO_ROOT | path join "charts" "*" "Chart.yaml") | each {|f| open $f | get name } | sort
   } else if ($charts | is-empty) {
     error make {msg: "give chart names or --all"}
   } else { $charts })

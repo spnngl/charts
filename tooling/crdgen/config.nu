@@ -1,6 +1,7 @@
 # Repository-wide constants. Everything that identifies *this* repo lives here.
 
 export const REPO_URL = "https://github.com/spnngl/charts"
+export const REPO_ROOT = (path self ../..)
 export const OWNER = "spnngl"
 export const OCI_BASE = "oci://ghcr.io/spnngl/charts"
 export const OCI_HOST_PATH = "ghcr.io/spnngl/charts"

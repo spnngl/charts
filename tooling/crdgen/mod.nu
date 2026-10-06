@@ -21,13 +21,8 @@ use emit.nu *
 use version.nu *
 use validate.nu *
 
-export def repo-root []: nothing -> path {
-  ^git rev-parse --show-toplevel | str trim
-}
-
 def select-manifests [names: list<string>, all: bool]: nothing -> list<record> {
-  let root = (repo-root)
-  let manifests = (manifest list ($root | path join "sources"))
+  let manifests = (manifest list ($REPO_ROOT | path join "sources"))
   if $all { return $manifests }
   if ($names | is-empty) { error make {msg: "give chart names or --all"} }
   $names | each {|n|
@@ -88,7 +83,7 @@ export def generate [manifest: record, --skip-validate]: nothing -> record {
 }
 
 def install [generated_dir: path, name: string]: nothing -> nothing {
-  let target = ((repo-root) | path join "charts" $name)
+  let target = ($REPO_ROOT | path join "charts" $name)
   if ($target | path exists) { rm -rf $target }
   mkdir ($target | path dirname)
   mv $generated_dir $target
@@ -111,10 +106,9 @@ export def "main regen" [...names: string, --all, --skip-validate, --json]: noth
 
 # Drift check: regenerate into temp and compare with the committed chart, byte for byte.
 export def "main check" [...names: string, --all]: nothing -> nothing {
-  let root = (repo-root)
   let drift = (select-manifests $names $all | each {|m|
     let g = (generate $m)
-    let committed = ($root | path join "charts" $m.name)
+    let committed = ($REPO_ROOT | path join "charts" $m.name)
     let a = (version dir-hashes $g.dir | sort-by path)
     let b = (if ($committed | path exists) { version dir-hashes $committed | sort-by path } else { [] })
     if $a == $b {
@@ -128,11 +122,11 @@ export def "main check" [...names: string, --all]: nothing -> nothing {
   } | compact)
   # root NOTICE
   let want = (notice-text)
-  let have = (if ($root | path join "NOTICE" | path exists) { open --raw ($root | path join "NOTICE") } else { "" })
+  let have = (if ($REPO_ROOT | path join "NOTICE" | path exists) { open --raw ($REPO_ROOT | path join "NOTICE") } else { "" })
   let drift = (if $want != $have { print "DRIFT NOTICE differs from regeneration"; $drift | append "NOTICE" } else { $drift })
   # naming invariant
-  let chart_dirs = (ls ($root | path join "charts") | where type == dir | get name | path basename)
-  let manifests = (manifest list ($root | path join "sources") | get name)
+  let chart_dirs = (ls ($REPO_ROOT | path join "charts") | where type == dir | get name | path basename)
+  let manifests = (manifest list ($REPO_ROOT | path join "sources") | get name)
   let orphans = ($chart_dirs | where {|d| ($d | str ends-with "-crds") and $d not-in $manifests })
   let missing = ($manifests | where {|n| $n not-in $chart_dirs })
   if not ($orphans | is-empty) { print $"charts without manifest: ($orphans | str join ', ')" }
@@ -152,7 +146,6 @@ def set-pin [path: path, tag: string]: nothing -> nothing {
 # Bump pins to the newest allowed upstream tag and regenerate.
 # Rows: {name, from, to (null when up to date), updated, version}.
 export def "main sync" [...names: string, --all, --dry-run, --json]: nothing -> nothing {
-  let root = (repo-root)
   let rows = (select-manifests $names $all | each {|m|
     let latest = (resolve latest $m)
     if $latest == null {
@@ -160,8 +153,8 @@ export def "main sync" [...names: string, --all, --dry-run, --json]: nothing -> 
     } else if $dry_run {
       {name: $m.name, from: $m.version.current, to: $latest.tag, updated: false, version: null}
     } else {
-      set-pin ($root | path join "sources" $"($m.name).yaml") $latest.tag
-      let fresh = (manifest load ($root | path join "sources" $"($m.name).yaml"))
+      set-pin ($REPO_ROOT | path join "sources" $"($m.name).yaml") $latest.tag
+      let fresh = (manifest load ($REPO_ROOT | path join "sources" $"($m.name).yaml"))
       let g = (generate $fresh)
       install $g.dir $m.name
       main notice
@@ -172,8 +165,7 @@ export def "main sync" [...names: string, --all, --dry-run, --json]: nothing -> 
 }
 
 def notice-text []: nothing -> string {
-  let root = (repo-root)
-  let rows = (manifest list ($root | path join "sources") | each {|m|
+  let rows = (manifest list ($REPO_ROOT | path join "sources") | each {|m|
     $"- ($m.name): CRDs from ($m.upstream.repo) \(($m.upstream.license)\)"
   })
   [
@@ -190,11 +182,11 @@ def notice-text []: nothing -> string {
 
 # Rewrite the root NOTICE (no per-version data, so concurrent sync PRs never conflict).
 export def "main notice" []: nothing -> nothing {
-  notice-text | save -f ((repo-root) | path join "NOTICE")
+  notice-text | save -f ($REPO_ROOT | path join "NOTICE")
 }
 
 export def "main list" [--json]: nothing -> nothing {
-  let rows = (manifest list ((repo-root) | path join "sources")
+  let rows = (manifest list ($REPO_ROOT | path join "sources")
   | each {|m| {name: $m.name, upstream: $m.upstream.repo, pin: $m.version.current, allow: $m.version.allow, sources: ($m.sources | get kind | str join ",")} })
   emit-result $rows $json
 }
