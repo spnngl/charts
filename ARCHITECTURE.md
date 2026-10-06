@@ -20,6 +20,7 @@ tooling/crdgen/            nushell generator, one file per pipeline step; `mod.n
 tooling/crdgen/tests/      fixtures + `run.nu` unit tests (no network)
 tooling/release/           plan.nu (what to publish), artifacthub.nu, verify.nu (smoke test)
 tooling/versions.toml      pinned tool versions, read by CI (.github/actions/setup-tools) and local runs
+tooling/ARCHITECTURE.md    code-level view: modules, data flow, contracts, env vars (tooling/AGENTS.md: coding rules)
 .github/workflows/pr.yml       validate, regen, drift-check, ct lint, ct install
 .github/workflows/release.yml  package, push, sign, attest, Artifact Hub, smoke test
 .github/workflows/sync.yml     scheduled upstream tracking, opens automerging PRs
@@ -79,7 +80,7 @@ resolve → fetch → render → split → filter → sanitize → dedupe → te
 | validate | `helm lint --strict`; `helm template` round-trips to sanitized records; injected labels/keep annotation present; schema negative test; values behaviour; structural CRD check (one storage version, name = plural.group, schemas present); kubeconform against the pinned Kubernetes JSON schemas | any check |
 
 Only `render` is polymorphic. Only `templatize` touches text; everything
-else is structured records.
+else is structured records. Module-level detail: `tooling/ARCHITECTURE.md`.
 
 Release-size budget: Helm stores the release (chart files base64-encoded
 inside JSON + rendered manifest) gzipped and base64-encoded in one Secret,

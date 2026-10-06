@@ -1,6 +1,8 @@
 # AGENTS.md
 
 Rules for AI agents working in this repository. Read `ARCHITECTURE.md` first.
+Before touching `tooling/`, also read `tooling/AGENTS.md` and
+`tooling/ARCHITECTURE.md`.
 
 ## Non-negotiable
 
@@ -24,14 +26,11 @@ Rules for AI agents working in this repository. Read `ARCHITECTURE.md` first.
 
 ## Toolchain
 
-- Generator and scripts: **nushell**. Typed `def` signatures, one pipeline
-  step per file under `tooling/crdgen/`, text manipulation only in
-  `templatize.nu`. Run `nu --ide-check 10 <file>` and `nufmt` before
-  committing.
+- Generator and scripts: **nushell**. Coding, security and test rules live in
+  `tooling/AGENTS.md`.
 - Tool versions live in `tooling/versions.toml`. Do not hardcode versions
   elsewhere (workflows read this file through `.github/actions/setup-tools`).
-- Tests: `nu tooling/crdgen/tests/run.nu`. Add a fixture when adding a
-  renderer or sanitizer rule.
+- Tests: `nu tooling/crdgen/tests/run.nu` (what to cover: `tooling/AGENTS.md`).
 - `nu tooling/crdgen/mod.nu check --all` is what CI runs: manifests, naming
   invariant, drift. Run it before pushing.
 - Release helpers live in `tooling/release/` (`plan.nu`, `artifacthub.nu`,
