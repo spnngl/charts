@@ -209,7 +209,10 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
     {name: "emit kube-version derives from CEL usage", run: {
       let docs = (fixture-docs "layout-a")
       assert equal (emit kube-version $docs) ">=1.25.0-0"
-      assert equal (emit kube-version ($docs | where metadata.name != "foos.example.io")) ">=1.16.0-0"
+      let no_cel = ($docs | where metadata.name != "foos.example.io")
+      assert equal (emit kube-version $no_cel) ">=1.16.0-0"
+      let mentions = ($no_cel | upsert 0.spec.versions.0.schema.openAPIV3Schema.description "see x-kubernetes-validations\": here")
+      assert equal (emit kube-version $mentions) ">=1.16.0-0"
     }}
     {name: "end to end: emitted chart renders back to sanitized input (helm)", run: {
       let manifest = (manifest defaults {

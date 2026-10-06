@@ -22,8 +22,9 @@ def crd-description [crd: record]: nothing -> string {
   if ($bounded | is-empty) { $"($crd.spec.names.kind) custom resource" } else { $bounded }
 }
 
+# Only the JSON key counts: a description that mentions it has the quote escaped.
 def uses-cel [crds: list<record>]: nothing -> bool {
-  $crds | to json | str contains "x-kubernetes-validations"
+  $crds | to json | str contains 'x-kubernetes-validations":'
 }
 
 export def "emit kube-version" [crds: list<record>]: nothing -> string {
