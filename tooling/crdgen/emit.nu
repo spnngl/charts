@@ -1,6 +1,7 @@
 # Write a complete CRD chart directory from sanitized CRDs + metadata.
 
 use config.nu *
+use manifest.nu ["manifest gh-slug"]
 use templatize.nu *
 
 const STATIC_DIR = (path self static)
@@ -85,7 +86,7 @@ export def "emit chart-record" [chart: record]: nothing -> record {
     $"($ANNOTATION_PREFIX)/upstream-tag": $resolved.tag
     $"($ANNOTATION_PREFIX)/upstream-commit": $resolved.sha
   }
-  let base = {
+  {
     apiVersion: "v2"
     name: $manifest.name
     description: $manifest.description
@@ -93,13 +94,12 @@ export def "emit chart-record" [chart: record]: nothing -> record {
     appVersion: $resolved.appVersion
     kubeVersion: (emit kube-version $crds)
     home: $manifest.upstream.homepage
+    ...(if $manifest.upstream.icon != null { {icon: $manifest.upstream.icon} } else { {} })
+    sources: [$REPO_URL $manifest.upstream.repo]
+    keywords: ["crds" ($manifest.name | str replace -r '-crds$' '')]
+    maintainers: [{name: $OWNER, url: $"https://github.com/($OWNER)"}]
+    annotations: $annotations
   }
-  let with_icon = (if $manifest.upstream.icon == null { $base } else { $base | insert icon $manifest.upstream.icon })
-  $with_icon
-  | insert sources [$REPO_URL $manifest.upstream.repo]
-  | insert keywords ["crds" ($manifest.name | str replace -r '-crds$' '')]
-  | insert maintainers [{name: $OWNER, url: $"https://github.com/($OWNER)"}]
-  | insert annotations $annotations
 }
 
 # Final Chart.yaml text from the piped `emit chart-record` plus `v` ({version, changes}),
@@ -182,46 +182,11 @@ export def "emit readme" [
   let license = $chart.license
   let name = $manifest.name
   let oci = $"($OCI_BASE)/($name)"
+  let slug = (manifest gh-slug $manifest)
   let crd_names = ($crds | get metadata.name | str join " ")
-  let paths = (source-labels $manifest)
+  let paths = (source-labels $manifest | each {|p| $"`($p)`" } | str join ", ")
   let conflicts = ($manifest.conflictsWith | each {|c| $"`($c)`" } | str join ", ")
-  let dropped_section = (if ($dropped | is-empty) { [] } else {
-    [
-      "## Not included"
-      ""
-      "Upstream ships these alongside the CRDs; this chart intentionally contains"
-      "CustomResourceDefinitions only:"
-      ""
-    ] | append ($dropped | each {|d| $"- `($d)`" }) | append [""]
-  })
-  let conflicts_section = (if ($manifest.conflictsWith | is-empty) { [] } else {
-    [
-      $"> **Warning:** this chart defines the same CRD names as ($conflicts). Install only one of them on a cluster."
-      ""
-    ]
-  })
   let release = ($name | str replace -r '-crds$' '')
-  let install_commands = (if not $oversized {
-    [
-      "```sh"
-      $"helm install ($release) ($oci) --version <version>"
-      "```"
-      ""
-    ]
-  } else {
-    [
-      "> **Too large for Helm's default storage.** Helm stores each release in one Secret"
-      "> \(or ConfigMap\), capped at 1 MiB; this chart's release exceeds it. Use the SQL"
-      "> storage driver \(PostgreSQL\):"
-      ""
-      "```sh"
-      "export HELM_DRIVER=sql"
-      "export HELM_DRIVER_SQL_CONNECTION_STRING='postgresql://<user>:<password>@<host>:5432/<db>'"
-      $"helm upgrade --install ($release) ($oci) --version <version> --history-max=1"
-      "```"
-      ""
-    ]
-  })
   [
     $"# ($name)"
     ""
@@ -229,27 +194,48 @@ export def "emit readme" [
     ""
     $"($manifest.description)."
     ""
-    $"CRDs are copied (if $manifest.transform.stripDocs { '' } else { 'verbatim ' })from [($manifest.upstream.repo | str replace 'https://github.com/' '')]\(($manifest.upstream.repo)\)"
+    $"CRDs are copied (if $manifest.transform.stripDocs { '' } else { 'verbatim ' })from [($slug)]\(($manifest.upstream.repo)\)"
     $"at tag [`($resolved.tag)`]\(($manifest.upstream.repo)/tree/($resolved.tag)\) \(commit `($resolved.sha)`\),"
-    $"path\(s\) ($paths | each {|p| $'`($p)`' } | str join ', '), and rendered as regular Helm templates so that"
+    $"path\(s\) ($paths), and rendered as regular Helm templates so that"
     "`helm upgrade` updates them \(Helm's own `crds/` directory never upgrades\)."
     ""
-  ]
-  | append (if not $manifest.transform.stripDocs { [] } else {
-    [
-      "Field-level schema documentation \(descriptions, titles, examples\) is stripped so the Helm release fits"
-      "Helm's 1 MiB release Secret: validation is unchanged, but `kubectl explain` shows field"
-      "types only. Refer to the upstream documentation for field descriptions."
-      ""
-    ]
-  })
-  | append $conflicts_section
-  | append [
+    ...(if $manifest.transform.stripDocs {
+      [
+        "Field-level schema documentation \(descriptions, titles, examples\) is stripped so the Helm release fits"
+        "Helm's 1 MiB release Secret: validation is unchanged, but `kubectl explain` shows field"
+        "types only. Refer to the upstream documentation for field descriptions."
+        ""
+      ]
+    } else { [] })
+    ...(if not ($manifest.conflictsWith | is-empty) {
+      [
+        $"> **Warning:** this chart defines the same CRD names as ($conflicts). Install only one of them on a cluster."
+        ""
+      ]
+    } else { [] })
     "## Install"
     ""
-  ]
-  | append $install_commands
-  | append [
+    ...(if $oversized {
+      [
+        "> **Too large for Helm's default storage.** Helm stores each release in one Secret"
+        "> \(or ConfigMap\), capped at 1 MiB; this chart's release exceeds it. Use the SQL"
+        "> storage driver \(PostgreSQL\):"
+        ""
+        "```sh"
+        "export HELM_DRIVER=sql"
+        "export HELM_DRIVER_SQL_CONNECTION_STRING='postgresql://<user>:<password>@<host>:5432/<db>'"
+        $"helm upgrade --install ($release) ($oci) --version <version> --history-max=1"
+        "```"
+        ""
+      ]
+    } else {
+      [
+        "```sh"
+        $"helm install ($release) ($oci) --version <version>"
+        "```"
+        ""
+      ]
+    })
     "Chart `version` equals the upstream version it ships; `appVersion` is always the exact upstream version."
     $"Installing requires Kubernetes (emit kube-version $crds | str replace '-0' '')."
     ""
@@ -283,15 +269,21 @@ export def "emit readme" [
     ""
     "## CRDs"
     ""
-  ]
-  | append (crd-table $crds)
-  | append [
+    ...(crd-table $crds)
     ""
     "Bold = storage version, ~~struck~~ = not served."
     ""
-  ]
-  | append $dropped_section
-  | append [
+    ...(if not ($dropped | is-empty) {
+      [
+        "## Not included"
+        ""
+        "Upstream ships these alongside the CRDs; this chart intentionally contains"
+        "CustomResourceDefinitions only:"
+        ""
+        ...($dropped | each {|d| $"- `($d)`" })
+        ""
+      ]
+    } else { [] })
     "## Verify"
     ""
     "```sh"
@@ -309,7 +301,7 @@ export def "emit readme" [
     ""
     "## License and attribution"
     ""
-    $"The CRD manifests are the work of the ($manifest.upstream.repo | str replace 'https://github.com/' '') project,"
+    $"The CRD manifests are the work of the ($slug) project,"
     $"licensed under ($license.spdx) \(copy in [`LICENSE`]\(./LICENSE\), modification statement in [`NOTICE`]\(./NOTICE\)\)."
     $"Chart scaffolding is Apache-2.0, \u{00a9} ($OWNER). Generated by [spnngl/charts]\(($REPO_URL)\);"
     "updates are automated, please report problems there rather than upstream."

@@ -91,7 +91,7 @@ Chart.yaml. The comment in `generate` explains this.
 | `sanitize.nu` | `sanitize crd/strip-injected` | config | — | yes |
 | `dedupe.nu` | `dedupe crds` | — | — | yes |
 | `templatize.nu` | `templatize crd/helpers`, `template escape` | — | — | yes |
-| `emit.nu` | `emit *` | config, templatize, `static/` | — | yes, except `emit chart-files` (reads `static/`, writes the chart dir) |
+| `emit.nu` | `emit *` | config, manifest (`gh-slug`), templatize, `static/` | — | yes, except `emit chart-files` (reads `static/`, writes the chart dir) |
 | `version.nu` | `version base-ref/previous/tree-hashes/dir-hashes/decide/compute` | config | `git` | no |
 | `validate.nu` | `validate chart/size-budget` | config, exec, render, sanitize | `helm`, `kubeconform`, `gzip`, `tar`, `git` | no |
 
