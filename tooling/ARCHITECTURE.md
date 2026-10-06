@@ -148,6 +148,8 @@ By default, kubeconform reads schemas from the `master` branch of
 `yannh/kubernetes-json-schema`, from the directory named after the
 `k8s-json-schema` version in `versions.toml`. This is deliberate: the
 Kubernetes version is the pin, and the repository is not pinned to a commit.
+Renovate tracks `kubernetes/kubernetes` releases for this pin; when yannh lags
+behind a release, that PR stays red until yannh catches up.
 Use `CRDGEN_SCHEMA_LOCATION` for a fixed local copy.
 
 ## Filesystem
