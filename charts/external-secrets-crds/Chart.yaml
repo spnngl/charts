@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for External Secrets Operator (stores, external/push
   secrets, generators)
 type: application
-version: 2.11.3
-appVersion: 2.11.0
+version: 2.12.0
+appVersion: 2.12.0
 kubeVersion: ">=1.25.0-0"
 home: https://external-secrets.io
 icon: >-
@@ -160,7 +160,7 @@ annotations:
       version: v1alpha1
       name: uuids.generators.external-secrets.io
       displayName: UUID
-      description: UUID generates a version 1 UUID (e56657e3-764f-11ef-a397-65231a88c216).
+      description: UUID generates a version 4 UUID (21061816-abbd-40ef-8985-6db0fbcbc4c4).
     - kind: VaultDynamicSecret
       version: v1alpha1
       name: vaultdynamicsecrets.generators.external-secrets.io
@@ -182,13 +182,13 @@ annotations:
       url: https://github.com/external-secrets/external-secrets
     - name: Upstream CRD source (config/crds/bases)
       url: >-
-        https://github.com/external-secrets/external-secrets/tree/v2.11.0/config/crds/bases
+        https://github.com/external-secrets/external-secrets/tree/v2.12.0/config/crds/bases
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/external-secrets-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/external-secrets/external-secrets
-  charts.spnngl.io/upstream-tag: v2.11.0
-  charts.spnngl.io/upstream-commit: e8f12e1f1646e0ad47966458023ff10c9577f2b0
+  charts.spnngl.io/upstream-tag: v2.12.0
+  charts.spnngl.io/upstream-commit: 9d17906e8e4c5532ffe513f72273df03b7b07bc6
   artifacthub.io/changes: |
-    - Chart regenerated with updated tooling (upstream unchanged at v2.11.0)
+    - Upstream CRDs updated from v2.11.0 to v2.12.0
