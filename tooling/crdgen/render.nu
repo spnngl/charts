@@ -3,29 +3,19 @@
 
 use fetch.nu ["fetch release-asset"]
 
-# Parse a YAML text that may hold several documents; always returns a list.
-export def "docs from-yaml" [text: string]: nothing -> list<any> {
-  if ($text | str trim | is-empty) { return [] }
-  let parsed = ($text | from yaml)
-  match ($parsed | describe | str replace -r '<.*' '') {
-    "list" | "table" => $parsed
-    _ => [$parsed]
-  }
-}
-
 # Flatten one level of nesting (lists of documents per source), drop nulls and
 # non-records (comment-only documents, scalars). Records are wrapped before
 # `flatten` because `flatten` would otherwise explode their columns.
 export def "docs normalize" []: list<any> -> list<record> {
   $in
-  | each {|d| if ($d | describe | str replace -r '<.*' '') in [list table] { $d } else { [$d] } }
+  | each {|d| if ($d | describe -d).type == list { $d } else { [$d] } }
   | flatten
   | compact
-  | where {|d| ($d | describe | str starts-with "record") }
+  | where {|d| ($d | describe -d).type == record }
 }
 
 def read-yaml-file [file: path]: nothing -> list<any> {
-  docs from-yaml (open --raw $file)
+  open --raw $file | from yaml --multiple list
 }
 
 # All YAML docs under a file or directory (recursive).
@@ -52,7 +42,7 @@ def render-kustomize [source: record, repo_dir: path]: nothing -> list<any> {
   if $out.exit_code != 0 {
     error make {msg: $"kustomize build ($dir) failed: ($out.stderr)"}
   }
-  docs from-yaml $out.stdout
+  $out.stdout | from yaml --multiple list
 }
 
 def render-helm-template [source: record, repo_dir: path]: nothing -> list<any> {
@@ -64,7 +54,7 @@ def render-helm-template [source: record, repo_dir: path]: nothing -> list<any> 
   if $out.exit_code != 0 {
     error make {msg: $"helm template ($chart) failed: ($out.stderr)"}
   }
-  let templated = (docs from-yaml $out.stdout)
+  let templated = ($out.stdout | from yaml --multiple list)
   let crds_dir = ($chart | path join "crds")
   let static = (if ($crds_dir | path exists) { read-yaml-path $crds_dir } else { [] })
   $templated | append $static

@@ -8,14 +8,14 @@ def fail [name: string, msg: string] {
 
 def require-string [m: record, name: string, path: string] {
   let v = ($m | get -o ($path | split row '.' | into cell-path))
-  if ($v | describe) != "string" or ($v | str trim | is-empty) {
+  if ($v | describe -d).type != string or ($v | str trim | is-empty) {
     fail $name $"'($path)' must be a non-empty string"
   }
 }
 
 # Validate one source entry.
 def validate-source [name: string, s: any, idx: int] {
-  if ($s | describe | str starts-with "record") == false {
+  if ($s | describe -d).type != record {
     fail $name $"sources[($idx)] must be a record"
   }
   let kind = ($s | get -o kind)
@@ -68,19 +68,19 @@ export def "manifest validate" [m: record, name: string]: nothing -> nothing {
     fail $name "'version.tagPattern' must contain one capture group for the appVersion"
   }
   let sources = ($m | get -o sources)
-  if ($sources | describe | str replace -r '<.*' '') not-in [list table] or ($sources | is-empty) {
+  if ($sources | describe -d).type != list or ($sources | is-empty) {
     fail $name "'sources' must be a non-empty list"
   }
   for e in ($sources | enumerate) { validate-source $name $e.item $e.index }
   let conflicts = ($m | get -o conflictsWith | default [])
   for c in $conflicts {
-    if ($c | describe) != "string" { fail $name "'conflictsWith' entries must be strings" }
+    if ($c | describe -d).type != string { fail $name "'conflictsWith' entries must be strings" }
   }
   let t = ($m | get -o transform | default {})
   for k in ($t | columns) {
     if $k not-in [include exclude patches stripDocs] { fail $name $"unknown 'transform.($k)'" }
   }
-  if ($t | get -o stripDocs | default false | describe) != "bool" { fail $name "'transform.stripDocs' must be a boolean" }
+  if ($t | get -o stripDocs | default false | describe -d).type != bool { fail $name "'transform.stripDocs' must be a boolean" }
   for p in ($t | get -o patches | default []) {
     if ($p | get -o reason | default "" | is-empty) { fail $name "every 'transform.patches' entry needs a 'reason'" }
     if ($p | get -o op) not-in [add replace remove] { fail $name "'transform.patches[].op' must be add|replace|remove" }
