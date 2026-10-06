@@ -64,6 +64,7 @@ security checklists. The project rules below take precedence.
   content. Use `$"…"` with `\(` when you need a literal parenthesis. Never put
   a literal `(` inside `$'…'`: it silently interpolates.
 - Do not embed large static file bodies in code as lists of quoted lines.
+  They live in `crdgen/static/`. Editing them changes every chart.
 
 ## External commands and errors
 
