@@ -8,6 +8,7 @@
 # Needs `oras` logged in to the registry.
 
 use ../crdgen/config.nu [OCI_BASE OCI_HOST_PATH OWNER REPO_ROOT]
+use ../crdgen/exec.nu [run-checked]
 
 const AH_API = "https://artifacthub.io/api/v1"
 const METADATA_LAYER_TYPE = "application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml"
@@ -75,11 +76,9 @@ def ensure [chart: string, template: record]: nothing -> string {
   }
   let dir = (mktemp -d -t ah.XXXXXX)
   $template | upsert repositoryID $repo.repository_id | to yaml | save -f ($dir | path join "artifacthub-repo.yml")
-  let push = (do { cd $dir; ^oras push $"($OCI_HOST_PATH)/($chart):artifacthub.io" $"artifacthub-repo.yml:($METADATA_LAYER_TYPE)" } | complete)
-  rm -rf $dir
-  if $push.exit_code != 0 {
-    error make {msg: $"oras push of Artifact Hub metadata for ($chart) failed:\n($push.stderr)"}
-  }
+  try {
+    run-checked $"oras push of Artifact Hub metadata for ($chart)" { cd $dir; ^oras push $"($OCI_HOST_PATH)/($chart):artifacthub.io" $"artifacthub-repo.yml:($METADATA_LAYER_TYPE)" } | ignore
+  } finally { rm -rf $dir }
   $repo.repository_id
 }
 

@@ -1,22 +1,15 @@
 # Generator-side validation of an emitted chart (runs before ct in CI).
 
 use config.nu *
+use exec.nu [run-checked]
 use render.nu ["docs normalize"]
 
-def run-checked [cmd: closure, what: string]: nothing -> string {
-  let out = (do $cmd | complete)
-  if $out.exit_code != 0 {
-    error make {msg: $"($what) failed:\n($out.stdout)\n($out.stderr)"}
-  }
-  $out.stdout
-}
-
 def "validate helm-lint" [dir: path]: nothing -> nothing {
-  run-checked { ^helm lint --strict $dir } $"helm lint ($dir)" | ignore
+  run-checked $"helm lint ($dir)" { ^helm lint --strict $dir } | ignore
 }
 
 def "validate helm-template" [dir: path, ...args: string]: nothing -> string {
-  run-checked { ^helm template crdgen-validate $dir ...$args } $"helm template ($dir)"
+  run-checked $"helm template ($dir)" { ^helm template crdgen-validate $dir ...$args }
 }
 
 # Strip what the chart injects so rendered output can be compared to sanitized input.
@@ -94,10 +87,8 @@ def "validate kubeconform" [dir: path]: nothing -> nothing {
   if ($env.CRDGEN_OFFLINE? | default "" | is-not-empty) { return }
   let version = ($env.CRDGEN_K8S_SCHEMA_VERSION? | default (open ($REPO_ROOT | path join "tooling" "versions.toml") | get tools.k8s-json-schema))
   let location = ($env.CRDGEN_SCHEMA_LOCATION? | default "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ .NormalizedKubernetesVersion }}/{{ .ResourceKind }}{{ .KindSuffix }}.json")
-  let out = (validate helm-template $dir | ^kubeconform -summary -kubernetes-version $version -schema-location $location | complete)
-  if $out.exit_code != 0 {
-    error make {msg: $"kubeconform ($dir) \(Kubernetes ($version) schemas\) failed:\n($out.stdout)\n($out.stderr)"}
-  }
+  let rendered = (validate helm-template $dir)
+  run-checked $"kubeconform ($dir) \(Kubernetes ($version) schemas\)" { $rendered | ^kubeconform -summary -kubernetes-version $version -schema-location $location } | ignore
 }
 
 # Structural sanity of each CRD: cheap, offline, and covers what the OpenAPI
@@ -137,7 +128,7 @@ def gzip-size [text: string]: nothing -> int {
 export def "validate size-budget" [dir: path]: nothing -> record<bytes: int, status: string> {
   let dir = ($dir | path expand)
   let tmp = (mktemp -d -t crdgen-size.XXXXXX)
-  run-checked { ^helm package $dir -d $tmp } $"helm package ($dir)" | ignore
+  run-checked $"helm package ($dir)" { ^helm package $dir -d $tmp } | ignore
   ^tar -xzf (glob ($tmp | path join "*.tgz") | first) -C $tmp
   let chart = ($tmp | path join (open ($dir | path join "Chart.yaml")).name)
   let b64 = {|f| {name: ($f | path relative-to $chart), data: (open --raw $f | encode base64)} }

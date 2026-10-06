@@ -1,5 +1,7 @@
 # Resolve manifest pins against the upstream git remote.
 
+use exec.nu [run-checked]
+
 # `git ls-remote --tags --refs` text → tags matching `tag_pattern`: [{tag, appVersion, sha}], ascending.
 # A matching tag whose capture is not a semantic version is skipped with a warning.
 export def parse-tags [tag_pattern: string]: string -> table<tag: string, appVersion: string, sha: string> {
@@ -23,11 +25,8 @@ export def parse-tags [tag_pattern: string]: string -> table<tag: string, appVer
 
 # All upstream tags matching tagPattern: [{tag, appVersion, sha}], ascending.
 export def "resolve tags" [manifest: record]: nothing -> table<tag: string, appVersion: string, sha: string> {
-  let out = (^git ls-remote --tags --refs $manifest.upstream.repo | complete)
-  if $out.exit_code != 0 {
-    error make {msg: $"git ls-remote failed for ($manifest.upstream.repo): ($out.stderr)"}
-  }
-  $out.stdout | parse-tags $manifest.version.tagPattern
+  run-checked $"git ls-remote ($manifest.upstream.repo)" { ^git ls-remote --tags --refs $manifest.upstream.repo }
+  | parse-tags $manifest.version.tagPattern
 }
 
 # Resolve `version.current` to {tag, appVersion, sha}. sha is the peeled commit.
@@ -37,11 +36,11 @@ export def "resolve current" [manifest: record]: nothing -> record<tag: string, 
   if ($cap | is-empty) {
     error make {msg: $"version.current '($tag)' does not match tagPattern"}
   }
-  let out = (^git ls-remote --tags $manifest.upstream.repo $"refs/tags/($tag)" $"refs/tags/($tag)^{}" | complete)
-  if $out.exit_code != 0 or ($out.stdout | str trim | is-empty) {
+  let stdout = (run-checked $"git ls-remote ($manifest.upstream.repo)" { ^git ls-remote --tags $manifest.upstream.repo $"refs/tags/($tag)" $"refs/tags/($tag)^{}" })
+  if ($stdout | str trim | is-empty) {
     error make {msg: $"tag '($tag)' not found in ($manifest.upstream.repo)"}
   }
-  let refs = ($out.stdout | lines | parse "{sha}\t{ref}")
+  let refs = ($stdout | lines | parse "{sha}\t{ref}")
   # annotated tags expose the commit via the peeled ^{} ref; lightweight tags don't have one
   let peeled = ($refs | where ref =~ '\^\{\}$')
   let sha = (if ($peeled | is-empty) { $refs.0.sha } else { $peeled.0.sha })

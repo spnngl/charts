@@ -12,6 +12,7 @@ versions.toml            pinned tool versions; read by .github/actions/setup-too
                          with bash, so keep it flat: `name = "x.y.z"` under [tools]
 crdgen/mod.nu            CLI (`main regen|check|sync|notice|list`); orchestration only
 crdgen/config.nu         repo identity + policy constants + `REPO_ROOT` (the one repo root); no logic
+crdgen/exec.nu           `run-checked`: run an external command, fail with its output
 crdgen/<step>.nu         one pipeline step per file (see Modules)
 crdgen/tests/run.nu      unit + end-to-end tests; fixtures/ holds one directory per case
 release/plan.nu          which charts still need publishing (release.yml)
@@ -78,6 +79,7 @@ Chart.yaml. The comment in `generate` explains this.
 | Module | Exports (callers) | Uses | External tools | Pure |
 |--------|-------------------|------|----------------|------|
 | `config.nu` | constants | — | — | yes |
+| `exec.nu` | `run-checked` (all modules that run a command that must succeed, and the release scripts) | — | — | no (runs the given closure) |
 | `manifest.nu` | `manifest validate/defaults/load/list/gh-slug` | config | — | reads files |
 | `resolve.nu` | `resolve tags/current/allowed/latest`, `parse-tags` | — | `git ls-remote` | no |
 | `fetch.nu` | `fetch repo/release-asset/license`, `license detect` | manifest | `git clone/rev-parse`, `gh release download` | no |
@@ -90,7 +92,7 @@ Chart.yaml. The comment in `generate` explains this.
 | `version.nu` | `version base-ref/previous/tree-hashes/dir-hashes/decide/compute` | config | `git` | no |
 | `validate.nu` | `validate chart/size-budget` | config, render | `helm`, `kubeconform`, `gzip`, `tar`, `git` | no |
 
-The release scripts use only `crdgen/config.nu`. Tests import the step
+The release scripts use only `crdgen/config.nu` and `crdgen/exec.nu`. Tests import the step
 modules directly. They never import `mod.nu`.
 
 ## Shared records
@@ -117,14 +119,14 @@ These records cross module boundaries. Treat their shapes as interfaces.
   Historical exceptions: `render.nu` (`docs …`), `fetch.nu`
   (`license detect`), `sanitize.nu` (`strip-docs …`, `pointer …`,
   `patch …`), `templatize.nu` (`template escape`), `resolve.nu`
-  (`parse-tags`).
+  (`parse-tags`), `exec.nu` (`run-checked`).
 - **Text:** only `templatize.nu` rewrites serialized text (sentinels,
   `{{`/`}}` escaping). `emit.nu` assembles README and NOTICE from line lists.
   Every other module works on records.
 - **Errors:** `error make {msg}` with enough context to act on: chart,
-  manifest, path, and the external command's stderr. When an external
-  failure matters: `| complete`, then check `exit_code`. When failure is an
-  expected answer (probing whether a ref or tag exists): only check
+  manifest, path, and the external command's output. When an external
+  failure matters: `run-checked` (`exec.nu`). When failure is an expected
+  answer (probing whether a ref or tag exists): `| complete`, then check only
   `exit_code`.
 - **Output:** human progress goes to stdout (`ok` / `DRIFT` lines). Machine
   output goes through `--json`. GitHub annotations (`::warning::…`) go to
