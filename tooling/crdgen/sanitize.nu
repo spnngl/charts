@@ -14,6 +14,61 @@ const SERVER_SIDE_FIELDS = [
   metadata.selfLink
 ]
 
+# JSONSchemaProps keys that only document, never validate.
+const DOC_KEYS = [description title example externalDocs]
+# JSONSchemaProps keys holding sub-schemas, by shape. Everything else (`default`,
+# `enum`, `example`, ...) is data and must not be walked: it may contain a
+# `description` key of its own, as may `properties` (a field named description).
+const SCHEMA_MAP_KEYS = [properties patternProperties definitions dependencies]
+const SCHEMA_LIST_KEYS = [allOf anyOf oneOf]
+const SCHEMA_KEYS = [items additionalProperties additionalItems not]
+
+def is-record [v: any]: nothing -> bool {
+  $v | describe | str starts-with "record"
+}
+
+# Apply `f` to the value under `key`, if present. Keys are taken literally (no dot splitting).
+def update-key [r: record, key: string, f: closure]: nothing -> record {
+  let cp = ([$key] | into cell-path)
+  let v = ($r | get -o $cp)
+  if $v == null { $r } else { $r | upsert $cp (do $f $v) }
+}
+
+# Remove DOC_KEYS from a schema node and, recursively, from its sub-schemas.
+# Non-record nodes (`additionalProperties: true`, string-list dependencies) pass through.
+export def "strip-docs schema" [s: any]: nothing -> any {
+  if not (is-record $s) { return $s }
+  let s = ($s | reject -o ...$DOC_KEYS)
+  let s = ($SCHEMA_MAP_KEYS | reduce --fold $s {|k, acc|
+    update-key $acc $k {|m|
+      if not (is-record $m) { $m } else {
+        $m | columns | reduce --fold $m {|name, m2| update-key $m2 $name {|sub| strip-docs schema $sub } }
+      }
+    }
+  })
+  let s = ($SCHEMA_LIST_KEYS | reduce --fold $s {|k, acc| update-key $acc $k {|l| $l | each {|sub| strip-docs schema $sub } } })
+  $SCHEMA_KEYS | reduce --fold $s {|k, acc|
+    update-key $acc $k {|v| if ($v | describe | str starts-with "list") { $v | each {|sub| strip-docs schema $sub } } else { strip-docs schema $v } }
+  }
+}
+
+# Strip schema and printer-column documentation from every version of a CRD.
+# Each version's top-level description is kept: a sentence per kind, it feeds
+# `kubectl explain <kind>`, the README and the Artifact Hub CRD list.
+export def "strip-docs crd" [crd: record]: nothing -> record {
+  let strip_keep_root = {|s|
+    let root_desc = ($s | get -o description)
+    let stripped = (strip-docs schema $s)
+    if $root_desc == null { $stripped } else { $stripped | insert description $root_desc }
+  }
+  $crd | update spec.versions {|c|
+    $c.spec.versions | each {|v|
+      let v = (update-key $v schema {|sch| update-key $sch openAPIV3Schema $strip_keep_root })
+      update-key $v additionalPrinterColumns {|cols| $cols | each {|col| $col | reject -o description } }
+    }
+  }
+}
+
 # Remove record keys matching any pattern. Returns the record, or null when empty.
 def prune-map [m: any, patterns: list<string>]: nothing -> any {
   if $m == null { return null }
@@ -60,5 +115,7 @@ export def "sanitize crd" [crd: record, transform: record]: nothing -> record {
   )
   let cleaned = (prune-metadata-map $cleaned "labels" $INJECTED_LABEL_PATTERNS)
   let cleaned = (prune-metadata-map $cleaned "annotations" $INJECTED_ANNOTATION_PATTERNS)
+  # Before patches, so a patch may still add documentation on purpose.
+  let cleaned = (if $transform.stripDocs { strip-docs crd $cleaned } else { $cleaned })
   $transform.patches | reduce --fold $cleaned {|p, acc| patch apply $acc $p }
 }

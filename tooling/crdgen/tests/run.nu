@@ -16,7 +16,7 @@ use ../emit.nu *
 use ../validate.nu *
 
 const FIXTURES = (path self | path dirname | path join "fixtures")
-const NO_TRANSFORM = {include: [], exclude: [], patches: []}
+const NO_TRANSFORM = {include: [], exclude: [], patches: [], stripDocs: false}
 
 def fixture-docs [layout: string]: nothing -> list<record> {
   render source {kind: "git-path", path: $layout} {} {} $FIXTURES | docs normalize
@@ -60,6 +60,8 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
       expect-error { manifest validate ($good | upsert sources [{kind: "ftp"}]) "x-crds" } "kind must be one of"
       expect-error { manifest validate ($good | upsert transform {patches: [{op: add, path: "/a"}]}) "x-crds" } "reason"
       expect-error { manifest validate ($good | upsert name "x") "x" } "must end with '-crds'"
+      expect-error { manifest validate ($good | upsert transform {stripDocs: "yes"}) "x-crds" } "stripDocs.*boolean"
+      manifest validate ($good | upsert transform {stripDocs: true}) "x-crds"
       let d = (manifest defaults $good)
       assert equal $d.transform $NO_TRANSFORM
       assert equal $d.version.allow "all"
@@ -103,6 +105,30 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
       assert equal $s.spec.versions.0.served false
       assert equal ($s.spec.names | get -o listKind) null
       assert equal $s.metadata.labels.added "yes"
+    }}
+    {name: "sanitize stripDocs removes schema docs, keeps fields and data", run: {
+      let w = (fixture-docs "strip-docs" | get 0)
+      assert equal (sanitize crd $w $NO_TRANSFORM) $w
+      let s = (sanitize crd $w ($NO_TRANSFORM | upsert stripDocs true))
+      let v = $s.spec.versions.0
+      assert equal $v.additionalPrinterColumns.0 {name: "Ready", type: "string", jsonPath: ".status.ready"}
+      assert equal $v.schema.openAPIV3Schema {
+        type: "object"
+        description: "Widget is a thing."
+        properties: {
+          spec: {
+            type: "object"
+            default: {description: "data, not documentation"}
+            properties: {
+              description: {type: "string"}
+              tags: {type: "array", items: {type: "string"}}
+              labels: {type: "object", additionalProperties: {type: "string"}}
+              choice: {allOf: [{type: "string"}]}
+              open: {type: "object", additionalProperties: true}
+            }
+          }
+        }
+      }
     }}
     {name: "dedupe merges identical, fails on conflict", run: {
       let a = (fixture-docs "layout-a")
@@ -161,6 +187,13 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
       assert (not ($readme | str contains "cosign.pub"))
       let big = (emit readme $manifest $resolved $crds $f.dropped $license --oversized)
       assert ($big | str contains "helm upgrade --install fixture oci://ghcr.io/spnngl/charts/fixture-crds --version <version> --history-max=1")
+      assert ($readme | str contains "copied verbatim from")
+      assert (not ((emit notice $manifest $resolved $license) | str contains "schema documentation"))
+      let stripped = ($manifest | upsert transform.stripDocs true)
+      let sreadme = (emit readme $stripped $resolved $crds $f.dropped $license)
+      assert ($sreadme | str contains "CRDs are copied from")
+      assert ($sreadme | str contains "`kubectl explain` shows field")
+      assert ((emit notice $stripped $resolved $license) | str contains "Field-level schema documentation (descriptions, titles, examples) was removed.")
       rm -rf ($dir | path dirname)
     }}
   ]
