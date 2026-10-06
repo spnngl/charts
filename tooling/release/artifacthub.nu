@@ -82,7 +82,11 @@ def ensure [chart: string, template: record]: nothing -> string {
   $repo.repository_id
 }
 
-def main [...charts: string, --all]: nothing -> nothing {
+# Register charts on Artifact Hub and push their metadata artifact.
+def main [
+  ...charts: string # charts to register (names from Chart.yaml)
+  --all # register every chart under charts/
+]: nothing -> nothing {
   if ($env.AH_API_KEY_ID? | default "" | is-empty) or ($env.AH_API_KEY_SECRET? | default "" | is-empty) {
     print "::warning::Artifact Hub secrets not set, skipping registration"
     return

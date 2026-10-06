@@ -29,6 +29,7 @@ def uses-cel [crds: list<record>]: nothing -> bool {
   $crds | to json | str contains 'x-kubernetes-validations":'
 }
 
+# kubeVersion constraint: >=1.25.0-0 when any CRD uses CEL validations, else >=1.16.0-0.
 export def "emit kube-version" [crds: list<record>]: nothing -> string {
   if (uses-cel $crds) { ">=1.25.0-0" } else { ">=1.16.0-0" }
 }
@@ -120,6 +121,7 @@ export def "emit chart-yaml" [v: record<version: string, changes: list<string>>]
 
 # --- values ---------------------------------------------------------------------
 
+# values.schema.json text: the same three keys for every chart, no extra properties.
 export def "emit values-schema" []: nothing -> string {
   {
     "$schema": "https://json-schema.org/draft-07/schema#"
@@ -137,6 +139,7 @@ export def "emit values-schema" []: nothing -> string {
 
 # --- NOTICE / README ----------------------------------------------------------
 
+# NOTICE text for a chart: the upstream NOTICE (if any), then our modification statement.
 export def "emit notice" [chart: record]: nothing -> string {
   let manifest = $chart.manifest
   let resolved = $chart.resolved
@@ -171,6 +174,7 @@ def crd-table [crds: list<record>]: nothing -> list<string> {
   ] | append $rows
 }
 
+# README text for a chart. `--oversized` swaps in the SQL-driver install instructions.
 export def "emit readme" [
   chart: record
   --oversized # projected release above SIZE_BUDGET_CAP (see `validate size-budget`)

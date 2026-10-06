@@ -14,7 +14,10 @@ def published [name: string, version: string]: nothing -> bool {
   (^gh release view $"($name)-($version)" --json tagName | complete | get exit_code) == 0
 }
 
-def main [--all]: nothing -> nothing {
+# Print the JSON matrix of charts whose current version is not fully published.
+def main [
+  --all # list every chart, ignoring the completion check
+]: nothing -> nothing {
   let charts = (
     glob ($REPO_ROOT | path join "charts" "*" "Chart.yaml")
     | sort

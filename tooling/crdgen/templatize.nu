@@ -55,6 +55,7 @@ def replace-sentinel [text: string, sentinel: string, block: closure]: nothing -
   | str join "\n"
 }
 
+# Helm template text (JSON) for one sanitized CRD, with the label and annotation injection blocks.
 export def "templatize crd" [crd: record, chart: string]: nothing -> string {
   let labels = ({$LABELS_SENTINEL: ""} | merge ($crd.metadata | get -o labels | default {}))
   let annotations = ($crd.metadata | get -o annotations | default {})

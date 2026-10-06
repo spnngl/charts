@@ -1,5 +1,5 @@
-# Merge CRDs coming from several sources. Same metadata.name must mean same content.
-
+# Merge CRDs coming from several sources. Same metadata.name must mean same
+# content (identical duplicates collapse, conflicting ones fail). Sorted by name.
 export def "dedupe crds" [crds: list<record>]: nothing -> list<record> {
   let groups = ($crds | group-by {|c| $c.metadata.name } --to-table | rename name items)
   let conflicts = ($groups | where {|g| ($g.items | uniq | length) > 1 } | get name)
