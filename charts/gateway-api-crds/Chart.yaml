@@ -4,7 +4,7 @@ apiVersion: v2
 name: gateway-api-crds
 description: CustomResourceDefinitions for Kubernetes Gateway API, standard channel
 type: application
-version: 1.6.4
+version: 1.6.5
 appVersion: 1.6.2
 kubeVersion: ">=1.25.0-0"
 home: https://gateway-api.sigs.k8s.io

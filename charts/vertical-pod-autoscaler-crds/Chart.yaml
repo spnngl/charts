@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for the Kubernetes Vertical Pod Autoscaler
   (VerticalPodAutoscaler, checkpoints)
 type: application
-version: 1.8.1
+version: 1.8.2
 appVersion: 1.8.0
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler

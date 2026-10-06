@@ -1,81 +1,76 @@
 # Sanitized CRD record → Helm template text. The ONLY step that manipulates text.
 #
-# Strategy: put sentinel keys into the record, serialise with `to yaml`, escape
-# Go-template delimiters that upstream may have in descriptions, then replace
-# the sentinel lines with template directives at the same indentation.
+# Output is JSON (valid YAML, so Helm and Kubernetes read it as usual),
+# serialised with `to json --indent 0`: one token per line, no indentation.
+# Helm stores every template base64-encoded inside the gzipped release, where
+# YAML indentation compresses poorly; this shrinks the release Secret by ~25 %
+# while keeping line-based diffs. Every structural brace sits on its own line,
+# so `{{`/`}}` can only come from string content, which `template escape` handles.
+#
+# Strategy: put sentinel keys FIRST in the maps that get injected content,
+# serialise, escape Go-template delimiters, then replace each sentinel line
+# (`"<sentinel>": ""` plus a trailing comma when more members follow) with
+# template directives emitting JSON members.
 
 const LABELS_SENTINEL = "__CRDGEN_LABELS__"
 const ANNOTATIONS_SENTINEL = "__CRDGEN_ANNOTATIONS__"
 const ANNOTATIONS_BLOCK_SENTINEL = "__CRDGEN_ANNOTATIONS_BLOCK__"
 
-# Escape `{{` and `}}` so Helm renders them literally.
+# Make every run of braces containing `{{` or `}}` render literally by turning
+# the whole run into a Go string literal action. Escaping whole runs (instead
+# of each `{{`/`}}`) keeps a neighbouring single brace from merging with the
+# generated delimiters, e.g. `{}}` must not become `{{{ "}}" }}`.
 export def "template escape" [text: string]: nothing -> string {
-  $text
-  | str replace -a '{{' "\u{1}"
-  | str replace -a '}}' "\u{2}"
-  | str replace -a "\u{1}" '{{ "{{" }}'
-  | str replace -a "\u{2}" '{{ "}}" }}'
+  $text | str replace -ra '([{}]*(?:\{\{|\}\})[{}]*)' '{{ "${1}" }}'
 }
 
-def labels-block [chart: string, indent: int]: nothing -> string {
-  [
-    $'{{- include "($chart).labels" . | nindent ($indent) }}'
-    '{{- with .Values.labels }}'
-    $'{{- toYaml . | nindent ($indent) }}'
-    '{{- end }}'
-  ] | str join "\n"
+# JSON members of an object rendered by `helper` (a JSON object), without braces.
+def members [chart: string, helper: string]: nothing -> string {
+  $'include "($chart).($helper)" . | trimPrefix "{" | trimSuffix "}"'
 }
 
-# Inside an existing `annotations:` map.
-def annotations-inline-block [chart: string, indent: int]: nothing -> string {
-  [
-    (['{{- with (include "' $chart '.crdAnnotations" . | fromYaml) }}'] | str join '')
-    $'{{- toYaml . | nindent ($indent) }}'
-    '{{- end }}'
-  ] | str join "\n"
+# Inside `labels`: injected labels are never empty.
+def labels-block [chart: string, comma: string]: nothing -> string {
+  $'{{ (members $chart "crdLabels") }}($comma)'
 }
 
-# Whole `annotations:` key, emitted only when there is something to put in it.
-def annotations-key-block [chart: string, indent: int]: nothing -> string {
-  let pad = ("" | fill -w $indent -c " ")
-  [
-    (['{{- with (include "' $chart '.crdAnnotations" . | fromYaml) }}'] | str join '')
-    $'($pad)annotations:'
-    $'($pad)  {{- toYaml . | nindent ($indent + 2) }}'
-    '{{- end }}'
-  ] | str join "\n"
+# Inside an existing `annotations` map; upstream members follow, hence the comma.
+def annotations-inline-block [chart: string, comma: string]: nothing -> string {
+  $'{{- with (members $chart "crdAnnotations") }}{{ . }}($comma){{- end }}'
 }
 
-# Replace every line `<spaces><sentinel>: ""` with the block built for that indentation.
+# Whole `annotations` key in `metadata`, emitted only when there is something to put in it.
+def annotations-key-block [chart: string, comma: string]: nothing -> string {
+  $'{{- with include "($chart).crdAnnotations" . | fromJson }}"annotations": {{ toJson . }}($comma){{- end }}'
+}
+
+# Replace every line `"<sentinel>": ""[,]` with the block built for its trailing comma.
 def replace-sentinel [text: string, sentinel: string, block: closure]: nothing -> string {
   $text
   | lines
   | each {|line|
-      let m = ($line | parse --regex (['^( *)' $sentinel ': ""$'] | str join ''))
-      if ($m | is-empty) { $line } else { do $block ($m.0.capture0 | str length) }
+      let m = ($line | parse --regex (['^"' $sentinel '": ""(,?)$'] | str join ''))
+      if ($m | is-empty) { $line } else { do $block $m.0.capture0 }
     }
   | str join "\n"
 }
 
 export def "templatize crd" [crd: record, chart: string]: nothing -> string {
-  let has_annotations = (($crd.metadata | get -o annotations | default {} | columns | length) > 0)
-  let marked = (
-    $crd
-    | upsert ([metadata labels $LABELS_SENTINEL] | into cell-path) ""
-    | if $has_annotations {
-        $in | upsert ([metadata annotations $ANNOTATIONS_SENTINEL] | into cell-path) ""
-      } else {
-        $in | upsert ([metadata $ANNOTATIONS_BLOCK_SENTINEL] | into cell-path) ""
-      }
+  let labels = ({$LABELS_SENTINEL: ""} | merge ($crd.metadata | get -o labels | default {}))
+  let annotations = ($crd.metadata | get -o annotations | default {})
+  let metadata = (
+    if ($annotations | is-empty) {
+      {$ANNOTATIONS_BLOCK_SENTINEL: ""} | merge ($crd.metadata | reject -o annotations)
+    } else {
+      $crd.metadata | upsert annotations ({$ANNOTATIONS_SENTINEL: ""} | merge $annotations)
+    }
+    | upsert labels $labels
   )
-  let yaml = (template escape ($marked | to yaml))
-  let out = (
-    $yaml
-    | replace-sentinel $in $LABELS_SENTINEL {|indent| labels-block $chart $indent }
-    | replace-sentinel $in $ANNOTATIONS_SENTINEL {|indent| annotations-inline-block $chart $indent }
-    | replace-sentinel $in $ANNOTATIONS_BLOCK_SENTINEL {|indent| annotations-key-block $chart $indent }
-  )
-  $out | str trim --right | $"($in)\n"
+  template escape ($crd | upsert metadata $metadata | to json --indent 0)
+  | replace-sentinel $in $LABELS_SENTINEL {|comma| labels-block $chart $comma }
+  | replace-sentinel $in $ANNOTATIONS_SENTINEL {|comma| annotations-inline-block $chart $comma }
+  | replace-sentinel $in $ANNOTATIONS_BLOCK_SENTINEL {|comma| annotations-key-block $chart $comma }
+  | $"($in)\n"
 }
 
 # _helpers.tpl content for a chart.
@@ -97,25 +92,28 @@ export def "templatize helpers" [chart: string]: nothing -> string {
     '{{- end }}'
     ''
     '{{/*'
-    'Standard labels applied to every CRD.'
+    'Labels applied to every CRD (standard labels, overridden by .Values.labels), as a JSON object.'
     '*/}}'
-    $'{{- define "($c).labels" -}}'
-    $'helm.sh/chart: {{ include "($c).chart" . }}'
-    $'app.kubernetes.io/name: {{ include "($c).name" . }}'
-    'app.kubernetes.io/instance: {{ .Release.Name }}'
-    'app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}'
-    'app.kubernetes.io/managed-by: {{ .Release.Service }}'
+    $'{{- define "($c).crdLabels" -}}'
+    '{{- $l := dict -}}'
+    (['{{- $_ := set $l "helm.sh/chart" (include "' $c '.chart" .) -}}'] | str join '')
+    (['{{- $_ := set $l "app.kubernetes.io/name" (include "' $c '.name" .) -}}'] | str join '')
+    '{{- $_ := set $l "app.kubernetes.io/instance" .Release.Name -}}'
+    '{{- $_ := set $l "app.kubernetes.io/version" .Chart.AppVersion -}}'
+    '{{- $_ := set $l "app.kubernetes.io/managed-by" .Release.Service -}}'
+    '{{- range $k, $v := (default (dict) .Values.labels) }}{{- $_ := set $l $k $v }}{{- end -}}'
+    '{{- toJson $l -}}'
     '{{- end }}'
     ''
     '{{/*'
-    'Extra annotations applied to every CRD (.Values.annotations plus the keep policy), as YAML.'
-    'Renders "{}" when empty so callers can guard with `with ... | fromYaml`.'
+    'Extra annotations applied to every CRD (.Values.annotations plus the keep policy), as a JSON object.'
+    'Renders "{}" when empty.'
     '*/}}'
     $'{{- define "($c).crdAnnotations" -}}'
     '{{- $a := dict -}}'
     '{{- range $k, $v := (default (dict) .Values.annotations) }}{{- $_ := set $a $k $v }}{{- end -}}'
     '{{- if .Values.keepOnUninstall }}{{- $_ := set $a "helm.sh/resource-policy" "keep" }}{{- end -}}'
-    '{{- toYaml $a -}}'
+    '{{- toJson $a -}}'
     '{{- end }}'
     ''
   ] | str join "\n"

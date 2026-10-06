@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for Traefik Proxy (IngressRoutes, Middlewares, TLS
   options, transports)
 type: application
-version: 3.7.14
+version: 3.7.15
 appVersion: 3.7.13
 kubeVersion: ">=1.25.0-0"
 home: https://traefik.io

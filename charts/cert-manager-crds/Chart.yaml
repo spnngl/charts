@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for cert-manager (certificates, issuers, ACME orders
   and challenges)
 type: application
-version: 1.21.3
+version: 1.21.4
 appVersion: 1.21.2
 kubeVersion: ">=1.25.0-0"
 home: https://cert-manager.io
