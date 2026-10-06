@@ -2,21 +2,26 @@
 
 use semver.nu *
 
+# `git ls-remote --tags --refs` text → tags matching `tag_pattern`: [{tag, appVersion, sha}], ascending.
+export def parse-tags [tag_pattern: string]: string -> table<tag: string, appVersion: string, sha: string> {
+  $in
+  | lines
+  | parse "{sha}\trefs/tags/{tag}"
+  | each {|r|
+      let cap = ($r.tag | parse --regex $tag_pattern)
+      if ($cap | is-empty) { null } else { {tag: $r.tag, appVersion: ($cap | get capture0.0), sha: $r.sha} }
+    }
+  | compact
+  | sort-by -c {|a, b| (semver cmp $a.appVersion $b.appVersion) < 0 }
+}
+
 # All upstream tags matching tagPattern: [{tag, appVersion, sha}], ascending.
 export def "resolve tags" [manifest: record]: nothing -> table<tag: string, appVersion: string, sha: string> {
   let out = (^git ls-remote --tags --refs $manifest.upstream.repo | complete)
   if $out.exit_code != 0 {
     error make {msg: $"git ls-remote failed for ($manifest.upstream.repo): ($out.stderr)"}
   }
-  $out.stdout
-  | lines
-  | parse "{sha}\trefs/tags/{tag}"
-  | each {|r|
-      let cap = ($r.tag | parse --regex $manifest.version.tagPattern)
-      if ($cap | is-empty) { null } else { {tag: $r.tag, appVersion: ($cap | get capture0.0), sha: $r.sha} }
-    }
-  | compact
-  | sort-by -c {|a, b| (semver cmp $a.appVersion $b.appVersion) < 0 }
+  $out.stdout | parse-tags $manifest.version.tagPattern
 }
 
 # Resolve `version.current` to {tag, appVersion, sha}. sha is the peeled commit.

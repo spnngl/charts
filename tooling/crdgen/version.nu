@@ -58,17 +58,15 @@ def strip-volatile [chart_yaml: record]: nothing -> record {
   | reject -o ([annotations "artifacthub.io/changes"] | into cell-path)
 }
 
-# Decide version + change note. `generated_dir` holds everything except Chart.yaml;
-# `chart_record` is the Chart.yaml content without version/changes.
-export def "version compute" [
-  name: string
-  app_version: string
-  resolved_tag: string
-  generated_dir: path
-  chart_record: record
-  base_ref: any
+# Pure decision: version, trigger and change note from the previous Chart.yaml
+# (null for a new chart), the resolved pin, the Chart.yaml record without
+# version/changes, and whether any file other than Chart.yaml differs from base.
+export def "version decide" [
+  input: record<previous: any, resolved: record, chart_record: record, files_changed: bool>
 ]: nothing -> record<version: string, trigger: string, changes: list<string>> {
-  let prev = (version previous $name $base_ref)
+  let prev = $input.previous
+  let app_version = $input.resolved.appVersion
+  let resolved_tag = $input.resolved.tag
   if $prev == null {
     return {
       version: $app_version
@@ -87,10 +85,8 @@ export def "version compute" [
       changes: [$"Upstream CRDs updated from ($prev_tag) to ($resolved_tag)"]
     }
   }
-  let base_files = (version tree-hashes $name $base_ref | where path != "Chart.yaml" | sort-by path)
-  let new_files = (version dir-hashes $generated_dir | where path != "Chart.yaml" | sort-by path)
-  let chart_changed = ((strip-volatile $prev) != (strip-volatile $chart_record))
-  if $base_files == $new_files and (not $chart_changed) {
+  let chart_changed = ((strip-volatile $prev) != (strip-volatile $input.chart_record))
+  if (not $input.files_changed) and (not $chart_changed) {
     let prev_changes = ($prev | get -o ([annotations "artifacthub.io/changes"] | into cell-path) | default "" | from yaml | default [])
     return {version: $prev_version, trigger: "none", changes: $prev_changes}
   }
@@ -98,5 +94,25 @@ export def "version compute" [
     version: (semver bump-patch $prev_version)
     trigger: "tooling"
     changes: [$"Chart regenerated with updated tooling \(upstream unchanged at ($resolved_tag)\)"]
+  }
+}
+
+# Decide version + change note. `generated_dir` holds everything except Chart.yaml;
+# `chart_record` is the Chart.yaml content without version/changes.
+export def "version compute" [
+  name: string
+  app_version: string
+  resolved_tag: string
+  generated_dir: path
+  chart_record: record
+  base_ref: any
+]: nothing -> record<version: string, trigger: string, changes: list<string>> {
+  let base_files = (version tree-hashes $name $base_ref | where path != "Chart.yaml" | sort-by path)
+  let new_files = (version dir-hashes $generated_dir | where path != "Chart.yaml" | sort-by path)
+  version decide {
+    previous: (version previous $name $base_ref)
+    resolved: {tag: $resolved_tag, appVersion: $app_version}
+    chart_record: $chart_record
+    files_changed: ($base_files != $new_files)
   }
 }
