@@ -110,22 +110,28 @@ def gzip-size [text: string]: nothing -> int {
 export def "validate size-budget" [dir: path]: nothing -> record<bytes: int, status: string> {
   let dir = ($dir | path expand)
   let tmp = (mktemp -d -t crdgen-size.XXXXXX)
-  run-checked $"helm package ($dir)" { ^helm package $dir -d $tmp } | ignore
-  ^tar -xzf (glob ($tmp | path join "*.tgz") | first) -C $tmp
-  let chart = ($tmp | path join (open ($dir | path join "Chart.yaml")).name)
-  let b64 = {|f| {name: ($f | path relative-to $chart), data: (open --raw $f | encode base64)} }
-  let templates = (glob ($chart | path join "templates" "*") --no-dir | sort | each $b64)
-  let files = (glob ($chart | path join "**" "*") --no-dir | where {|f| ($f | path relative-to $chart) !~ '^(templates/|Chart\.yaml$|values\.yaml$)' } | sort | each $b64)
-  rm -rf $tmp
+  let packaged = (
+    try {
+      run-checked $"helm package ($dir)" { ^helm package $dir -d $tmp } | ignore
+      let archive = (glob ($tmp | path join "*.tgz") | first)
+      run-checked $"tar -xzf ($archive)" { ^tar -xzf $archive -C $tmp } | ignore
+      let chart = ($tmp | path join (open ($dir | path join "Chart.yaml")).name)
+      let b64 = {|f| {name: ($f | path relative-to $chart), data: (open --raw $f | encode base64)} }
+      {
+        templates: (glob ($chart | path join "templates" "*") --no-dir | sort | each $b64)
+        files: (glob ($chart | path join "**" "*") --no-dir | where {|f| ($f | path relative-to $chart) !~ '^(templates/|Chart\.yaml$|values\.yaml$)' } | sort | each $b64)
+      }
+    } finally { rm -rf $tmp }
+  )
   let manifest = (validate helm-template $dir)
   let release = {
     name: "release-name"
     info: {status: "deployed"}
     chart: {
       metadata: (open ($dir | path join "Chart.yaml"))
-      templates: $templates
+      templates: $packaged.templates
       values: (open ($dir | path join "values.yaml"))
-      files: $files
+      files: $packaged.files
     }
     manifest: $manifest
     version: 1

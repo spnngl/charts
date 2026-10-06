@@ -17,11 +17,13 @@ def main [chart: string, version: string]: nothing -> nothing {
   let ref = $"($OCI_HOST_PATH)/($chart):($version)"
   let dir = (mktemp -d -t verify.XXXXXX)
 
-  step $"helm pull ($OCI_BASE)/($chart) ($version)" { ^helm pull $"($OCI_BASE)/($chart)" --version $version -d $dir }
-  step "chart renders" { ^helm template smoke ($dir | path join $"($chart)-($version).tgz") }
-  step "cosign verify (keyless)" { ^cosign verify ...$id $ref }
-  step "cosign verify-attestation (SBOM, keyless)" { ^cosign verify-attestation ...$id --type spdxjson $ref }
-  step "gh attestation verify (provenance)" { ^gh attestation verify $"oci://($ref)" --owner $OWNER }
-  step "gh attestation verify (SBOM)" { ^gh attestation verify $"oci://($ref)" --owner $OWNER --predicate-type https://spdx.dev/Document/v2.3 }
-  print $"OK ($ref)"
+  try {
+    step $"helm pull ($OCI_BASE)/($chart) ($version)" { ^helm pull $"($OCI_BASE)/($chart)" --version $version -d $dir }
+    step "chart renders" { ^helm template smoke ($dir | path join $"($chart)-($version).tgz") }
+    step "cosign verify (keyless)" { ^cosign verify ...$id $ref }
+    step "cosign verify-attestation (SBOM, keyless)" { ^cosign verify-attestation ...$id --type spdxjson $ref }
+    step "gh attestation verify (provenance)" { ^gh attestation verify $"oci://($ref)" --owner $OWNER }
+    step "gh attestation verify (SBOM)" { ^gh attestation verify $"oci://($ref)" --owner $OWNER --predicate-type https://spdx.dev/Document/v2.3 }
+    print $"OK ($ref)"
+  } finally { rm -rf $dir }
 }

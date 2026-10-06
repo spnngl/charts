@@ -43,42 +43,49 @@ def pipeline [manifest: record]: nothing -> record {
   {resolved: $resolved, repo_dir: $repo_dir, license: $license, crds: $crds, dropped: $filtered.dropped}
 }
 
-# Generate a chart into a fresh temp dir; returns {dir, summary}.
+# Generate a chart into a fresh temp dir; returns {dir, summary}. The caller owns
+# the parent of `dir` and removes it (`install` and `check` do); on failure
+# it is removed here.
 export def generate [manifest: record, --skip-validate]: nothing -> record {
   let p = (pipeline $manifest)
   let tmp = (mktemp -d -t $"crdgen-($manifest.name).XXXXXX")
-  let dir = ($tmp | path join $manifest.name)
-  emit chart-files $dir $manifest $p.resolved $p.crds $p.dropped $p.license
-  let chart_record = (emit chart-record $manifest $p.resolved $p.crds $p.license)
-  # The README depends on the size (SQL driver note), so the size is always
-  # estimated, even with --skip-validate. The note only grows the release.
-  # The README must be final before `version compute` hashes the directory,
-  # so size it with a deterministic provisional Chart.yaml (appVersion, no
-  # changes); the final one differs by a few bytes.
-  emit chart-yaml $chart_record $p.resolved.appVersion [] | save -f ($dir | path join "Chart.yaml")
-  let budget = (validate size-budget $dir)
-  let budget = (if $budget.status != "oversized" { $budget } else {
-    emit readme $manifest $p.resolved $p.crds $p.dropped $p.license --oversized | save -f ($dir | path join "README.md")
-    validate size-budget $dir
-  })
-  let base_ref = (version base-ref)
-  let v = (version compute $manifest.name $p.resolved.appVersion $p.resolved.tag $dir $chart_record $base_ref)
-  emit chart-yaml $chart_record $v.version $v.changes | save -f ($dir | path join "Chart.yaml")
-  if not $skip_validate { validate chart $dir $p.crds }
-  {
-    dir: $dir
-    summary: {
-      name: $manifest.name
-      version: $v.version
-      appVersion: $p.resolved.appVersion
-      tag: $p.resolved.tag
-      commit: $p.resolved.sha
-      trigger: $v.trigger
-      base: ($base_ref | default "none")
-      crds: ($p.crds | length)
-      dropped: $p.dropped
-      release_secret: ($budget.bytes | into filesize)
+  try {
+    let dir = ($tmp | path join $manifest.name)
+    emit chart-files $dir $manifest $p.resolved $p.crds $p.dropped $p.license
+    let chart_record = (emit chart-record $manifest $p.resolved $p.crds $p.license)
+    # The README depends on the size (SQL driver note), so the size is always
+    # estimated, even with --skip-validate. The note only grows the release.
+    # The README must be final before `version compute` hashes the directory,
+    # so size it with a deterministic provisional Chart.yaml (appVersion, no
+    # changes); the final one differs by a few bytes.
+    emit chart-yaml $chart_record $p.resolved.appVersion [] | save -f ($dir | path join "Chart.yaml")
+    let budget = (validate size-budget $dir)
+    let budget = (if $budget.status != "oversized" { $budget } else {
+      emit readme $manifest $p.resolved $p.crds $p.dropped $p.license --oversized | save -f ($dir | path join "README.md")
+      validate size-budget $dir
+    })
+    let base_ref = (version base-ref)
+    let v = (version compute $manifest.name $p.resolved.appVersion $p.resolved.tag $dir $chart_record $base_ref)
+    emit chart-yaml $chart_record $v.version $v.changes | save -f ($dir | path join "Chart.yaml")
+    if not $skip_validate { validate chart $dir $p.crds }
+    {
+      dir: $dir
+      summary: {
+        name: $manifest.name
+        version: $v.version
+        appVersion: $p.resolved.appVersion
+        tag: $p.resolved.tag
+        commit: $p.resolved.sha
+        trigger: $v.trigger
+        base: ($base_ref | default "none")
+        crds: ($p.crds | length)
+        dropped: $p.dropped
+        release_secret: ($budget.bytes | into filesize)
+      }
     }
+  } catch {|e|
+    rm -rf $tmp
+    error make {msg: $e.msg}
   }
 }
 
@@ -87,6 +94,7 @@ def install [generated_dir: path, name: string]: nothing -> nothing {
   if ($target | path exists) { rm -rf $target }
   mkdir ($target | path dirname)
   mv $generated_dir $target
+  rm -rf ($generated_dir | path dirname)
 }
 
 def emit-result [rows: table, json: bool]: nothing -> nothing {
@@ -108,17 +116,19 @@ export def "main regen" [...names: string, --all, --skip-validate, --json]: noth
 export def "main check" [...names: string, --all]: nothing -> nothing {
   let drift = (select-manifests $names $all | each {|m|
     let g = (generate $m)
-    let committed = ($REPO_ROOT | path join "charts" $m.name)
-    let a = (version dir-hashes $g.dir | sort-by path)
-    let b = (if ($committed | path exists) { version dir-hashes $committed | sort-by path } else { [] })
-    if $a == $b {
-      print $"ok    ($m.name) ($g.summary.version)"
-      null
-    } else {
-      print $"DRIFT ($m.name): charts/($m.name) differs from regeneration"
-      ^git --no-pager diff --no-index --stat $committed $g.dir | print
-      $m.name
-    }
+    try {
+      let committed = ($REPO_ROOT | path join "charts" $m.name)
+      let a = (version dir-hashes $g.dir | sort-by path)
+      let b = (if ($committed | path exists) { version dir-hashes $committed | sort-by path } else { [] })
+      if $a == $b {
+        print $"ok    ($m.name) ($g.summary.version)"
+        null
+      } else {
+        print $"DRIFT ($m.name): charts/($m.name) differs from regeneration"
+        ^git --no-pager diff --no-index --stat $committed $g.dir | print
+        $m.name
+      }
+    } finally { rm -rf ($g.dir | path dirname) }
   } | compact)
   # root NOTICE
   let want = (notice-text)

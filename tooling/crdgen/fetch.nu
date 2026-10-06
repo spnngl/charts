@@ -27,15 +27,21 @@ export def "fetch repo" [manifest: record, resolved: record]: nothing -> path {
 }
 
 # Download one GitHub release asset into a temp dir; returns the file path.
+# On success the caller owns the file's parent directory and must remove it.
 export def "fetch release-asset" [manifest: record, resolved: record, asset: string]: nothing -> path {
   let slug = (manifest gh-slug $manifest)
   let dir = (mktemp -d -t crdgen-asset.XXXXXX)
-  run-checked $"gh release download ($slug) ($resolved.tag) pattern '($asset)'" { ^gh release download $resolved.tag -R $slug -p $asset -D $dir } | ignore
-  let files = (ls $dir | get name)
-  if ($files | length) != 1 {
-    error make {msg: $"asset pattern '($asset)' matched ($files | length) files in ($slug) ($resolved.tag); must match exactly one"}
+  try {
+    run-checked $"gh release download ($slug) ($resolved.tag) pattern '($asset)'" { ^gh release download $resolved.tag -R $slug -p $asset -D $dir } | ignore
+    let files = (ls $dir | get name)
+    if ($files | length) != 1 {
+      error make {msg: $"asset pattern '($asset)' matched ($files | length) files in ($slug) ($resolved.tag); must match exactly one"}
+    }
+    $files.0
+  } catch {|e|
+    rm -rf $dir
+    error make {msg: $e.msg}
   }
-  $files.0
 }
 
 # Detect the SPDX id of a license text. Returns null when unknown.
