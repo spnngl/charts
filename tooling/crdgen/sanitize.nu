@@ -36,7 +36,7 @@ def update-key [r: record, key: string, f: closure]: nothing -> record {
 
 # Remove DOC_KEYS from a schema node and, recursively, from its sub-schemas.
 # Non-record nodes (`additionalProperties: true`, string-list dependencies) pass through.
-export def "strip-docs schema" [s: any]: nothing -> any {
+def "strip-docs schema" [s: any]: nothing -> any {
   if not (is-record $s) { return $s }
   let s = ($s | reject -o ...$DOC_KEYS)
   let s = ($SCHEMA_MAP_KEYS | reduce --fold $s {|k, acc|
@@ -55,7 +55,7 @@ export def "strip-docs schema" [s: any]: nothing -> any {
 # Strip schema and printer-column documentation from every version of a CRD.
 # Each version's top-level description is kept: a sentence per kind, it feeds
 # `kubectl explain <kind>`, the README and the Artifact Hub CRD list.
-export def "strip-docs crd" [crd: record]: nothing -> record {
+def "strip-docs crd" [crd: record]: nothing -> record {
   let strip_keep_root = {|s|
     let root_desc = ($s | get -o description)
     let stripped = (strip-docs schema $s)
@@ -87,7 +87,7 @@ def prune-metadata-map [crd: record, field: string, patterns: list<string>]: not
 }
 
 # JSON pointer ("/spec/versions/0/served") → cell-path.
-export def "pointer to-cell-path" [pointer: string]: nothing -> cell-path {
+def "pointer to-cell-path" [pointer: string]: nothing -> cell-path {
   $pointer
   | split row '/'
   | skip 1
@@ -99,7 +99,7 @@ export def "pointer to-cell-path" [pointer: string]: nothing -> cell-path {
 }
 
 # Apply one JSON6902-style patch (add | replace | remove).
-export def "patch apply" [crd: record, patch: record]: nothing -> record {
+def "patch apply" [crd: record, patch: record]: nothing -> record {
   let cp = (pointer to-cell-path $patch.path)
   match $patch.op {
     "add" | "replace" => ($crd | upsert $cp $patch.value)

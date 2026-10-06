@@ -2,7 +2,7 @@
 
 use manifest.nu ["manifest gh-slug"]
 
-export def "fetch cache-dir" []: nothing -> path {
+def cache-dir []: nothing -> path {
   $env.CRDGEN_CACHE? | default ($nu.cache-dir | path join "crdgen")
 }
 
@@ -10,7 +10,7 @@ export def "fetch cache-dir" []: nothing -> path {
 # the cached checkout is verified against the resolved commit so a moved tag
 # never goes unnoticed.
 export def "fetch repo" [manifest: record, resolved: record]: nothing -> path {
-  let cache = (fetch cache-dir)
+  let cache = (cache-dir)
   let slug = ($manifest.upstream.repo | str replace -r '^https?://' '' | str replace -a '/' '__')
   let dir = ($cache | path join $"($slug)@($resolved.tag)")
   if not ($dir | path join ".git" | path exists) {
@@ -57,7 +57,7 @@ export def "license detect" [text: string]: nothing -> any {
 
 # Upstream LICENSE/NOTICE at the checkout. Fails if LICENSE is missing or does
 # not match the manifest's declared SPDX id.
-export def "fetch license" [manifest: record, repo_dir: path]: nothing -> record<license_path: string, license_text: string, spdx: string, notice_text: any> {
+export def "fetch license" [manifest: record, repo_dir: path]: nothing -> record<license_text: string, spdx: string, notice_text: any> {
   let candidates = (ls $repo_dir | get name | where {|p| ($p | path basename) =~ '(?i)^(LICENSE|LICENCE|COPYING)(\.(md|txt))?$' })
   if ($candidates | is-empty) {
     error make {msg: $"no LICENSE file at the root of ($manifest.upstream.repo) @ ($manifest.version.current)"}
@@ -70,7 +70,6 @@ export def "fetch license" [manifest: record, repo_dir: path]: nothing -> record
   }
   let notices = (ls $repo_dir | get name | where {|p| ($p | path basename) =~ '(?i)^NOTICE(\.(md|txt))?$' })
   {
-    license_path: ($license_path | path basename)
     license_text: $license_text
     spdx: $detected
     notice_text: (if ($notices | is-empty) { null } else { open --raw $notices.0 })

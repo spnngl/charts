@@ -13,10 +13,6 @@ def storage-version [crd: record]: nothing -> record {
   if ($storage | is-empty) { $versions | last } else { $storage.0 }
 }
 
-def served-versions [crd: record]: nothing -> list<string> {
-  $crd.spec.versions | where {|v| ($v | get -o served | default false) } | get name
-}
-
 # First sentence of the storage version's schema description, single line, bounded.
 def crd-description [crd: record]: nothing -> string {
   let desc = (storage-version $crd | get -o schema.openAPIV3Schema.description | default "")
