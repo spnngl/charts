@@ -5,6 +5,7 @@ name: Secret Scanning (betterleaks-github)
 on:
   schedule:
     - cron: "42 8 * * *"
+      timezone: "Europe/Paris"
   workflow_dispatch:
 
 permissions: {}
