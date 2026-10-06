@@ -27,18 +27,16 @@ export def "filter crds" [docs: list<record>, transform: record]: nothing -> rec
     | uniq
     | sort
   )
-  let selected = (
-    $crds
-    | where {|c|
-        let name = $c.metadata.name
-        let included = (($transform.include | is-empty) or (matches-any $name $transform.include))
-        let excluded = (matches-any $name $transform.exclude)
-        $included and (not $excluded)
-      }
-  )
+  let is_selected = {|c|
+    let name = $c.metadata.name
+    let included = (($transform.include | is-empty) or (matches-any $name $transform.include))
+    let excluded = (matches-any $name $transform.exclude)
+    $included and (not $excluded)
+  }
+  let selected = ($crds | where $is_selected)
   let dropped_crds = (
     $crds
-    | where {|c| $c.metadata.name not-in ($selected | get metadata.name) }
+    | where {|c| not (do $is_selected $c) }
     | each {|c| $"CustomResourceDefinition ($c.metadata.name) \(excluded by manifest\)" }
   )
   if ($selected | is-empty) {

@@ -42,7 +42,7 @@ def ah-post [path: string, body: record]: nothing -> nothing {
 # before creation would keep returning [] afterwards: bust it with a nonce.
 def find-repository [url: string]: nothing -> oneof<record, nothing> {
   let nonce = (date now | format date %s%f)
-  ah-get $"/repositories/search?url=($url)&limit=10&nonce=($nonce)" | where url == $url | get 0?
+  ah-get $"/repositories/search?({url: $url, limit: 10, nonce: $nonce} | url build-query)" | where url == $url | get 0?
 }
 
 # Creation is asynchronous on the AH side; poll a few times.
