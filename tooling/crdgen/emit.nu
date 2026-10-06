@@ -42,14 +42,14 @@ def ah-crds-annotation [crds: list<record>]: nothing -> string {
   | to yaml
 }
 
-def source-paths [manifest: record]: nothing -> list<string> {
-  $manifest.sources | each {|s|
-    match $s.kind {
-      "git-path" | "kustomize" => $s.path
-      "helm-template" => $s.chartPath
-      "release-asset" => $"release asset ($s.asset)"
-    }
-  }
+# {kind, path} of every source; `path` is the field SOURCE_PATH_FIELD names for its kind.
+def source-paths [manifest: record]: nothing -> table<kind: string, path: string> {
+  $manifest.sources | each {|s| {kind: $s.kind, path: ($s | get ($SOURCE_PATH_FIELD | get $s.kind))} }
+}
+
+# Source paths as shown in prose: a release asset is not a repository path.
+def source-labels [manifest: record]: nothing -> list<string> {
+  source-paths $manifest | each {|p| if $p.kind == "release-asset" { $"release asset ($p.path)" } else { $p.path } }
 }
 
 def upstream-tree-url [manifest: record, tag: string, path: string]: nothing -> string {
@@ -70,7 +70,7 @@ export def "emit chart-record" [
       {name: "Upstream project", url: $manifest.upstream.homepage}
       {name: "Upstream repository", url: $manifest.upstream.repo}
     ]
-    | append (source-paths $manifest | where {|p| not ($p | str starts-with "release asset") } | each {|p| {name: $"Upstream CRD source \(($p)\)", url: (upstream-tree-url $manifest $resolved.tag $p)} })
+    | append (source-paths $manifest | where kind != "release-asset" | each {|p| {name: $"Upstream CRD source \(($p.path)\)", url: (upstream-tree-url $manifest $resolved.tag $p.path)} })
     | append [
       {name: "Chart source", url: $"($REPO_URL)/tree/main/charts/($manifest.name)"}
       {name: "Verify signature and attestations", url: $"($REPO_URL)#verifying-what-you-install"}
@@ -164,7 +164,7 @@ export def "emit notice" [manifest: record, resolved: record, license: record]: 
   let ours = [
     $"The CustomResourceDefinition manifests under templates/ were copied from"
     $"  ($manifest.upstream.repo)"
-    $"at tag ($resolved.tag) \(commit ($resolved.sha)\), path\(s\): (source-paths $manifest | str join ', ')"
+    $"at tag ($resolved.tag) \(commit ($resolved.sha)\), path\(s\): (source-labels $manifest | str join ', ')"
     $"and modified by ($REPO_URL): Helm labels, annotations and templating were"
     $"added; server-side metadata and upstream Helm release metadata were removed."
     ...(if $manifest.transform.stripDocs { ["Field-level schema documentation (descriptions, titles, examples) was removed."] } else { [] })
@@ -202,7 +202,7 @@ export def "emit readme" [
   let name = $manifest.name
   let oci = $"($OCI_BASE)/($name)"
   let crd_names = ($crds | get metadata.name | str join " ")
-  let paths = (source-paths $manifest)
+  let paths = (source-labels $manifest)
   let conflicts = ($manifest.conflictsWith | each {|c| $"`($c)`" } | str join ", ")
   let dropped_section = (if ($dropped | is-empty) { [] } else {
     [
