@@ -1,18 +1,24 @@
 # Resolve manifest pins against the upstream git remote.
 
-use semver.nu *
-
 # `git ls-remote --tags --refs` text → tags matching `tag_pattern`: [{tag, appVersion, sha}], ascending.
+# A matching tag whose capture is not a semantic version is skipped with a warning.
 export def parse-tags [tag_pattern: string]: string -> table<tag: string, appVersion: string, sha: string> {
   $in
   | lines
   | parse "{sha}\trefs/tags/{tag}"
   | each {|r|
       let cap = ($r.tag | parse --regex $tag_pattern)
-      if ($cap | is-empty) { null } else { {tag: $r.tag, appVersion: ($cap | get capture0.0), sha: $r.sha} }
+      if ($cap | is-empty) { return null }
+      let app_version = $cap.capture0.0
+      if (try { $app_version | into semver; true } catch { false }) {
+        {tag: $r.tag, appVersion: $app_version, sha: $r.sha}
+      } else {
+        print -e $"::warning::skipping tag ($r.tag): not a semantic version"
+        null
+      }
     }
   | compact
-  | sort-by -c {|a, b| (semver cmp $a.appVersion $b.appVersion) < 0 }
+  | sort-by {|t| $t.appVersion | into semver }
 }
 
 # All upstream tags matching tagPattern: [{tag, appVersion, sha}], ascending.
@@ -42,11 +48,23 @@ export def "resolve current" [manifest: record]: nothing -> record<tag: string, 
   {tag: $tag, appVersion: ($cap | get capture0.0), sha: $sha}
 }
 
+# Is `candidate` an allowed upgrade from `current` under policy all|minor|patch?
+export def "resolve allowed" [current: string, candidate: string, policy: string]: nothing -> bool {
+  let a = ($current | into semver)
+  let b = ($candidate | into semver)
+  match $policy {
+    "all" => true
+    "minor" => ($a.major == $b.major)
+    "patch" => ($a.major == $b.major and $a.minor == $b.minor)
+    _ => { error make {msg: $"unknown allow policy '($policy)'"} }
+  }
+}
+
 # Newest allowed upstream version above `current`, or null.
 export def "resolve latest" [manifest: record]: nothing -> any {
   let current_app = ($manifest.version.current | parse --regex $manifest.version.tagPattern | get capture0.0)
   resolve tags $manifest
-  | where {|t| (semver cmp $t.appVersion $current_app) > 0 }
-  | where {|t| semver allowed $current_app $t.appVersion $manifest.version.allow }
+  | where {|t| ($t.appVersion | into semver) > ($current_app | into semver) }
+  | where {|t| resolve allowed $current_app $t.appVersion $manifest.version.allow }
   | last
 }
