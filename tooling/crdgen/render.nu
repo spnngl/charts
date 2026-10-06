@@ -73,7 +73,8 @@ def render-release-asset [source: record, chart: record]: nothing -> list<any> {
   } finally { rm -rf ($file | path dirname) $extracted }
 }
 
-# Render one source entry. Returns raw documents (not yet filtered).
+# Render one source entry. Returns raw, untyped YAML documents (`any`: external
+# data, not yet filtered).
 # `chart` carries {manifest, resolved, repo_dir}.
 export def "render source" [source: record, chart: record]: nothing -> list<any> {
   match $source.kind {
