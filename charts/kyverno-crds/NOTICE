@@ -78,4 +78,5 @@ The CustomResourceDefinition manifests under templates/ were copied from
 at tag v1.19.1 (commit 40ec788d48bb28d83dbf85538e962a59db9d45c6), path(s): config/crds
 and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
 added; server-side metadata and upstream Helm release metadata were removed.
+Field-level schema documentation (descriptions, titles, examples) was removed.
 Upstream license: Apache-2.0 (see LICENSE in this directory).
