@@ -7,13 +7,13 @@ on:
     branches:
       - main
     paths:
-      - renovate.json
+      - renovate.json5
       - .github/workflows/renovate.yml
   push:
     branches:
       - main
     paths:
-      - renovate.json
+      - renovate.json5
       - .github/workflows/renovate.yml
 
 permissions:
@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # No file argument on purpose: with one, the validator checks the file as a
-      # *global* config; without, it discovers renovate.json as a repository
+      # *global* config; without, it discovers renovate.json5 as a repository
       # config.
       - name: renovate-config-validator --strict
         run: renovate-config-validator --strict
