@@ -63,12 +63,10 @@
         // Renovate updates itself A LOT, keep some stability by updating once a
         // week.
         {
-            "description": "Auto-upgrade renovate",
-            "matchDepNames": ["renovatebot/renovate"],
-            "matchUpdateTypes": ["minor", "patch"],
+            "description": "Renovate image (validator workflow): weekly. Automerge of minor/patch/digest comes from the first rule.",
+            "matchDepNames": ["ghcr.io/renovatebot/renovate"],
             "schedule": ["before 5am on Monday"],
-            "automergeSchedule": ["before 5am on Monday"],
-            "automerge": true
+            "automergeSchedule": ["before 5am on Monday"]
         }
     ]
 }
