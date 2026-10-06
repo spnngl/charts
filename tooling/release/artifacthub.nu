@@ -21,6 +21,7 @@ def ah-repo-name [chart: string]: nothing -> string {
   $"($OWNER)-($chart)"
 }
 
+# Parsed response body: untyped external data.
 def ah-get [path: string]: nothing -> any {
   let r = (http get -H (headers) -e -f $"($AH_API)($path)")
   if $r.status >= 400 {
@@ -38,13 +39,13 @@ def ah-post [path: string, body: record]: nothing -> nothing {
 
 # Artifact Hub caches search responses per query string, so a lookup made
 # before creation would keep returning [] afterwards: bust it with a nonce.
-def find-repository [url: string]: nothing -> any {
+def find-repository [url: string]: nothing -> oneof<record, nothing> {
   let nonce = (date now | format date %s%f)
   ah-get $"/repositories/search?url=($url)&limit=10&nonce=($nonce)" | where url == $url | get 0?
 }
 
 # Creation is asynchronous on the AH side; poll a few times.
-def find-repository-retry [url: string]: nothing -> any {
+def find-repository-retry [url: string]: nothing -> oneof<record, nothing> {
   for attempt in 1..6 {
     sleep 5sec
     let found = (find-repository $url)

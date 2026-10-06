@@ -61,7 +61,7 @@ export def "resolve allowed" [current: string, candidate: string, policy: string
 }
 
 # Newest allowed upstream version above `current`, or null.
-export def "resolve latest" [manifest: record]: nothing -> any {
+export def "resolve latest" [manifest: record]: nothing -> oneof<record, nothing> {
   let current_app = ($manifest.version.current | parse --regex $manifest.version.tagPattern | get capture0.0)
   resolve tags $manifest
   | where {|t| ($t.appVersion | into semver) > ($current_app | into semver) }

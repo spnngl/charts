@@ -13,7 +13,7 @@ def ref-exists [ref: string]: nothing -> bool {
 }
 
 # Git ref the generated output is compared against. null on a repo without history.
-export def "version base-ref" []: nothing -> any {
+export def "version base-ref" []: nothing -> oneof<string, nothing> {
   let override = ($env.CRDGEN_BASE_REF? | default "")
   if not ($override | is-empty) {
     if not (ref-exists $override) { error make {msg: $"CRDGEN_BASE_REF '($override)' does not exist"} }
@@ -26,7 +26,7 @@ export def "version base-ref" []: nothing -> any {
 }
 
 # Previously committed Chart.yaml for a chart at `base_ref`, or null.
-export def "version previous" [name: string, base_ref: any]: nothing -> any {
+export def "version previous" [name: string, base_ref: oneof<string, nothing>]: nothing -> oneof<record, nothing> {
   if $base_ref == null { return null }
   let out = (^git show $"($base_ref):charts/($name)/Chart.yaml" | complete)
   if $out.exit_code != 0 { return null }
@@ -34,7 +34,7 @@ export def "version previous" [name: string, base_ref: any]: nothing -> any {
 }
 
 # {path, hash} for every blob under charts/<name> at base_ref (paths relative to the chart dir).
-export def "version tree-hashes" [name: string, base_ref: any]: nothing -> table<path: string, hash: string> {
+export def "version tree-hashes" [name: string, base_ref: oneof<string, nothing>]: nothing -> table<path: string, hash: string> {
   if $base_ref == null { return [] }
   let out = (^git ls-tree -r $base_ref -- $"charts/($name)" | complete)
   if $out.exit_code != 0 { return [] }
@@ -63,7 +63,7 @@ def bump-patch [version: string]: nothing -> string {
 # (null for a new chart), the resolved pin, the Chart.yaml record without
 # version/changes, and whether any file other than Chart.yaml differs from base.
 export def "version decide" [
-  input: record<previous: any, resolved: record, chart_record: record, files_changed: bool>
+  input: record<previous: oneof<record, nothing>, resolved: record, chart_record: record, files_changed: bool>
 ]: nothing -> record<version: string, trigger: string, changes: list<string>> {
   let prev = $input.previous
   let app_version = $input.resolved.appVersion
@@ -106,7 +106,7 @@ export def "version compute" [
   resolved_tag: string
   generated_dir: path
   chart_record: record
-  base_ref: any
+  base_ref: oneof<string, nothing>
 ]: nothing -> record<version: string, trigger: string, changes: list<string>> {
   let base_files = (version tree-hashes $name $base_ref | where path != "Chart.yaml" | sort-by path)
   let new_files = (version dir-hashes $generated_dir | where path != "Chart.yaml" | sort-by path)
