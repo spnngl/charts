@@ -6,6 +6,8 @@
 use std/assert
 use ../manifest.nu *
 use ../semver.nu *
+use ../resolve.nu [parse-tags]
+use ../version.nu ["version decide"]
 use ../fetch.nu ["license detect"]
 use ../render.nu *
 use ../filter.nu *
@@ -38,6 +40,48 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
       assert (not (semver allowed "1.6.2" "2.0.0" "minor"))
       assert (not (semver allowed "1.6.2" "1.7.0" "patch"))
       assert equal (["1.10.0" "1.2.0" "0.9.9"] | semver sort) ["0.9.9" "1.2.0" "1.10.0"]
+    }}
+    {name: "parse-tags: ascending semver order, drops non-matching tags", run: {
+      let text = ["aaa\trefs/tags/v1.2.0" "bbb\trefs/tags/v1.10.0" "ccc\trefs/tags/nightly" "ddd\trefs/tags/v0.9.9"] | str join "\n"
+      let tags = ($text | parse-tags '^v(\d+\.\d+\.\d+)$')
+      assert equal ($tags | get appVersion) ["0.9.9" "1.2.0" "1.10.0"]
+      assert equal ($tags | get tag) ["v0.9.9" "v1.2.0" "v1.10.0"]
+      assert equal ($tags | get sha) ["ddd" "aaa" "bbb"]
+    }}
+    {name: "version decide: new, upstream, tooling, none", run: {
+      let chart_record = {name: "x-crds", appVersion: "1.2.3", annotations: {"charts.spnngl.io/upstream-tag": "v1.2.3"}}
+      let previous = {
+        name: "x-crds", version: "1.2.3", appVersion: "1.2.3"
+        annotations: {"charts.spnngl.io/upstream-tag": "v1.2.3", "artifacthub.io/changes": "- Initial release\n"}
+      }
+      let resolved = {tag: "v1.2.3", appVersion: "1.2.3", sha: "abc"}
+      let base = {previous: $previous, resolved: $resolved, chart_record: $chart_record, files_changed: false}
+      # new chart
+      assert equal (version decide ($base | upsert previous null)) {version: "1.2.3", trigger: "new", changes: ["Initial release, CRDs from upstream v1.2.3"]}
+      # upstream bump above the previous chart version
+      let up = (version decide ($base | upsert resolved {tag: "v1.3.0", appVersion: "1.3.0", sha: "def"}))
+      assert equal $up {version: "1.3.0", trigger: "upstream", changes: ["Upstream CRDs updated from v1.2.3 to v1.3.0"]}
+      # upstream bump at or below the previous chart version: PATCH+1
+      let ahead = ($previous | upsert version "1.5.2")
+      assert equal (version decide ($base | upsert previous $ahead | upsert resolved {tag: "v1.5.0", appVersion: "1.5.0", sha: "def"})).version "1.5.3"
+      let equal_ = ($previous | upsert version "1.5.0")
+      assert equal (version decide ($base | upsert previous $equal_ | upsert resolved {tag: "v1.5.0", appVersion: "1.5.0", sha: "def"})).version "1.5.1"
+      # tooling change: files differ, or Chart.yaml fields differ
+      let tooling = (version decide ($base | upsert files_changed true))
+      assert equal $tooling {version: "1.2.4", trigger: "tooling", changes: ["Chart regenerated with updated tooling (upstream unchanged at v1.2.3)"]}
+      assert equal (version decide ($base | upsert chart_record ($chart_record | upsert description "new"))).trigger "tooling"
+      # nothing changed: previous version and change note are kept
+      assert equal (version decide $base) {version: "1.2.3", trigger: "none", changes: ["Initial release"]}
+    }}
+    {name: "version decide: previous tag falls back to appVersion", run: {
+      let previous = {name: "x-crds", version: "1.0.0", appVersion: "1.0.0", annotations: {}}
+      let d = (version decide {
+        previous: $previous
+        resolved: {tag: "v1.1.0", appVersion: "1.1.0", sha: "abc"}
+        chart_record: {name: "x-crds"}
+        files_changed: false
+      })
+      assert equal $d.changes ["Upstream CRDs updated from 1.0.0 to v1.1.0"]
     }}
     {name: "license detect", run: {
       assert equal (license detect "Apache License\n Version 2.0, January 2004") "Apache-2.0"
