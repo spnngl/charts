@@ -4,7 +4,7 @@
 "metadata": {
 "annotations": {
 {{- with include "traefik-crds.crdAnnotations" . | trimPrefix "{" | trimSuffix "}" }}{{ . }},{{- end }}
-"controller-gen.kubebuilder.io/version": "v0.19.0"
+"controller-gen.kubebuilder.io/version": "v0.21.0"
 },
 "name": "ingressroutes.traefik.io",
 "labels": {
