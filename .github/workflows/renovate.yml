@@ -27,6 +27,10 @@ jobs:
       image: ghcr.io/renovatebot/renovate:44.139.0@sha256:67e76082eded90c6fa1d1552cc9d8d93d1eb06e13e81591aab57b6f4994217be
       options: --user 0
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@351661ca32ac09a36dc5ee2d536e3128f2a3c8ed # v2.22.0
+        with:
+          egress-policy: block
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # No file argument on purpose: with one, the validator checks the file as a
       # *global* config; without, it discovers renovate.json5 as a repository
