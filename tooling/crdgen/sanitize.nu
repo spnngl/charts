@@ -83,6 +83,12 @@ def prune-metadata-map [crd: record, field: string, patterns: list<string>]: not
   }
 }
 
+# Remove the labels and annotations the chart template injects. A map left empty is dropped.
+export def "sanitize strip-injected" [crd: record]: nothing -> record {
+  let cleaned = (prune-metadata-map $crd "labels" $INJECTED_LABEL_PATTERNS)
+  prune-metadata-map $cleaned "annotations" $INJECTED_ANNOTATION_PATTERNS
+}
+
 # JSON pointer ("/spec/versions/0/served") → cell-path.
 def "pointer to-cell-path" [pointer: string]: nothing -> cell-path {
   $pointer
@@ -110,8 +116,7 @@ export def "sanitize crd" [crd: record, transform: record]: nothing -> record {
     $crd
     | reject -o ...$SERVER_SIDE_FIELDS
   )
-  let cleaned = (prune-metadata-map $cleaned "labels" $INJECTED_LABEL_PATTERNS)
-  let cleaned = (prune-metadata-map $cleaned "annotations" $INJECTED_ANNOTATION_PATTERNS)
+  let cleaned = (sanitize strip-injected $cleaned)
   # Before patches, so a patch may still add documentation on purpose.
   let cleaned = (if $transform.stripDocs { strip-docs crd $cleaned } else { $cleaned })
   $transform.patches | reduce --fold $cleaned {|p, acc| patch apply $acc $p }
