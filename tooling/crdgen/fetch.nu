@@ -44,7 +44,7 @@ export def "fetch release-asset" [manifest: record, resolved: record, asset: str
 }
 
 # Detect the SPDX id of a license text. Returns null when unknown.
-export def "license detect" [text: string]: nothing -> any {
+export def "license detect" [text: string]: nothing -> oneof<string, nothing> {
   let t = ($text | str replace -ra '\s+' ' ')
   if ($t =~ 'Apache License' and $t =~ 'Version 2\.0') { return "Apache-2.0" }
   if ($t =~ 'Permission is hereby granted, free of charge') { return "MIT" }
@@ -57,7 +57,7 @@ export def "license detect" [text: string]: nothing -> any {
 
 # Upstream LICENSE/NOTICE at the checkout. Fails if LICENSE is missing or does
 # not match the manifest's declared SPDX id.
-export def "fetch license" [manifest: record, repo_dir: path]: nothing -> record<license_text: string, spdx: string, notice_text: any> {
+export def "fetch license" [manifest: record, repo_dir: path]: nothing -> record<license_text: string, spdx: string, notice_text: oneof<string, nothing>> {
   let candidates = (ls $repo_dir | get name | where {|p| ($p | path basename) =~ '(?i)^(LICENSE|LICENCE|COPYING)(\.(md|txt))?$' })
   if ($candidates | is-empty) {
     error make {msg: $"no LICENSE file at the root of ($manifest.upstream.repo) @ ($manifest.version.current)"}

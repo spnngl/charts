@@ -13,7 +13,7 @@ def require-string [m: record, name: string, path: string] {
   }
 }
 
-# Validate one source entry.
+# Validate one source entry (`s` is untyped manifest data).
 def validate-source [name: string, s: any, idx: int] {
   if ($s | describe -d).type != record {
     fail $name $"sources[($idx)] must be a record"

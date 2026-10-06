@@ -32,6 +32,7 @@ def update-key [r: record, key: string, f: closure]: nothing -> record {
 
 # Remove DOC_KEYS from a schema node and, recursively, from its sub-schemas.
 # Non-record nodes (`additionalProperties: true`, string-list dependencies) pass through.
+# `any`: a schema node is a record, or a bool/list in places (external data).
 def "strip-docs schema" [s: any]: nothing -> any {
   if ($s | describe -d).type != record { return $s }
   let s = ($s | reject -o ...$DOC_KEYS)
@@ -66,7 +67,7 @@ def "strip-docs crd" [crd: record]: nothing -> record {
 }
 
 # Remove record keys matching any pattern. Returns the record, or null when empty.
-def prune-map [m: any, patterns: list<string>]: nothing -> any {
+def prune-map [m: oneof<record, nothing>, patterns: list<string>]: nothing -> oneof<record, nothing> {
   if $m == null { return null }
   let kept = ($m | transpose key value | where {|r| not ($patterns | any {|p| $r.key =~ $p }) })
   if ($kept | is-empty) { null } else { $kept | transpose -rd }

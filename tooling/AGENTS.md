@@ -44,9 +44,9 @@ security checklists. The project rules below take precedence.
 - Names: kebab-case for commands and flags, snake_case for variables and
   parameters, SCREAMING_SNAKE_CASE for constants and environment variables.
   Use full words (`manifest`, not `mf`).
-- Every `def` has typed parameters and an `input -> output` signature. Use
-  `any` only for "value or null" or for truly untyped external data, and say
-  so in the comment.
+- Every `def` has typed parameters and an `input -> output` signature. Write
+  "value or null" as `oneof<T, nothing>`. Use `any` only for truly untyped
+  external data, and say so in the comment.
 - At most 2 positional parameters on exported commands, and on any command
   you write or rewrite. Pass the rest as one typed record, as pipeline input,
   or as flags.
