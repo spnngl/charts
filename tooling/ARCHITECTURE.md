@@ -52,7 +52,7 @@ sources/<name>.yaml
   └ manifest load            validated record, optional fields defaulted
 resolve current              resolved {tag, appVersion, sha}
 fetch repo                   repo_dir: cached shallow clone, HEAD checked against sha
-fetch license                license {license_path, license_text, spdx, notice_text}
+fetch license                license {license_text, spdx, notice_text}
 render source  (per source)  list<any>   ─┐
 docs normalize                list<record> ┘ flat documents
 filter crds                  {crds, dropped}
@@ -81,15 +81,15 @@ Chart.yaml. The comment in `generate` explains this.
 | `config.nu` | constants | — | — | yes |
 | `manifest.nu` | `manifest validate/defaults/load/list/gh-slug` | config | — | reads files |
 | `resolve.nu` | `resolve tags/current/latest` | semver | `git ls-remote` | no |
-| `fetch.nu` | `fetch repo/release-asset/license/cache-dir`, `license detect` | manifest | `git clone/rev-parse`, `gh release download` | no |
+| `fetch.nu` | `fetch repo/release-asset/license`, `license detect` | manifest | `git clone/rev-parse`, `gh release download` | no |
 | `render.nu` | `render source`, `docs from-yaml/normalize` | fetch | `kustomize`, `helm`, `tar`, `unzip` | no |
 | `filter.nu` | `filter crds` | — | — | yes |
-| `sanitize.nu` | `sanitize crd` (+ `strip-docs`, `pointer`, `patch` helpers) | config | — | yes |
+| `sanitize.nu` | `sanitize crd` | config | — | yes |
 | `dedupe.nu` | `dedupe crds` | — | — | yes |
 | `templatize.nu` | `templatize crd/helpers`, `template escape` | — | — | yes |
 | `emit.nu` | `emit *` | config, templatize | — | yes, except `emit chart-files` (writes the chart dir) |
 | `version.nu` | `version base-ref/previous/tree-hashes/dir-hashes/compute` | semver, config | `git` | no |
-| `validate.nu` | `validate *` | config, render | `helm`, `kubeconform`, `gzip`, `wc`, `tar`, `git` | no |
+| `validate.nu` | `validate chart/size-budget` | config, render | `helm`, `kubeconform`, `gzip`, `wc`, `tar`, `git` | no |
 | `semver.nu` | `semver *` | — | — | yes |
 
 The release scripts use only `crdgen/config.nu`. Tests import the step
@@ -106,7 +106,7 @@ These records cross module boundaries. Treat their shapes as interfaces.
   re-defaults them.
 - **resolved**: `{tag, appVersion, sha}`. `appVersion` is capture group 1 of
   `tagPattern`. `sha` is the peeled commit.
-- **license**: `{license_path, license_text, spdx, notice_text}`.
+- **license**: `{license_text, spdx, notice_text}`.
   `notice_text` may be null.
 - **crd**: a plain `CustomResourceDefinition` record. Fields that came from
   upstream are external data, so read their optional fields with `get -o` /

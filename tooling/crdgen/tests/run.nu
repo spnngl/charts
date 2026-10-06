@@ -208,7 +208,7 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
         sources: [{kind: "git-path", path: "layout-a"}]
       })
       let resolved = {tag: "v1.0.0", appVersion: "1.0.0", sha: "0000000000000000000000000000000000000000"}
-      let license = {license_path: "LICENSE", license_text: "Apache License Version 2.0", spdx: "Apache-2.0", notice_text: null}
+      let license = {license_text: "Apache License Version 2.0", spdx: "Apache-2.0", notice_text: null}
       let f = (filter crds (fixture-docs "layout-a") $NO_TRANSFORM)
       let crds = (dedupe crds ($f.crds | each {|c| sanitize crd $c $NO_TRANSFORM }))
       let dir = (mktemp -d -t crdgen-test.XXXXXX | path join "fixture-crds")

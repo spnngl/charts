@@ -38,14 +38,14 @@ def select-manifests [names: list<string>, all: bool]: nothing -> list<record> {
 }
 
 # Run the pipeline up to sanitized+deduped CRDs.
-export def pipeline [manifest: record]: nothing -> record {
+def pipeline [manifest: record]: nothing -> record {
   let resolved = (resolve current $manifest)
   let repo_dir = (fetch repo $manifest $resolved)
   let license = (fetch license $manifest $repo_dir)
   let docs = ($manifest.sources | each {|s| render source $s $manifest $resolved $repo_dir } | docs normalize)
   let filtered = (filter crds $docs $manifest.transform)
   let crds = (dedupe crds ($filtered.crds | each {|c| sanitize crd $c $manifest.transform }))
-  {resolved: $resolved, repo_dir: $repo_dir, license: $license, crds: $crds, dropped: $filtered.dropped, documents: ($docs | length)}
+  {resolved: $resolved, repo_dir: $repo_dir, license: $license, crds: $crds, dropped: $filtered.dropped}
 }
 
 # Generate a chart into a fresh temp dir; returns {dir, summary}.

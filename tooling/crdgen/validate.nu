@@ -11,11 +11,11 @@ def run-checked [cmd: closure, what: string]: nothing -> string {
   $out.stdout
 }
 
-export def "validate helm-lint" [dir: path]: nothing -> nothing {
+def "validate helm-lint" [dir: path]: nothing -> nothing {
   run-checked { ^helm lint --strict $dir } $"helm lint ($dir)" | ignore
 }
 
-export def "validate helm-template" [dir: path, ...args: string]: nothing -> string {
+def "validate helm-template" [dir: path, ...args: string]: nothing -> string {
   run-checked { ^helm template crdgen-validate $dir ...$args } $"helm template ($dir)"
 }
 
@@ -37,7 +37,7 @@ def normalize [doc: record]: nothing -> record {
 }
 
 # Rendered CRDs must equal the sanitized input, modulo injected labels/annotations.
-export def "validate round-trip" [dir: path, crds: list<record>]: nothing -> nothing {
+def "validate round-trip" [dir: path, crds: list<record>]: nothing -> nothing {
   let rendered = (docs from-yaml (validate helm-template $dir) | docs normalize)
   if ($rendered | length) != ($crds | length) {
     error make {msg: $"($dir): rendered ($rendered | length) documents, expected ($crds | length)"}
@@ -62,7 +62,7 @@ export def "validate round-trip" [dir: path, crds: list<record>]: nothing -> not
 }
 
 # Values the schema must reject.
-export def "validate schema-negative" [dir: path]: nothing -> nothing {
+def "validate schema-negative" [dir: path]: nothing -> nothing {
   for args in [["--set" "typo=1"] ["--set" "keepOnUninstall=notabool"] ["--set" "labels=string"]] {
     let out = (do { ^helm template crdgen-validate $dir ...$args } | complete)
     if $out.exit_code == 0 {
@@ -72,7 +72,7 @@ export def "validate schema-negative" [dir: path]: nothing -> nothing {
 }
 
 # keepOnUninstall=false must drop the keep annotation; custom labels/annotations must land.
-export def "validate values-behaviour" [dir: path]: nothing -> nothing {
+def "validate values-behaviour" [dir: path]: nothing -> nothing {
   let rendered = (docs from-yaml (validate helm-template $dir "--set" "keepOnUninstall=false" "--set" "labels.team=a" "--set" "annotations.note=b") | docs normalize)
   for r in $rendered {
     if ($r.metadata.annotations | get -o "helm.sh/resource-policy") != null {
@@ -90,7 +90,7 @@ export def "validate values-behaviour" [dir: path]: nothing -> nothing {
 # yannh/kubernetes-json-schema does (with absolute $refs to _definitions.json).
 # Env: CRDGEN_OFFLINE=1 skips; CRDGEN_SCHEMA_LOCATION overrides the template
 # (e.g. a local clone); CRDGEN_K8S_SCHEMA_VERSION overrides versions.toml.
-export def "validate kubeconform" [dir: path]: nothing -> nothing {
+def "validate kubeconform" [dir: path]: nothing -> nothing {
   if ($env.CRDGEN_OFFLINE? | default "" | is-not-empty) { return }
   let root = (^git rev-parse --show-toplevel | str trim)
   let version = ($env.CRDGEN_K8S_SCHEMA_VERSION? | default (open ($root | path join "tooling" "versions.toml") | get tools.k8s-json-schema))
@@ -104,7 +104,7 @@ export def "validate kubeconform" [dir: path]: nothing -> nothing {
 # Structural sanity of each CRD: cheap, offline, and covers what the OpenAPI
 # schema does not (one storage version, name == plural.group). Full API-server
 # validation happens in `ct install` against kind.
-export def "validate structure" [crds: list<record>]: nothing -> nothing {
+def "validate structure" [crds: list<record>]: nothing -> nothing {
   for c in $crds {
     let name = ($c | get -o metadata.name | default "<unnamed>")
     def need [cond: bool, what: string] {
