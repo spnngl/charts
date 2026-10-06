@@ -3,12 +3,12 @@
 "kind": "CustomResourceDefinition",
 "metadata": {
 "annotations": {
-{{- with include "kyverno-api-crds.crdAnnotations" . | trimPrefix "{" | trimSuffix "}" }}{{ . }},{{- end }}
+{{- with include "kyverno-crds.crdAnnotations" . | trimPrefix "{" | trimSuffix "}" }}{{ . }},{{- end }}
 "controller-gen.kubebuilder.io/version": "(devel)"
 },
 "name": "mutatingpolicies.policies.kyverno.io",
 "labels": {
-{{ include "kyverno-api-crds.crdLabels" . | trimPrefix "{" | trimSuffix "}" }}
+{{ include "kyverno-crds.crdLabels" . | trimPrefix "{" | trimSuffix "}" }}
 }
 },
 "spec": {

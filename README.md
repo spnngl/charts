@@ -26,8 +26,7 @@ Two kinds of charts live here:
 | [`chaos-mesh-crds`](./charts/chaos-mesh-crds) | [chaos-mesh/chaos-mesh](https://github.com/chaos-mesh/chaos-mesh) | chaos experiments, schedules, workflows |
 | [`cilium-crds`](./charts/cilium-crds) | [cilium/cilium](https://github.com/cilium/cilium) | cilium.io v2 + v2alpha1 |
 | [`cluster-api-crds`](./charts/cluster-api-crds) | [kubernetes-sigs/cluster-api](https://github.com/kubernetes-sigs/cluster-api) | core CRDs (clusters, machines, ClusterClass, IPAM, runtime) |
-| [`kyverno-api-crds`](./charts/kyverno-api-crds) | [kyverno/kyverno](https://github.com/kyverno/kyverno) | CEL policies and exceptions (policies.kyverno.io) |
-| [`kyverno-crds`](./charts/kyverno-crds) | [kyverno/kyverno](https://github.com/kyverno/kyverno) | kyverno.io policies and exceptions, reports, wgpolicyk8s.io policy reports |
+| [`kyverno-crds`](./charts/kyverno-crds) | [kyverno/kyverno](https://github.com/kyverno/kyverno) | kyverno.io and CEL (policies.kyverno.io) policies, exceptions, policy reports (needs `HELM_DRIVER=sql`, see below) |
 | [`orc-crds`](./charts/orc-crds) | [k-orc/openstack-resource-controller](https://github.com/k-orc/openstack-resource-controller) | OpenStack resources |
 | [`topolvm-crds`](./charts/topolvm-crds) | [topolvm/topolvm](https://github.com/topolvm/topolvm) | LogicalVolume |
 | [`traefik-crds`](./charts/traefik-crds) | [traefik/traefik](https://github.com/traefik/traefik) | traefik.io (IngressRoutes, Middlewares, TLS options, transports) |
@@ -74,17 +73,14 @@ or the chart's Artifact Hub page.
 - `gateway-api-crds` (standard channel) and `gateway-api-exp-crds`
   (experimental channel) define the same CRD names and cannot be installed
   together.
-- `kyverno-crds` up to 1.19.1 also shipped the policies.kyverno.io CRDs; they
-  moved to `kyverno-api-crds` so each release fits Helm's 1 MiB release Secret
-  (mirroring upstream's `crds` and `kyverno-api` subcharts). Upgrading
-  `kyverno-crds` removes them from its release, and Helm deletes them (and
-  every CEL policy) unless they carry `helm.sh/resource-policy: keep`:
+- `kyverno-crds` is too large for Helm's default
+  release storage (one Secret, 1 MiB). Store the release in PostgreSQL
+  instead:
 
   ```sh
-  # only if you set keepOnUninstall=false: re-add the keep annotation first
-  helm upgrade <release> oci://ghcr.io/spnngl/charts/kyverno-crds --version 1.19.1 --reuse-values --set keepOnUninstall=true
-  helm upgrade <release> oci://ghcr.io/spnngl/charts/kyverno-crds --version <version> --reuse-values
-  helm install <release>-api oci://ghcr.io/spnngl/charts/kyverno-api-crds --version <version> --take-ownership   # Helm >= 3.17
+  export HELM_DRIVER=sql
+  export HELM_DRIVER_SQL_CONNECTION_STRING='postgresql://<user>:<password>@<host>:5432/<db>'
+  helm upgrade --install <release> oci://ghcr.io/spnngl/charts/<chart> --version <version> --history-max=1
   ```
 
 ## Verifying what you install
