@@ -78,8 +78,9 @@ export def "manifest validate" [m: record, name: string]: nothing -> nothing {
   }
   let t = ($m | get -o transform | default {})
   for k in ($t | columns) {
-    if $k not-in [include exclude patches] { fail $name $"unknown 'transform.($k)'" }
+    if $k not-in [include exclude patches stripDocs] { fail $name $"unknown 'transform.($k)'" }
   }
+  if ($t | get -o stripDocs | default false | describe) != "bool" { fail $name "'transform.stripDocs' must be a boolean" }
   for p in ($t | get -o patches | default []) {
     if ($p | get -o reason | default "" | is-empty) { fail $name "every 'transform.patches' entry needs a 'reason'" }
     if ($p | get -o op) not-in [add replace remove] { fail $name "'transform.patches[].op' must be add|replace|remove" }
@@ -97,6 +98,7 @@ export def "manifest defaults" [m: record]: nothing -> record {
       include: ($m | get -o transform.include | default [])
       exclude: ($m | get -o transform.exclude | default [])
       patches: ($m | get -o transform.patches | default [])
+      stripDocs: ($m | get -o transform.stripDocs | default false)
     }
 }
 

@@ -171,6 +171,7 @@ export def "emit notice" [manifest: record, resolved: record, license: record]: 
     $"at tag ($resolved.tag) \(commit ($resolved.sha)\), path\(s\): (source-paths $manifest | str join ', ')"
     $"and modified by ($REPO_URL): Helm labels, annotations and templating were"
     $"added; server-side metadata and upstream Helm release metadata were removed."
+    ...(if $manifest.transform.stripDocs { ["Field-level schema documentation (descriptions, titles, examples) was removed."] } else { [] })
     $"Upstream license: ($license.spdx) \(see LICENSE in this directory\)."
     ""
   ]
@@ -251,12 +252,20 @@ export def "emit readme" [
     ""
     $"($manifest.description)."
     ""
-    $"CRDs are copied verbatim from [($manifest.upstream.repo | str replace 'https://github.com/' '')]\(($manifest.upstream.repo)\)"
+    $"CRDs are copied (if $manifest.transform.stripDocs { '' } else { 'verbatim ' })from [($manifest.upstream.repo | str replace 'https://github.com/' '')]\(($manifest.upstream.repo)\)"
     $"at tag [`($resolved.tag)`]\(($manifest.upstream.repo)/tree/($resolved.tag)\) \(commit `($resolved.sha)`\),"
     $"path\(s\) ($paths | each {|p| $'`($p)`' } | str join ', '), and rendered as regular Helm templates so that"
     "`helm upgrade` updates them \(Helm's own `crds/` directory never upgrades\)."
     ""
   ]
+  | append (if not $manifest.transform.stripDocs { [] } else {
+    [
+      "Field-level schema documentation \(descriptions, titles, examples\) is stripped so the Helm release fits"
+      "Helm's 1 MiB release Secret: validation is unchanged, but `kubectl explain` shows field"
+      "types only. Refer to the upstream documentation for field descriptions."
+      ""
+    ]
+  })
   | append $conflicts_section
   | append [
     "## Install"

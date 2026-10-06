@@ -56,6 +56,7 @@ conflictsWith: [<other-chart>]          # optional; README warning only
 transform:
   include: []  exclude: []              # regex on metadata.name
   patches: []                           # JSON6902 + mandatory reason:
+  stripDocs: false                      # optional; drop schema docs (see release-size budget)
 ```
 
 ## Generator pipeline (`tooling/crdgen`, nushell)
@@ -71,7 +72,7 @@ resolve → fetch → render → split → filter → sanitize → dedupe → te
 | render | layout-specific: read files / `kustomize build` / `helm template` / extract asset → `list<record>` | renderer error |
 | split | one record per YAML document | — |
 | filter | keep `apiextensions.k8s.io/v1` `CustomResourceDefinition` only; apply include/exclude; log dropped kinds | zero CRDs |
-| sanitize | drop `status`, `creationTimestamp`, server-side metadata, Helm labels/annotations; apply patches; keep everything else | — |
+| sanitize | drop `status`, `creationTimestamp`, server-side metadata, Helm labels/annotations; with `stripDocs`, drop schema `description`/`title`/`example`/`externalDocs` (all but each version's top-level description; never field names or `default`/`enum` data) and printer-column descriptions; apply patches; keep everything else | — |
 | dedupe | same `metadata.name` from several sources must be identical | content differs |
 | templatize | `to json --indent 0` (JSON is YAML; see release-size budget); escape `{{`/`}}`; inject labels/annotations template via sentinel lines | — |
 | emit | `Chart.yaml` (derived `kubeVersion`, Artifact Hub annotations, `charts.spnngl.io/upstream-{repo,tag,commit}`, `sources[0]` = this repo), `values.yaml`, `values.schema.json`, `ci/ci-values.yaml`, `templates/*.yaml`, `_helpers.tpl`, `LICENSE`, `NOTICE`, `README.md`, `.helmignore` (excludes `ci/` and itself from the package); release-size estimate (README SQL-driver note when oversized) | — |
@@ -90,10 +91,14 @@ ships, its README replaces `helm install` with the SQL storage driver
 Templates are emitted as unindented JSON, one token per line: base64 inside
 the release defeats gzip on YAML indentation, so this saves ~25 % over YAML
 while keeping line diffs (`.gitattributes` collapses them on GitHub). Helm
-cannot decompress anything at render time, so this is the floor. At v1.6.2:
+cannot decompress anything at render time, so short of dropping content
+(`stripDocs`, below) this is the floor. At v1.6.2:
 `gateway-api-crds` ≈ 485 kB, `gateway-api-exp-crds` ≈ 601 kB — one chart
 holding both channels would exceed the cap, hence two charts. Prefer such a
-split when it is natural; `kyverno-crds` (≈ 1.7 MB) is oversized instead.
+split when it is natural. Otherwise `transform.stripDocs` removes schema
+documentation (72–92 % smaller; validation unchanged, `kubectl explain` loses
+field docs; README and NOTICE say so): `kyverno-crds` (≈ 1.7 MB) drops to
+≈ 190 kB. Enable it only where needed; docs are worth their bytes.
 
 Schema validation: kubeconform's default schema location
 (`<version>-standalone-strict`) has no `CustomResourceDefinition` schema, but
