@@ -9,7 +9,7 @@ version:
   # Pre-releases (-rc, -ea, -beta) are excluded by the pattern.
   tagPattern: '^v(\d+\.\d+\.\d+)$'
   allow: all
-  current: v3.7.13
+  current: v3.7.14
 sources:
   # Concatenated controller-gen output (script/code-gen.sh); the per-CRD files
   # are not committed. integration/fixtures/k8s/01-traefik-crd.yml is a copy.
