@@ -113,6 +113,19 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
       assert equal ($docs | length) 3
       assert equal ($docs | get metadata.name | sort) ["bars.example.io" "bazs.example.io" "foos.example.io"]
     }}
+    {name: "render git-path refuses files outside the checkout", run: {
+      let tmp = (mktemp -d -t crdgen-test.XXXXXX)
+      try {
+        let repo = ($tmp | path join "repo")
+        mkdir $repo ($tmp | path join "outside")
+        "kind: Foo\n" | save ($tmp | path join "outside" "x.yaml")
+        "kind: Bar\n" | save ($repo | path join "ok.yaml")
+        assert equal (render source {kind: "git-path", path: "ok.yaml"} {} {} $repo | docs normalize | get kind) ["Bar"]
+        expect-error { render source {kind: "git-path", path: "../outside"} {} {} $repo } "resolves outside"
+        ^ln -s ($tmp | path join "outside" "x.yaml") ($repo | path join "link.yaml")
+        expect-error { render source {kind: "git-path", path: "."} {} {} $repo } "resolves outside"
+      } finally { rm -rf $tmp }
+    }}
     {name: "filter keeps CRDs only and reports dropped kinds", run: {
       let f = (filter crds (fixture-docs "layout-c") $NO_TRANSFORM)
       assert equal ($f.crds | get metadata.name) ["foos.example.io"]

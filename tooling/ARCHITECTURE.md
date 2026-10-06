@@ -164,7 +164,7 @@ Use `CRDGEN_SCHEMA_LOCATION` for a fixed local copy.
 - **Upstream content** (git checkout, release assets, `helm template` /
   `kustomize build` output): untrusted data. It is parsed into records and
   never executed. `kustomize build` runs without exec functions or plugins,
-  and `helm template` without a post-renderer. `sync.yml` handles this content
+  and `helm template` without a post-renderer. Files read from a checkout or archive must resolve (symlinks followed) inside it (`render.nu`). `sync.yml` handles this content
   while holding GitHub App credentials.
 - **Secrets**: only `artifacthub.nu` reads them (`AH_*`). They go into
   in-process HTTP headers. They are never in argv, never printed, never
