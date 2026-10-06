@@ -1,7 +1,7 @@
 # Generator-side validation of an emitted chart (runs before ct in CI).
 
 use config.nu *
-use render.nu ["docs from-yaml" "docs normalize"]
+use render.nu ["docs normalize"]
 
 def run-checked [cmd: closure, what: string]: nothing -> string {
   let out = (do $cmd | complete)
@@ -38,7 +38,7 @@ def normalize [doc: record]: nothing -> record {
 
 # Rendered CRDs must equal the sanitized input, modulo injected labels/annotations.
 def "validate round-trip" [dir: path, crds: list<record>]: nothing -> nothing {
-  let rendered = (docs from-yaml (validate helm-template $dir) | docs normalize)
+  let rendered = (validate helm-template $dir | from yaml --multiple list | docs normalize)
   if ($rendered | length) != ($crds | length) {
     error make {msg: $"($dir): rendered ($rendered | length) documents, expected ($crds | length)"}
   }
@@ -73,7 +73,7 @@ def "validate schema-negative" [dir: path]: nothing -> nothing {
 
 # keepOnUninstall=false must drop the keep annotation; custom labels/annotations must land.
 def "validate values-behaviour" [dir: path]: nothing -> nothing {
-  let rendered = (docs from-yaml (validate helm-template $dir "--set" "keepOnUninstall=false" "--set" "labels.team=a" "--set" "annotations.note=b") | docs normalize)
+  let rendered = (validate helm-template $dir "--set" "keepOnUninstall=false" "--set" "labels.team=a" "--set" "annotations.note=b" | from yaml --multiple list | docs normalize)
   for r in $rendered {
     if ($r.metadata.annotations | get -o "helm.sh/resource-policy") != null {
       error make {msg: $"($dir): keepOnUninstall=false still rendered helm.sh/resource-policy on ($r.metadata.name)"}
@@ -125,7 +125,7 @@ def "validate structure" [crds: list<record>]: nothing -> nothing {
 }
 
 def gzip-size [text: string]: nothing -> int {
-  $text | ^gzip -c | ^wc -c | str trim | into int
+  $text | ^gzip -c | bytes length
 }
 
 # Projected Helm release Secret payload. Mirrors what Helm stores: a JSON release

@@ -81,14 +81,14 @@ Chart.yaml. The comment in `generate` explains this.
 | `manifest.nu` | `manifest validate/defaults/load/list/gh-slug` | config | — | reads files |
 | `resolve.nu` | `resolve tags/current/allowed/latest`, `parse-tags` | — | `git ls-remote` | no |
 | `fetch.nu` | `fetch repo/release-asset/license`, `license detect` | manifest | `git clone/rev-parse`, `gh release download` | no |
-| `render.nu` | `render source`, `docs from-yaml/normalize` | fetch | `kustomize`, `helm`, `tar`, `unzip` | no |
+| `render.nu` | `render source`, `docs normalize` | fetch | `kustomize`, `helm`, `tar`, `unzip` | no |
 | `filter.nu` | `filter crds` | — | — | yes |
 | `sanitize.nu` | `sanitize crd` | config | — | yes |
 | `dedupe.nu` | `dedupe crds` | — | — | yes |
 | `templatize.nu` | `templatize crd/helpers`, `template escape` | — | — | yes |
 | `emit.nu` | `emit *` | config, templatize | — | yes, except `emit chart-files` (writes the chart dir) |
 | `version.nu` | `version base-ref/previous/tree-hashes/dir-hashes/decide/compute` | config | `git` | no |
-| `validate.nu` | `validate chart/size-budget` | config, render | `helm`, `kubeconform`, `gzip`, `wc`, `tar`, `git` | no |
+| `validate.nu` | `validate chart/size-budget` | config, render | `helm`, `kubeconform`, `gzip`, `tar`, `git` | no |
 
 The release scripts use only `crdgen/config.nu`. Tests import the step
 modules directly. They never import `mod.nu`.

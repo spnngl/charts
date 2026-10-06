@@ -46,15 +46,13 @@ export def "version tree-hashes" [name: string, base_ref: any]: nothing -> table
 
 # {path, hash} for every file under a generated directory (git blob hashes).
 export def "version dir-hashes" [dir: path]: nothing -> table<path: string, hash: string> {
-  glob ($dir | path join "**" "*") --no-dir
-  | sort
-  | each {|f| {path: ($f | path relative-to $dir), hash: (^git hash-object $f | str trim)} }
+  let files = (glob ($dir | path join "**" "*") --no-dir | sort)
+  if ($files | is-empty) { return [] }
+  $files | zip (^git hash-object ...$files | lines) | each {|p| {path: ($p.0 | path relative-to $dir), hash: $p.1} }
 }
 
 def strip-volatile [chart_yaml: record]: nothing -> record {
-  $chart_yaml
-  | reject -o version
-  | reject -o ([annotations "artifacthub.io/changes"] | into cell-path)
+  $chart_yaml | reject -o version annotations."artifacthub.io/changes"
 }
 
 def bump-patch [version: string]: nothing -> string {
