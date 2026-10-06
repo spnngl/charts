@@ -28,16 +28,22 @@ security checklists. The project rules below take precedence.
   step logic. A new step means a new file, a row in the root ARCHITECTURE
   pipeline table, and a row in the Modules table of `ARCHITECTURE.md`.
 - Only `render.nu` behaves differently per source kind. Elsewhere, a kind
-  only selects which field holds its path (`SOURCE_PATH_FIELD` in `config.nu`). Only `templatize.nu` rewrites
-  serialized text.
+  only selects which field holds its path (`SOURCE_PATH_FIELD` in
+  `config.nu`). Only `templatize.nu` rewrites serialized text.
 - Keep the pure modules pure (`filter`, `sanitize`, `dedupe`, `templatize`,
   `emit` except `emit chart-files`, `config`). I/O belongs in
   `exec`, `resolve`, `fetch`, `render`, `version`, `validate`, `mod`.
 - Repo identity and policy constants go in `config.nu`. Tool versions go in
-  `versions.toml` only.
+  `versions.toml` only. Use `REPO_ROOT` from `config.nu` for repo paths: never
+  call `git rev-parse --show-toplevel`, and pass `-C $REPO_ROOT` to `git`
+  commands that use repo-relative paths.
 - Per-upstream quirks go in the manifest, not in code.
 - Export only what another module or a test imports.
-- Prefer deleting code. Prefer a Nushell built-in over a hand-written helper.
+- Prefer deleting code. Prefer a Nushell built-in over a hand-written helper
+  (`into semver`, `from yaml --multiple list`, `url build-query`).
+- Put decisions in pure commands (`version decide`, `parse-tags`,
+  `resolve allowed`) and keep git and network calls in thin wrappers, so tests
+  need neither.
 
 ## Nushell style
 
@@ -107,6 +113,9 @@ security checklists. The project rules below take precedence.
 - Tests stay offline. `run.nu` sets `CRDGEN_OFFLINE=1`.
 - A test is a `{name, run}` entry in `tests`. Use `std/assert` and
   `expect-error`.
+- A test that creates a temp dir removes it in `try { … } finally { … }`.
+- Add a test for every fix that changes what the generator accepts or emits
+  (for example the CEL detection and the path-escape check).
 
 ## Generated output
 

@@ -11,7 +11,7 @@ the release-size budget, the workflows and the trust model.
 versions.toml            pinned tool versions; read by .github/actions/setup-tools
                          with bash, so keep it flat: `name = "x.y.z"` under [tools]
 crdgen/mod.nu            CLI (`main regen|check|sync|notice|list`); orchestration only
-crdgen/config.nu         repo identity + policy constants + `REPO_ROOT` (the one repo root); no logic
+crdgen/config.nu         repo identity, policy constants, `REPO_ROOT` (the one repo root); no logic
 crdgen/exec.nu           `run-checked`: run an external command, fail with its output
 crdgen/<step>.nu         one pipeline step per file (see Modules)
 crdgen/static/           verbatim chart files: values.yaml, ci-values.yaml, helmignore,
@@ -61,6 +61,8 @@ filter crds                  {crds, dropped}
 sanitize crd   (per CRD)     list<record>
 dedupe crds                  list<record>, sorted by metadata.name
 emit chart-files             <tmp>/<name>/  everything except Chart.yaml
+                             (`chart` record = manifest, resolved, repo_dir, license, crds, dropped;
+                              built by `pipeline` in `mod.nu`, see Shared records)
 emit chart-record            Chart.yaml record without version/changes
 validate size-budget         {bytes, status}; README re-emitted with --oversized if needed
 version compute              {version, trigger, changes, base} against the base ref
@@ -81,19 +83,19 @@ Chart.yaml. The comment in `generate` explains this.
 
 | Module | Exports (callers) | Uses | External tools | Pure |
 |--------|-------------------|------|----------------|------|
-| `config.nu` | constants | — | — | yes |
+| `config.nu` | constants, `REPO_ROOT` | — | — | yes |
 | `exec.nu` | `run-checked` (modules and release scripts) | — | — | no (runs the given closure) |
 | `manifest.nu` | `manifest validate/defaults/load/list/gh-slug` | config | — | reads files |
-| `resolve.nu` | `resolve tags/current/allowed/latest`, `parse-tags` | — | `git ls-remote` | no |
-| `fetch.nu` | `fetch repo/release-asset/license`, `license detect` | manifest | `git clone/rev-parse`, `gh release download` | no |
-| `render.nu` | `render source`, `docs normalize` | fetch | `kustomize`, `helm`, `tar`, `unzip` | no |
+| `resolve.nu` | `resolve tags/current/allowed/latest`, `parse-tags` | exec | `git ls-remote` | no (`parse-tags` and `resolve allowed` are pure) |
+| `fetch.nu` | `fetch repo/release-asset/license`, `license detect` | exec, manifest | `git clone/rev-parse`, `gh release download` | no |
+| `render.nu` | `render source`, `docs normalize` | exec, fetch | `kustomize`, `helm`, `tar`, `unzip` | no |
 | `filter.nu` | `filter crds` | — | — | yes |
 | `sanitize.nu` | `sanitize crd/strip-injected` | config | — | yes |
 | `dedupe.nu` | `dedupe crds` | — | — | yes |
 | `templatize.nu` | `templatize crd/helpers`, `template escape` | — | — | yes |
 | `emit.nu` | `emit *` | config, manifest (`gh-slug`), templatize, `static/` | — | yes, except `emit chart-files` (reads `static/`, writes the chart dir) |
-| `version.nu` | `version base-ref/previous/tree-hashes/dir-hashes/decide/compute` | config | `git` | no |
-| `validate.nu` | `validate chart/size-budget` | config, exec, render, sanitize | `helm`, `kubeconform`, `gzip`, `tar`, `git` | no |
+| `version.nu` | `version base-ref/previous/tree-hashes/dir-hashes/decide/compute` | config | `git` | no (`version decide` is pure) |
+| `validate.nu` | `validate chart/size-budget` | config, exec, render, sanitize | `helm`, `kubeconform`, `gzip`, `tar` | no |
 
 The release scripts use only `crdgen/config.nu` and `crdgen/exec.nu`. Tests
 import the step modules directly. They never import `mod.nu`.
@@ -127,6 +129,9 @@ These records cross module boundaries. Treat their shapes as interfaces.
   (`license detect`), `sanitize.nu` (`strip-docs …`, `pointer …`,
   `patch …`), `templatize.nu` (`template escape`), `resolve.nu`
   (`parse-tags`), `exec.nu` (`run-checked`).
+- **Pure cores:** decisions live in pure commands (`version decide`,
+  `parse-tags`, `resolve allowed`) that the tests call directly. The wrappers
+  around them (`version compute`, `resolve tags`) only gather inputs from git.
 - **Text:** only `templatize.nu` rewrites serialized text (sentinels,
   `{{`/`}}` escaping). `emit.nu` assembles README and NOTICE from line lists.
   Every other module works on records.
@@ -163,7 +168,9 @@ Use `CRDGEN_SCHEMA_LOCATION` for a fixed local copy.
 - Writes: `charts/<name>/`, `NOTICE`, `sources/<name>.yaml` (sync only).
 - Cache: `$CRDGEN_CACHE/<host>__<owner>__<repo>@<tag>`. The HEAD is
   re-checked on every use. Delete the cache entry if upstream moved a tag.
-- Temp: built-in `mktemp`, prefixes `crdgen-*`, `verify.*`, `ah.*`.
+- Temp: built-in `mktemp`, prefixes `crdgen-*`, `verify.*`, `ah.*`. Always
+  removed in `try`/`finally`, or handed to the caller (see Data flow).
+- Read-only inputs: `crdgen/static/`, `versions.toml`, `artifacthub-repo.yml`.
 
 ## Trust boundaries
 
@@ -183,12 +190,16 @@ Use `CRDGEN_SCHEMA_LOCATION` for a fixed local copy.
 
 - `tests/run.nu` holds a list of `{name, run}` closures and uses
   `std/assert` plus a local `expect-error`. It needs no network (it sets
-  `CRDGEN_OFFLINE=1`) and needs `helm` on PATH.
+  `CRDGEN_OFFLINE=1`) and needs `helm` and `ln` on PATH.
 - Fixtures:
   - `layout-a`: multi-doc files, comment-only docs, directory recursion.
   - `layout-c`: non-CRD kinds.
   - `conflict`: dedupe conflict.
   - `strip-docs`: schema documentation stripping.
+- Unit tests without fixtures cover `parse-tags`, `resolve allowed`,
+  `version decide`, `manifest validate`, `template escape`, `emit kube-version`
+  and `license detect`. The path-escape test builds its own symlinks in a temp
+  dir.
 - The end-to-end test emits a chart from fixtures and runs `validate chart`
   on it.
 - The regression test for the whole generator is
