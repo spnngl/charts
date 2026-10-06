@@ -3,6 +3,7 @@
 use config.nu *
 use exec.nu [run-checked]
 use render.nu ["docs normalize"]
+use sanitize.nu ["sanitize strip-injected"]
 
 def "validate helm-lint" [dir: path]: nothing -> nothing {
   run-checked $"helm lint ($dir)" { ^helm lint --strict $dir } | ignore
@@ -12,36 +13,17 @@ def "validate helm-template" [dir: path, ...args: string]: nothing -> string {
   run-checked $"helm template ($dir)" { ^helm template crdgen-validate $dir ...$args }
 }
 
-# Strip what the chart injects so rendered output can be compared to sanitized input.
-def strip-injected [doc: record]: nothing -> record {
-  let patterns_l = ($INJECTED_LABEL_PATTERNS)
-  let patterns_a = ($INJECTED_ANNOTATION_PATTERNS)
-  let labels = ($doc.metadata | get -o labels | default {} | transpose k v | where {|r| not ($patterns_l | any {|p| $r.k =~ $p }) })
-  let annotations = ($doc.metadata | get -o annotations | default {} | transpose k v | where {|r| not ($patterns_a | any {|p| $r.k =~ $p }) })
-  let d = ($doc | reject -o metadata.labels metadata.annotations)
-  let d = (if ($labels | is-empty) { $d } else { $d | upsert metadata.labels ($labels | transpose -rd) })
-  if ($annotations | is-empty) { $d } else { $d | upsert metadata.annotations ($annotations | transpose -rd) }
-}
-
-def normalize [doc: record]: nothing -> record {
-  let d = $doc
-  let d = (if (($d.metadata | get -o labels | default {} | columns | is-empty)) { $d | reject -o metadata.labels } else { $d })
-  if (($d.metadata | get -o annotations | default {} | columns | is-empty)) { $d | reject -o metadata.annotations } else { $d }
-}
-
 # Rendered CRDs must equal the sanitized input, modulo injected labels/annotations.
 def "validate round-trip" [dir: path, crds: list<record>]: nothing -> nothing {
   let rendered = (validate helm-template $dir | from yaml --multiple list | docs normalize)
   if ($rendered | length) != ($crds | length) {
     error make {msg: $"($dir): rendered ($rendered | length) documents, expected ($crds | length)"}
   }
-  let expected = ($crds | each {|c| normalize $c })
   for r in $rendered {
     let name = $r.metadata.name
-    let want = ($expected | where metadata.name == $name)
+    let want = ($crds | where metadata.name == $name)
     if ($want | is-empty) { error make {msg: $"($dir): rendered unexpected CRD ($name)"} }
-    let got = (normalize (strip-injected $r))
-    if $got != $want.0 {
+    if (sanitize strip-injected $r) != $want.0 {
       error make {msg: $"($dir): rendered CRD ($name) differs from sanitized input \(templating mangled it\)"}
     }
     # injected labels must all be present
