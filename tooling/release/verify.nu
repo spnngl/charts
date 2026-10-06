@@ -12,7 +12,11 @@ def step [what: string, cmd: closure] {
   if not ($stdout | str trim | is-empty) { print $stdout }
 }
 
-def main [chart: string, version: string]: nothing -> nothing {
+# Verify a published chart version: pull, render, signature, attestations.
+def main [
+  chart: string # chart name, e.g. kyverno-crds
+  version: string # published chart version
+]: nothing -> nothing {
   let id = [--certificate-identity-regexp $COSIGN_IDENTITY_REGEXP --certificate-oidc-issuer $COSIGN_OIDC_ISSUER]
   let ref = $"($OCI_HOST_PATH)/($chart):($version)"
   let dir = (mktemp -d -t verify.XXXXXX)

@@ -103,7 +103,12 @@ def emit-result [rows: table, json: bool]: nothing -> nothing {
 }
 
 # Regenerate charts from their manifests.
-export def "main regen" [...names: string, --all, --skip-validate, --json]: nothing -> nothing {
+export def "main regen" [
+  ...names: string # charts to regenerate (manifest names)
+  --all # regenerate every chart
+  --skip-validate # skip `validate chart` (the size estimate still runs)
+  --json # print the summary rows as JSON
+]: nothing -> nothing {
   let results = (select-manifests $names $all | each {|m|
     let g = (generate $m --skip-validate=$skip_validate)
     install $g.dir $m.name
@@ -131,7 +136,10 @@ def naming-violations []: nothing -> record<orphans: list<string>, missing: list
 }
 
 # Drift check: regenerate into temp and compare with the committed chart, byte for byte.
-export def "main check" [...names: string, --all]: nothing -> nothing {
+export def "main check" [
+  ...names: string # charts to check (manifest names)
+  --all # check every chart
+]: nothing -> nothing {
   let drift = (select-manifests $names $all | each {|m|
     let g = (generate $m)
     try {
@@ -166,7 +174,12 @@ def set-pin [path: path, tag: string]: nothing -> nothing {
 
 # Bump pins to the newest allowed upstream tag and regenerate.
 # Rows: {name, from, to (null when up to date), updated, version}.
-export def "main sync" [...names: string, --all, --dry-run, --json]: nothing -> nothing {
+export def "main sync" [
+  ...names: string # charts to sync (manifest names)
+  --all # sync every chart
+  --dry-run # only report the newest allowed tags, change nothing
+  --json # print the rows as JSON
+]: nothing -> nothing {
   let rows = (select-manifests $names $all | each {|m|
     let latest = (resolve latest $m)
     if $latest == null {
@@ -207,12 +220,16 @@ export def "main notice" []: nothing -> nothing {
   notice-text | save -f ($REPO_ROOT | path join "NOTICE")
 }
 
-export def "main list" [--json]: nothing -> nothing {
+# Show every manifest with its upstream, pin, allow policy and source kinds.
+export def "main list" [
+  --json # print the rows as JSON
+]: nothing -> nothing {
   let rows = (manifest list ($REPO_ROOT | path join "sources")
   | each {|m| {name: $m.name, upstream: $m.upstream.repo, pin: $m.version.current, allow: $m.version.allow, sources: ($m.sources | get kind | str join ",")} })
   emit-result $rows $json
 }
 
+# Show the available commands.
 export def main []: nothing -> nothing {
   help main
 }

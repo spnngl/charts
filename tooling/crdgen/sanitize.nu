@@ -111,6 +111,8 @@ def "patch apply" [crd: record, patch: record]: nothing -> record {
   }
 }
 
+# Strip server-side noise and injected labels/annotations, optionally strip
+# schema documentation, then apply the manifest patches.
 export def "sanitize crd" [crd: record, transform: record]: nothing -> record {
   let cleaned = (
     $crd

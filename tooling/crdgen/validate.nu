@@ -147,6 +147,7 @@ export def "validate size-budget" [dir: path]: nothing -> record<bytes: int, sta
   {bytes: $bytes, status: $status}
 }
 
+# Run every generator-side check on an emitted chart dir; fails on the first violation.
 export def "validate chart" [dir: path, crds: list<record>]: nothing -> nothing {
   validate helm-lint $dir
   validate round-trip $dir $crds
