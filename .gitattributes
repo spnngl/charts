@@ -1,0 +1,2 @@
+# Generated CRD templates (tooling/crdgen): collapsed in GitHub diffs, excluded from language stats.
+charts/*-crds/templates/*.yaml linguist-generated=true

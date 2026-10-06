@@ -109,16 +109,21 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
       assert equal (dedupe crds ($a | append $a) | length) 3
       expect-error { dedupe crds (fixture-docs "conflict") } "foos.example.io"
     }}
+    {name: "template escape: whole brace runs become string literals", run: {
+      assert equal (template escape "a {{ x }} b") 'a {{ "{{" }} x {{ "}}" }} b'
+      assert equal (template escape "x{}}y") 'x{{ "{}}" }}y'
+      assert equal (template escape "{a}{}") "{a}{}"
+    }}
     {name: "templatize escapes braces and injects template blocks", run: {
       let foo = (sanitize crd (fixture-docs "layout-a" | where metadata.name == "foos.example.io" | get 0) $NO_TRANSFORM)
       let t = (templatize crd $foo "x-crds")
       assert ($t | str contains '{{ "{{" }} .Values.templated {{ "}}" }}')
-      assert ($t | str contains '{{- include "x-crds.labels" . | nindent 4 }}')
-      assert ($t | str contains '{{- with (include "x-crds.crdAnnotations" . | fromYaml) }}')
+      assert ($t | str contains "\"labels\": {\n{{ include \"x-crds.crdLabels\" . | trimPrefix \"{\" | trimSuffix \"}\" }},\n")
+      assert ($t | str contains "\"annotations\": {\n{{- with include \"x-crds.crdAnnotations\" . | trimPrefix \"{\" | trimSuffix \"}\" }}{{ . }},{{- end }}\n")
       assert (not ($t | str contains "__CRDGEN"))
       let bar = (fixture-docs "layout-a" | where metadata.name == "bars.example.io" | get 0)
       let tb = (templatize crd $bar "x-crds")
-      assert ($tb | str contains "  annotations:\n    {{- toYaml . | nindent 4 }}")
+      assert ($tb | str contains "\"metadata\": {\n{{- with include \"x-crds.crdAnnotations\" . | fromJson }}\"annotations\": {{ toJson . }},{{- end }}\n")
     }}
     {name: "emit kube-version derives from CEL usage", run: {
       let docs = (fixture-docs "layout-a")

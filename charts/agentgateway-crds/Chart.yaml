@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for agentgateway (backends, models, parameters,
   policies)
 type: application
-version: 1.6.2
+version: 1.6.3
 appVersion: 1.6.0
 kubeVersion: ">=1.25.0-0"
 home: https://agentgateway.dev

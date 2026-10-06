@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for External Secrets Operator (stores, external/push
   secrets, generators)
 type: application
-version: 2.11.2
+version: 2.11.3
 appVersion: 2.11.0
 kubeVersion: ">=1.25.0-0"
 home: https://external-secrets.io

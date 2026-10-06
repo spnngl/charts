@@ -13,23 +13,26 @@ Chart name and version as used by the helm.sh/chart label.
 {{- end }}
 
 {{/*
-Standard labels applied to every CRD.
+Labels applied to every CRD (standard labels, overridden by .Values.labels), as a JSON object.
 */}}
-{{- define "velero-crds.labels" -}}
-helm.sh/chart: {{ include "velero-crds.chart" . }}
-app.kubernetes.io/name: {{ include "velero-crds.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- define "velero-crds.crdLabels" -}}
+{{- $l := dict -}}
+{{- $_ := set $l "helm.sh/chart" (include "velero-crds.chart" .) -}}
+{{- $_ := set $l "app.kubernetes.io/name" (include "velero-crds.name" .) -}}
+{{- $_ := set $l "app.kubernetes.io/instance" .Release.Name -}}
+{{- $_ := set $l "app.kubernetes.io/version" .Chart.AppVersion -}}
+{{- $_ := set $l "app.kubernetes.io/managed-by" .Release.Service -}}
+{{- range $k, $v := (default (dict) .Values.labels) }}{{- $_ := set $l $k $v }}{{- end -}}
+{{- toJson $l -}}
 {{- end }}
 
 {{/*
-Extra annotations applied to every CRD (.Values.annotations plus the keep policy), as YAML.
-Renders "{}" when empty so callers can guard with `with ... | fromYaml`.
+Extra annotations applied to every CRD (.Values.annotations plus the keep policy), as a JSON object.
+Renders "{}" when empty.
 */}}
 {{- define "velero-crds.crdAnnotations" -}}
 {{- $a := dict -}}
 {{- range $k, $v := (default (dict) .Values.annotations) }}{{- $_ := set $a $k $v }}{{- end -}}
 {{- if .Values.keepOnUninstall }}{{- $_ := set $a "helm.sh/resource-policy" "keep" }}{{- end -}}
-{{- toYaml $a -}}
+{{- toJson $a -}}
 {{- end }}

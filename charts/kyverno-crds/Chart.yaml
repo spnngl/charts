@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for Kyverno (policies, CEL policies, exceptions,
   policy reports)
 type: application
-version: 1.19.1
+version: 1.19.2
 appVersion: 1.19.1
 kubeVersion: ">=1.25.0-0"
 home: https://kyverno.io
@@ -152,4 +152,4 @@ annotations:
   charts.spnngl.io/upstream-tag: v1.19.1
   charts.spnngl.io/upstream-commit: 40ec788d48bb28d83dbf85538e962a59db9d45c6
   artifacthub.io/changes: |
-    - Initial release, CRDs from upstream v1.19.1
+    - Chart regenerated with updated tooling (upstream unchanged at v1.19.1)

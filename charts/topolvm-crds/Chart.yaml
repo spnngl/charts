@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for TopoLVM (LogicalVolume, topolvm.io and legacy
   topolvm.cybozu.com groups)
 type: application
-version: 0.41.3
+version: 0.41.4
 appVersion: 0.41.1
 kubeVersion: ">=1.16.0-0"
 home: https://github.com/topolvm/topolvm

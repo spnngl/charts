@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for Argo CD (Applications, ApplicationSets,
   AppProjects)
 type: application
-version: 3.5.4
+version: 3.5.5
 appVersion: 3.5.3
 kubeVersion: ">=1.16.0-0"
 home: https://argo-cd.readthedocs.io

@@ -11,14 +11,8 @@ path(s) `config/crd/bases`, and rendered as regular Helm templates so that
 
 ## Install
 
-> **Too large for Helm's default storage.** Helm stores each release in one Secret
-> (or ConfigMap), capped at 1 MiB; this chart's release exceeds it. Use the SQL
-> storage driver (PostgreSQL):
-
 ```sh
-export HELM_DRIVER=sql
-export HELM_DRIVER_SQL_CONNECTION_STRING='postgresql://<user>:<password>@<host>:5432/<db>'
-helm upgrade --install chaos-mesh oci://ghcr.io/spnngl/charts/chaos-mesh-crds --version <version> --history-max=1
+helm install chaos-mesh oci://ghcr.io/spnngl/charts/chaos-mesh-crds --version <version>
 ```
 
 Chart `version` equals the upstream version it ships; `appVersion` is always the exact upstream version.

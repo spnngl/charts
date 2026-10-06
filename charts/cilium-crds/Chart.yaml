@@ -4,7 +4,7 @@ apiVersion: v2
 name: cilium-crds
 description: CustomResourceDefinitions for Cilium (cilium.io v2 and v2alpha1)
 type: application
-version: 1.20.4
+version: 1.20.5
 appVersion: 1.20.2
 kubeVersion: ">=1.25.0-0"
 home: https://cilium.io

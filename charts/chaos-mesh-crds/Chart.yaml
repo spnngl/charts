@@ -6,7 +6,7 @@ description: >-
   CustomResourceDefinitions for Chaos Mesh (chaos experiments, schedules,
   workflows)
 type: application
-version: 2.8.5
+version: 2.8.6
 appVersion: 2.8.4
 kubeVersion: ">=1.16.0-0"
 home: https://chaos-mesh.org
