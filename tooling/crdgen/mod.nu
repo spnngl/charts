@@ -32,54 +32,55 @@ def select-manifests [names: list<string>, all: bool]: nothing -> list<record> {
   }
 }
 
-# Run the pipeline up to sanitized+deduped CRDs.
+# Run the pipeline up to sanitized+deduped CRDs. Returns the `chart` record
+# shared by the later steps: {manifest, resolved, repo_dir, license, crds, dropped}.
 def pipeline [manifest: record]: nothing -> record {
   let resolved = (resolve current $manifest)
   let repo_dir = (fetch repo $manifest $resolved)
+  let source_chart = {manifest: $manifest, resolved: $resolved, repo_dir: $repo_dir}
   let license = (fetch license $manifest $repo_dir)
-  let docs = ($manifest.sources | each {|s| render source $s $manifest $resolved $repo_dir } | docs normalize)
+  let docs = ($manifest.sources | each {|s| render source $s $source_chart } | docs normalize)
   let filtered = (filter crds $docs $manifest.transform)
   let crds = (dedupe crds ($filtered.crds | each {|c| sanitize crd $c $manifest.transform }))
-  {resolved: $resolved, repo_dir: $repo_dir, license: $license, crds: $crds, dropped: $filtered.dropped}
+  $source_chart | merge {license: $license, crds: $crds, dropped: $filtered.dropped}
 }
 
 # Generate a chart into a fresh temp dir; returns {dir, summary}. The caller owns
 # the parent of `dir` and removes it (`install` and `check` do); on failure
 # it is removed here.
 export def generate [manifest: record, --skip-validate]: nothing -> record {
-  let p = (pipeline $manifest)
+  let chart = (pipeline $manifest)
   let tmp = (mktemp -d -t $"crdgen-($manifest.name).XXXXXX")
   try {
     let dir = ($tmp | path join $manifest.name)
-    emit chart-files $dir $manifest $p.resolved $p.crds $p.dropped $p.license
-    let chart_record = (emit chart-record $manifest $p.resolved $p.crds $p.license)
+    emit chart-files $dir $chart
+    let chart_record = (emit chart-record $chart)
     # The README depends on the size (SQL driver note), so the size is always
     # estimated, even with --skip-validate. The note only grows the release.
     # The README must be final before `version compute` hashes the directory,
     # so size it with a deterministic provisional Chart.yaml (appVersion, no
     # changes); the final one differs by a few bytes.
-    emit chart-yaml $chart_record $p.resolved.appVersion [] | save -f ($dir | path join "Chart.yaml")
+    $chart_record | emit chart-yaml {version: $chart.resolved.appVersion, changes: []} | save -f ($dir | path join "Chart.yaml")
     let budget = (validate size-budget $dir)
     let budget = (if $budget.status != "oversized" { $budget } else {
-      emit readme $manifest $p.resolved $p.crds $p.dropped $p.license --oversized | save -f ($dir | path join "README.md")
+      emit readme $chart --oversized | save -f ($dir | path join "README.md")
       validate size-budget $dir
     })
-    let base_ref = (version base-ref)
-    let v = (version compute $manifest.name $p.resolved.appVersion $p.resolved.tag $dir $chart_record $base_ref)
-    emit chart-yaml $chart_record $v.version $v.changes | save -f ($dir | path join "Chart.yaml")
-    if not $skip_validate { validate chart $dir $p.crds }
+    let v = ($chart_record | version compute $chart $dir)
+    $chart_record | emit chart-yaml $v | save -f ($dir | path join "Chart.yaml")
+    if not $skip_validate { validate chart $dir $chart.crds }
     {
       dir: $dir
       summary: {
         name: $manifest.name
         version: $v.version
-        appVersion: $p.resolved.appVersion
-        tag: $p.resolved.tag
-        commit: $p.resolved.sha
+        appVersion: $chart.resolved.appVersion
+        tag: $chart.resolved.tag
+        commit: $chart.resolved.sha
         trigger: $v.trigger
-        base: ($base_ref | default "none")
-        crds: ($p.crds | length)
-        dropped: $p.dropped
+        base: ($v.base | default "none")
+        crds: ($chart.crds | length)
+        dropped: $chart.dropped
         release_secret: ($budget.bytes | into filesize)
       }
     }

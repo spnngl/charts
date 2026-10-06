@@ -20,7 +20,7 @@ const FIXTURES = (path self | path dirname | path join "fixtures")
 const NO_TRANSFORM = {include: [], exclude: [], patches: [], stripDocs: false}
 
 def fixture-docs [layout: string]: nothing -> list<record> {
-  render source {kind: "git-path", path: $layout} {} {} $FIXTURES | docs normalize
+  render source {kind: "git-path", path: $layout} {repo_dir: $FIXTURES} | docs normalize
 }
 
 def expect-error [body: closure, pattern: string] {
@@ -31,11 +31,11 @@ def expect-error [body: closure, pattern: string] {
 def tests []: nothing -> list<record<name: string, run: closure>> {
   [
     {name: "resolve allowed", run: {
-      assert (resolve allowed "1.6.2" "1.7.0" "minor")
-      assert (not (resolve allowed "1.6.2" "2.0.0" "minor"))
-      assert (not (resolve allowed "1.6.2" "1.7.0" "patch"))
-      assert (resolve allowed "1.6.2" "2.0.0" "all")
-      expect-error { resolve allowed "1.6.2" "1.7.0" "bogus" } "unknown allow policy"
+      assert ("1.7.0" | resolve allowed "1.6.2" "minor")
+      assert (not ("2.0.0" | resolve allowed "1.6.2" "minor"))
+      assert (not ("1.7.0" | resolve allowed "1.6.2" "patch"))
+      assert ("2.0.0" | resolve allowed "1.6.2" "all")
+      expect-error { "1.7.0" | resolve allowed "1.6.2" "bogus" } "unknown allow policy"
     }}
     {name: "parse-tags: ascending semver order, drops non-matching tags", run: {
       let text = ["aaa\trefs/tags/v1.2.0" "bbb\trefs/tags/v1.10.0" "ccc\trefs/tags/nightly" "ddd\trefs/tags/v0.9.9" "eee\trefs/tags/v01.2.0"] | str join "\n"
@@ -120,10 +120,10 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
         mkdir $repo ($tmp | path join "outside")
         "kind: Foo\n" | save ($tmp | path join "outside" "x.yaml")
         "kind: Bar\n" | save ($repo | path join "ok.yaml")
-        assert equal (render source {kind: "git-path", path: "ok.yaml"} {} {} $repo | docs normalize | get kind) ["Bar"]
-        expect-error { render source {kind: "git-path", path: "../outside"} {} {} $repo } "resolves outside"
+        assert equal (render source {kind: "git-path", path: "ok.yaml"} {repo_dir: $repo} | docs normalize | get kind) ["Bar"]
+        expect-error { render source {kind: "git-path", path: "../outside"} {repo_dir: $repo} } "resolves outside"
         ^ln -s ($tmp | path join "outside" "x.yaml") ($repo | path join "link.yaml")
-        expect-error { render source {kind: "git-path", path: "."} {} {} $repo } "resolves outside"
+        expect-error { render source {kind: "git-path", path: "."} {repo_dir: $repo} } "resolves outside"
       } finally { rm -rf $tmp }
     }}
     {name: "filter keeps CRDs only and reports dropped kinds", run: {
@@ -231,14 +231,15 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
       let tmp = (mktemp -d -t crdgen-test.XXXXXX)
       let dir = ($tmp | path join "fixture-crds")
       try {
-        emit chart-files $dir $manifest $resolved $crds $f.dropped $license
-        let rec = (emit chart-record $manifest $resolved $crds $license)
-        emit chart-yaml $rec "1.0.0" ["Initial release"] | save -f ($dir | path join "Chart.yaml")
-        let chart = (open ($dir | path join "Chart.yaml"))
-        assert equal $chart.sources.0 "https://github.com/spnngl/charts"
-        assert equal $chart.kubeVersion ">=1.25.0-0"
-        assert ($chart.annotations."artifacthub.io/crds" | str contains "kind: Foo")
-        assert (not ("artifacthub.io/signKey" in $chart.annotations))
+        let chart = {manifest: $manifest, resolved: $resolved, repo_dir: $FIXTURES, license: $license, crds: $crds, dropped: $f.dropped}
+        emit chart-files $dir $chart
+        let rec = (emit chart-record $chart)
+        $rec | emit chart-yaml {version: "1.0.0", changes: ["Initial release"]} | save -f ($dir | path join "Chart.yaml")
+        let chart_yaml = (open ($dir | path join "Chart.yaml"))
+        assert equal $chart_yaml.sources.0 "https://github.com/spnngl/charts"
+        assert equal $chart_yaml.kubeVersion ">=1.25.0-0"
+        assert ($chart_yaml.annotations."artifacthub.io/crds" | str contains "kind: Foo")
+        assert (not ("artifacthub.io/signKey" in $chart_yaml.annotations))
         validate chart $dir $crds
         assert equal (validate size-budget $dir).status "ok"
         assert ((open --raw ($dir | path join ".helmignore")) | lines | any {|l| $l == "ci/" })
@@ -248,15 +249,16 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
         assert (not ($readme | str contains "HELM_DRIVER=sql"))
         assert ($readme | str contains "--certificate-oidc-issuer https://token.actions.githubusercontent.com")
         assert (not ($readme | str contains "cosign.pub"))
-        let big = (emit readme $manifest $resolved $crds $f.dropped $license --oversized)
+        let big = (emit readme $chart --oversized)
         assert ($big | str contains "helm upgrade --install fixture oci://ghcr.io/spnngl/charts/fixture-crds --version <version> --history-max=1")
         assert ($readme | str contains "copied verbatim from")
-        assert (not ((emit notice $manifest $resolved $license) | str contains "schema documentation"))
+        assert (not ((emit notice $chart) | str contains "schema documentation"))
         let stripped = ($manifest | upsert transform.stripDocs true)
-        let sreadme = (emit readme $stripped $resolved $crds $f.dropped $license)
+        let stripped_chart = ($chart | upsert manifest $stripped)
+        let sreadme = (emit readme $stripped_chart)
         assert ($sreadme | str contains "CRDs are copied from")
         assert ($sreadme | str contains "`kubectl explain` shows field")
-        assert ((emit notice $stripped $resolved $license) | str contains "Field-level schema documentation (descriptions, titles, examples) was removed.")
+        assert ((emit notice $stripped_chart) | str contains "Field-level schema documentation (descriptions, titles, examples) was removed.")
       } finally { rm -rf $tmp }
     }}
   ]

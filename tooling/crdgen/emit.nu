@@ -61,12 +61,11 @@ def upstream-tree-url [manifest: record, tag: string, path: string]: nothing -> 
 # --- Chart.yaml ----------------------------------------------------------------
 
 # Chart.yaml as a record, WITHOUT version and artifacthub.io/changes (added by `emit chart-yaml`).
-export def "emit chart-record" [
-  manifest: record
-  resolved: record
-  crds: list<record>
-  license: record
-]: nothing -> record {
+export def "emit chart-record" [chart: record]: nothing -> record {
+  let manifest = $chart.manifest
+  let resolved = $chart.resolved
+  let crds = $chart.crds
+  let license = $chart.license
   let links = (
     [
       {name: "Upstream project", url: $manifest.upstream.homepage}
@@ -103,12 +102,14 @@ export def "emit chart-record" [
   | insert annotations $annotations
 }
 
-# Final Chart.yaml text: record + version + changes, keys in conventional order.
-export def "emit chart-yaml" [chart_record: record, version: string, changes: list<string>]: nothing -> string {
+# Final Chart.yaml text from the piped `emit chart-record` plus `v` ({version, changes}),
+# keys in conventional order.
+export def "emit chart-yaml" [v: record<version: string, changes: list<string>>]: record -> string {
+  let chart_record = $in
   let ordered = (
-    {apiVersion: $chart_record.apiVersion, name: $chart_record.name, description: $chart_record.description, type: $chart_record.type, version: $version, appVersion: $chart_record.appVersion}
+    {apiVersion: $chart_record.apiVersion, name: $chart_record.name, description: $chart_record.description, type: $chart_record.type, version: $v.version, appVersion: $chart_record.appVersion}
     | merge ($chart_record | reject apiVersion name description type appVersion annotations)
-    | insert annotations ($chart_record.annotations | insert "artifacthub.io/changes" ($changes | to yaml))
+    | insert annotations ($chart_record.annotations | insert "artifacthub.io/changes" ($v.changes | to yaml))
   )
   [
     $SCHEMA_HEADER
@@ -136,7 +137,10 @@ export def "emit values-schema" []: nothing -> string {
 
 # --- NOTICE / README ----------------------------------------------------------
 
-export def "emit notice" [manifest: record, resolved: record, license: record]: nothing -> string {
+export def "emit notice" [chart: record]: nothing -> string {
+  let manifest = $chart.manifest
+  let resolved = $chart.resolved
+  let license = $chart.license
   let ours = [
     $"The CustomResourceDefinition manifests under templates/ were copied from"
     $"  ($manifest.upstream.repo)"
@@ -168,13 +172,14 @@ def crd-table [crds: list<record>]: nothing -> list<string> {
 }
 
 export def "emit readme" [
-  manifest: record
-  resolved: record
-  crds: list<record>
-  dropped: list<string>
-  license: record
+  chart: record
   --oversized # projected release above SIZE_BUDGET_CAP (see `validate size-budget`)
 ]: nothing -> string {
+  let manifest = $chart.manifest
+  let resolved = $chart.resolved
+  let crds = $chart.crds
+  let dropped = $chart.dropped
+  let license = $chart.license
   let name = $manifest.name
   let oci = $"($OCI_BASE)/($name)"
   let crd_names = ($crds | get metadata.name | str join " ")
@@ -320,25 +325,18 @@ export def "emit readme" [
 # from static/, so editing those files changes every chart. .helmignore holds
 # the standard `helm create` patterns plus `ci/`: ct reads ci/*-values.yaml from
 # the chart directory, but the packaged chart (and the release) does not need it.
-export def "emit chart-files" [
-  dir: path
-  manifest: record
-  resolved: record
-  crds: list<record>
-  dropped: list<string>
-  license: record
-]: nothing -> nothing {
+export def "emit chart-files" [dir: path, chart: record]: nothing -> nothing {
   if ($dir | path exists) { rm -rf $dir }
   mkdir ($dir | path join "templates") ($dir | path join "ci")
-  for c in $crds {
-    templatize crd $c $manifest.name | save -f ($dir | path join "templates" $"($c.metadata.name).yaml")
+  for c in $chart.crds {
+    templatize crd $c $chart.manifest.name | save -f ($dir | path join "templates" $"($c.metadata.name).yaml")
   }
-  open --raw ($STATIC_DIR | path join "_helpers.tpl") | templatize helpers $manifest.name | save -f ($dir | path join "templates" "_helpers.tpl")
+  open --raw ($STATIC_DIR | path join "_helpers.tpl") | templatize helpers $chart.manifest.name | save -f ($dir | path join "templates" "_helpers.tpl")
   cp ($STATIC_DIR | path join "values.yaml") ($dir | path join "values.yaml")
   emit values-schema | save -f ($dir | path join "values.schema.json")
   cp ($STATIC_DIR | path join "ci-values.yaml") ($dir | path join "ci" "ci-values.yaml")
-  $license.license_text | save -f ($dir | path join "LICENSE")
-  emit notice $manifest $resolved $license | save -f ($dir | path join "NOTICE")
-  emit readme $manifest $resolved $crds $dropped $license | save -f ($dir | path join "README.md")
+  $chart.license.license_text | save -f ($dir | path join "LICENSE")
+  emit notice $chart | save -f ($dir | path join "NOTICE")
+  emit readme $chart | save -f ($dir | path join "README.md")
   cp ($STATIC_DIR | path join "helmignore") ($dir | path join ".helmignore")
 }

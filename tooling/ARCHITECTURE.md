@@ -63,7 +63,7 @@ dedupe crds                  list<record>, sorted by metadata.name
 emit chart-files             <tmp>/<name>/  everything except Chart.yaml
 emit chart-record            Chart.yaml record without version/changes
 validate size-budget         {bytes, status}; README re-emitted with --oversized if needed
-version compute              {version, trigger, changes} against the base ref
+version compute              {version, trigger, changes, base} against the base ref
 emit chart-yaml              Chart.yaml
 validate chart               lint, round-trip, schema, values, structure, kubeconform
 ```
@@ -111,6 +111,10 @@ These records cross module boundaries. Treat their shapes as interfaces.
   `tagPattern`. `sha` is the peeled commit.
 - **license**: `{license_text, spdx, notice_text}`.
   `notice_text` may be null.
+- **chart**: `{manifest, resolved, repo_dir}` from `fetch`, plus `{license, crds,
+  dropped}` once `pipeline` in `mod.nu` has run. `render source` and
+  `fetch release-asset` get the first three; `emit *` and `version compute`
+  get all six. It is how commands stay at two positional parameters.
 - **crd**: a plain `CustomResourceDefinition` record. Fields that came from
   upstream are external data, so read their optional fields with `get -o` /
   `?`.

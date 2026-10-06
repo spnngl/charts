@@ -47,10 +47,10 @@ export def "resolve current" [manifest: record]: nothing -> record<tag: string, 
   {tag: $tag, appVersion: ($cap | get capture0.0), sha: $sha}
 }
 
-# Is `candidate` an allowed upgrade from `current` under policy all|minor|patch?
-export def "resolve allowed" [current: string, candidate: string, policy: string]: nothing -> bool {
+# Is the piped candidate version an allowed upgrade from `current` under policy all|minor|patch?
+export def "resolve allowed" [current: string, policy: string]: string -> bool {
   let a = ($current | into semver)
-  let b = ($candidate | into semver)
+  let b = ($in | into semver)
   match $policy {
     "all" => true
     "minor" => ($a.major == $b.major)
@@ -64,6 +64,6 @@ export def "resolve latest" [manifest: record]: nothing -> oneof<record, nothing
   let current_app = ($manifest.version.current | parse --regex $manifest.version.tagPattern | get capture0.0)
   resolve tags $manifest
   | where {|t| ($t.appVersion | into semver) > ($current_app | into semver) }
-  | where {|t| resolve allowed $current_app $t.appVersion $manifest.version.allow }
+  | where {|t| $t.appVersion | resolve allowed $current_app $manifest.version.allow }
   | last
 }

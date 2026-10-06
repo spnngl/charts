@@ -98,22 +98,21 @@ export def "version decide" [
   }
 }
 
-# Decide version + change note. `generated_dir` holds everything except Chart.yaml;
-# `chart_record` is the Chart.yaml content without version/changes.
-export def "version compute" [
-  name: string
-  app_version: string
-  resolved_tag: string
-  generated_dir: path
-  chart_record: record
-  base_ref: oneof<string, nothing>
-]: nothing -> record<version: string, trigger: string, changes: list<string>> {
+# Decide version + change note for `chart` against the base ref. The piped record
+# is the Chart.yaml content without version/changes; `generated_dir` holds
+# everything except Chart.yaml. Returns the `version decide` record plus `base`,
+# the git ref compared against (null without history).
+export def "version compute" [chart: record, generated_dir: path]: record -> record<version: string, trigger: string, changes: list<string>, base: oneof<string, nothing>> {
+  let chart_record = $in
+  let name = $chart.manifest.name
+  let base_ref = (version base-ref)
   let base_files = (version tree-hashes $name $base_ref | where path != "Chart.yaml" | sort-by path)
   let new_files = (version dir-hashes $generated_dir | where path != "Chart.yaml" | sort-by path)
-  version decide {
+  let decided = (version decide {
     previous: (version previous $name $base_ref)
-    resolved: {tag: $resolved_tag, appVersion: $app_version}
+    resolved: $chart.resolved
     chart_record: $chart_record
     files_changed: ($base_files != $new_files)
-  }
+  })
+  $decided | insert base $base_ref
 }

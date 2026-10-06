@@ -28,8 +28,9 @@ export def "fetch repo" [manifest: record, resolved: record]: nothing -> path {
 
 # Download one GitHub release asset into a temp dir; returns the file path.
 # On success the caller owns the file's parent directory and must remove it.
-export def "fetch release-asset" [manifest: record, resolved: record, asset: string]: nothing -> path {
-  let slug = (manifest gh-slug $manifest)
+export def "fetch release-asset" [chart: record, asset: string]: nothing -> path {
+  let resolved = $chart.resolved
+  let slug = (manifest gh-slug $chart.manifest)
   let dir = (mktemp -d -t crdgen-asset.XXXXXX)
   try {
     run-checked $"gh release download ($slug) ($resolved.tag) pattern '($asset)'" { ^gh release download $resolved.tag -R $slug -p $asset -D $dir } | ignore

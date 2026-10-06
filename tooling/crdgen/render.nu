@@ -37,30 +37,30 @@ def read-yaml-path [root: path, base: path]: nothing -> list<any> {
   $files | each {|f| open --raw $f | from yaml --multiple list } | flatten
 }
 
-def render-git-path [source: record, repo_dir: path]: nothing -> list<any> {
-  read-yaml-path ($repo_dir | path join $source.path) $repo_dir
+def render-git-path [source: record, chart: record]: nothing -> list<any> {
+  read-yaml-path ($chart.repo_dir | path join $source.path) $chart.repo_dir
 }
 
-def render-kustomize [source: record, repo_dir: path]: nothing -> list<any> {
-  let dir = ($repo_dir | path join $source.path)
+def render-kustomize [source: record, chart: record]: nothing -> list<any> {
+  let dir = ($chart.repo_dir | path join $source.path)
   run-checked $"kustomize build ($dir)" { ^kustomize build $dir } | from yaml --multiple list
 }
 
-def render-helm-template [source: record, repo_dir: path]: nothing -> list<any> {
-  let chart = ($repo_dir | path join $source.chartPath)
+def render-helm-template [source: record, chart: record]: nothing -> list<any> {
+  let chart_dir = ($chart.repo_dir | path join $source.chartPath)
   let values_file = (mktemp -t crdgen-values.XXXXXX.yaml)
   ($source | get -o values | default {}) | to yaml | save -f $values_file
   let templated = (
-    try { run-checked $"helm template ($chart)" { ^helm template crdgen $chart -f $values_file --include-crds } } finally { rm -f $values_file }
+    try { run-checked $"helm template ($chart_dir)" { ^helm template crdgen $chart_dir -f $values_file --include-crds } } finally { rm -f $values_file }
     | from yaml --multiple list
   )
-  let crds_dir = ($chart | path join "crds")
-  let static = (if ($crds_dir | path exists) { read-yaml-path $crds_dir $repo_dir } else { [] })
+  let crds_dir = ($chart_dir | path join "crds")
+  let static = (if ($crds_dir | path exists) { read-yaml-path $crds_dir $chart.repo_dir } else { [] })
   $templated | append $static
 }
 
-def render-release-asset [source: record, manifest: record, resolved: record]: nothing -> list<any> {
-  let file = (fetch release-asset $manifest $resolved $source.asset)
+def render-release-asset [source: record, chart: record]: nothing -> list<any> {
+  let file = (fetch release-asset $chart $source.asset)
   let extracted = (mktemp -d -t crdgen-extract.XXXXXX)
   try {
     let inner = ($extracted | path join ($source | get -o archivePath | default ""))
@@ -77,12 +77,13 @@ def render-release-asset [source: record, manifest: record, resolved: record]: n
 }
 
 # Render one source entry. Returns raw documents (not yet filtered).
-export def "render source" [source: record, manifest: record, resolved: record, repo_dir: path]: nothing -> list<any> {
+# `chart` carries {manifest, resolved, repo_dir}.
+export def "render source" [source: record, chart: record]: nothing -> list<any> {
   match $source.kind {
-    "git-path" => (render-git-path $source $repo_dir)
-    "kustomize" => (render-kustomize $source $repo_dir)
-    "helm-template" => (render-helm-template $source $repo_dir)
-    "release-asset" => (render-release-asset $source $manifest $resolved)
+    "git-path" => (render-git-path $source $chart)
+    "kustomize" => (render-kustomize $source $chart)
+    "helm-template" => (render-helm-template $source $chart)
+    "release-asset" => (render-release-asset $source $chart)
     _ => { error make {msg: $"unknown source kind ($source.kind)"} }
   }
 }
