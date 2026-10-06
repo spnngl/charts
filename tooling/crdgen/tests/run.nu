@@ -209,34 +209,36 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
       let license = {license_text: "Apache License Version 2.0", spdx: "Apache-2.0", notice_text: null}
       let f = (filter crds (fixture-docs "layout-a") $NO_TRANSFORM)
       let crds = (dedupe crds ($f.crds | each {|c| sanitize crd $c $NO_TRANSFORM }))
-      let dir = (mktemp -d -t crdgen-test.XXXXXX | path join "fixture-crds")
-      emit chart-files $dir $manifest $resolved $crds $f.dropped $license
-      let rec = (emit chart-record $manifest $resolved $crds $license)
-      emit chart-yaml $rec "1.0.0" ["Initial release"] | save -f ($dir | path join "Chart.yaml")
-      let chart = (open ($dir | path join "Chart.yaml"))
-      assert equal $chart.sources.0 "https://github.com/spnngl/charts"
-      assert equal $chart.kubeVersion ">=1.25.0-0"
-      assert ($chart.annotations."artifacthub.io/crds" | str contains "kind: Foo")
-      assert (not ("artifacthub.io/signKey" in $chart.annotations))
-      validate chart $dir $crds
-      assert equal (validate size-budget $dir).status "ok"
-      assert ((open --raw ($dir | path join ".helmignore")) | lines | any {|l| $l == "ci/" })
-      let readme = (open --raw ($dir | path join "README.md"))
-      assert ($readme | str contains "kubectl annotate crd bars.example.io bazs.example.io foos.example.io")
-      assert ($readme | str contains "~~**v1beta1**~~")
-      assert (not ($readme | str contains "HELM_DRIVER=sql"))
-      assert ($readme | str contains "--certificate-oidc-issuer https://token.actions.githubusercontent.com")
-      assert (not ($readme | str contains "cosign.pub"))
-      let big = (emit readme $manifest $resolved $crds $f.dropped $license --oversized)
-      assert ($big | str contains "helm upgrade --install fixture oci://ghcr.io/spnngl/charts/fixture-crds --version <version> --history-max=1")
-      assert ($readme | str contains "copied verbatim from")
-      assert (not ((emit notice $manifest $resolved $license) | str contains "schema documentation"))
-      let stripped = ($manifest | upsert transform.stripDocs true)
-      let sreadme = (emit readme $stripped $resolved $crds $f.dropped $license)
-      assert ($sreadme | str contains "CRDs are copied from")
-      assert ($sreadme | str contains "`kubectl explain` shows field")
-      assert ((emit notice $stripped $resolved $license) | str contains "Field-level schema documentation (descriptions, titles, examples) was removed.")
-      rm -rf ($dir | path dirname)
+      let tmp = (mktemp -d -t crdgen-test.XXXXXX)
+      let dir = ($tmp | path join "fixture-crds")
+      try {
+        emit chart-files $dir $manifest $resolved $crds $f.dropped $license
+        let rec = (emit chart-record $manifest $resolved $crds $license)
+        emit chart-yaml $rec "1.0.0" ["Initial release"] | save -f ($dir | path join "Chart.yaml")
+        let chart = (open ($dir | path join "Chart.yaml"))
+        assert equal $chart.sources.0 "https://github.com/spnngl/charts"
+        assert equal $chart.kubeVersion ">=1.25.0-0"
+        assert ($chart.annotations."artifacthub.io/crds" | str contains "kind: Foo")
+        assert (not ("artifacthub.io/signKey" in $chart.annotations))
+        validate chart $dir $crds
+        assert equal (validate size-budget $dir).status "ok"
+        assert ((open --raw ($dir | path join ".helmignore")) | lines | any {|l| $l == "ci/" })
+        let readme = (open --raw ($dir | path join "README.md"))
+        assert ($readme | str contains "kubectl annotate crd bars.example.io bazs.example.io foos.example.io")
+        assert ($readme | str contains "~~**v1beta1**~~")
+        assert (not ($readme | str contains "HELM_DRIVER=sql"))
+        assert ($readme | str contains "--certificate-oidc-issuer https://token.actions.githubusercontent.com")
+        assert (not ($readme | str contains "cosign.pub"))
+        let big = (emit readme $manifest $resolved $crds $f.dropped $license --oversized)
+        assert ($big | str contains "helm upgrade --install fixture oci://ghcr.io/spnngl/charts/fixture-crds --version <version> --history-max=1")
+        assert ($readme | str contains "copied verbatim from")
+        assert (not ((emit notice $manifest $resolved $license) | str contains "schema documentation"))
+        let stripped = ($manifest | upsert transform.stripDocs true)
+        let sreadme = (emit readme $stripped $resolved $crds $f.dropped $license)
+        assert ($sreadme | str contains "CRDs are copied from")
+        assert ($sreadme | str contains "`kubectl explain` shows field")
+        assert ((emit notice $stripped $resolved $license) | str contains "Field-level schema documentation (descriptions, titles, examples) was removed.")
+      } finally { rm -rf $tmp }
     }}
   ]
 }

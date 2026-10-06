@@ -57,18 +57,19 @@ def render-helm-template [source: record, repo_dir: path]: nothing -> list<any> 
 
 def render-release-asset [source: record, manifest: record, resolved: record]: nothing -> list<any> {
   let file = (fetch release-asset $manifest $resolved $source.asset)
-  let archive_path = ($source | get -o archivePath)
-  if ($file =~ '\.(tar\.gz|tgz)$') {
-    let dir = (mktemp -d -t crdgen-extract.XXXXXX)
-    ^tar -xzf $file -C $dir
-    read-yaml-path ($dir | path join ($archive_path | default ""))
-  } else if ($file =~ '\.zip$') {
-    let dir = (mktemp -d -t crdgen-extract.XXXXXX)
-    ^unzip -q $file -d $dir
-    read-yaml-path ($dir | path join ($archive_path | default ""))
-  } else {
-    read-yaml-file $file
-  }
+  let extracted = (mktemp -d -t crdgen-extract.XXXXXX)
+  try {
+    let inner = ($extracted | path join ($source | get -o archivePath | default ""))
+    if ($file =~ '\.(tar\.gz|tgz)$') {
+      run-checked $"tar -xzf ($file)" { ^tar -xzf $file -C $extracted } | ignore
+      read-yaml-path $inner
+    } else if ($file =~ '\.zip$') {
+      run-checked $"unzip ($file)" { ^unzip -q $file -d $extracted } | ignore
+      read-yaml-path $inner
+    } else {
+      read-yaml-file $file
+    }
+  } finally { rm -rf ($file | path dirname) $extracted }
 }
 
 # Render one source entry. Returns raw documents (not yet filtered).

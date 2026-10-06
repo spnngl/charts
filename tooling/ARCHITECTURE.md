@@ -68,6 +68,7 @@ validate chart               lint, round-trip, schema, values, structure, kubeco
 
 After `generate`, `regen` and `sync` move the temp dir to `charts/<name>/`.
 `check` instead compares git blob hashes against the committed directory.
+Both remove the temp dir afterwards; `generate` removes it itself when it fails.
 
 Ordering constraint: the README depends on the size estimate, and
 `version compute` hashes the directory. So the README must be final before
