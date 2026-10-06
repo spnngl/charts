@@ -32,7 +32,7 @@ security checklists. The project rules below take precedence.
   serialized text.
 - Keep the pure modules pure (`filter`, `sanitize`, `dedupe`, `templatize`,
   `emit` except `emit chart-files`, `config`). I/O belongs in
-  `resolve`, `fetch`, `render`, `version`, `validate`, `mod`.
+  `exec`, `resolve`, `fetch`, `render`, `version`, `validate`, `mod`.
 - Repo identity and policy constants go in `config.nu`. Tool versions go in
   `versions.toml` only.
 - Per-upstream quirks go in the manifest, not in code.
@@ -70,9 +70,10 @@ security checklists. The project rules below take precedence.
 - Call `^cmd` with each argument as a separate value. Never build command
   strings, and never use `sh -c`, `nu -c`, `source $var` or `run-external`
   on computed names.
-- When failure matters: `| complete`, check `exit_code`, then
-  `error make {msg}` naming what failed and including stderr. When failure is
-  an expected answer (does this ref exist?): check `exit_code` only.
+- When failure matters: `run-checked "<what>" { ^cmd … }` (`crdgen/exec.nu`).
+  It returns stdout and fails with `<what>` plus the command's output. Keep
+  `<what>` short and name the chart, manifest or path. When failure is an
+  expected answer (does this ref exist?): `| complete`, check `exit_code` only.
 - Error messages name the chart, manifest or path, and tell the reader what
   to do.
 - CI annotations: `print -e $"::warning::…"`.

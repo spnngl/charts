@@ -4,14 +4,12 @@
 #   nu tooling/release/verify.nu <chart-name> <version>
 
 use ../crdgen/config.nu [OCI_BASE OCI_HOST_PATH OWNER COSIGN_IDENTITY_REGEXP COSIGN_OIDC_ISSUER]
+use ../crdgen/exec.nu [run-checked]
 
 def step [what: string, cmd: closure] {
   print $"--> ($what)"
-  let out = (do $cmd | complete)
-  if $out.exit_code != 0 {
-    error make {msg: $"($what) failed:\n($out.stdout)\n($out.stderr)"}
-  }
-  if not ($out.stdout | str trim | is-empty) { print $out.stdout }
+  let stdout = (run-checked $what $cmd)
+  if not ($stdout | str trim | is-empty) { print $stdout }
 }
 
 def main [chart: string, version: string]: nothing -> nothing {

@@ -1,6 +1,7 @@
 # Turn a manifest `sources[]` entry into a flat list of YAML documents (records).
 # This is the only layout-specific step.
 
+use exec.nu [run-checked]
 use fetch.nu ["fetch release-asset"]
 
 # Flatten one level of nesting (lists of documents per source), drop nulls and
@@ -38,23 +39,17 @@ def render-git-path [source: record, repo_dir: path]: nothing -> list<any> {
 
 def render-kustomize [source: record, repo_dir: path]: nothing -> list<any> {
   let dir = ($repo_dir | path join $source.path)
-  let out = (^kustomize build $dir | complete)
-  if $out.exit_code != 0 {
-    error make {msg: $"kustomize build ($dir) failed: ($out.stderr)"}
-  }
-  $out.stdout | from yaml --multiple list
+  run-checked $"kustomize build ($dir)" { ^kustomize build $dir } | from yaml --multiple list
 }
 
 def render-helm-template [source: record, repo_dir: path]: nothing -> list<any> {
   let chart = ($repo_dir | path join $source.chartPath)
   let values_file = (mktemp -t crdgen-values.XXXXXX.yaml)
   ($source | get -o values | default {}) | to yaml | save -f $values_file
-  let out = (^helm template crdgen $chart -f $values_file --include-crds | complete)
-  rm -f $values_file
-  if $out.exit_code != 0 {
-    error make {msg: $"helm template ($chart) failed: ($out.stderr)"}
-  }
-  let templated = ($out.stdout | from yaml --multiple list)
+  let templated = (
+    try { run-checked $"helm template ($chart)" { ^helm template crdgen $chart -f $values_file --include-crds } } finally { rm -f $values_file }
+    | from yaml --multiple list
+  )
   let crds_dir = ($chart | path join "crds")
   let static = (if ($crds_dir | path exists) { read-yaml-path $crds_dir } else { [] })
   $templated | append $static

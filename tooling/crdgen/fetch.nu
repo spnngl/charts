@@ -1,5 +1,6 @@
 # Fetch upstream sources at the pinned tag, and read upstream license files.
 
+use exec.nu [run-checked]
 use manifest.nu ["manifest gh-slug"]
 
 def cache-dir []: nothing -> path {
@@ -16,10 +17,7 @@ export def "fetch repo" [manifest: record, resolved: record]: nothing -> path {
   if not ($dir | path join ".git" | path exists) {
     mkdir $cache
     if ($dir | path exists) { rm -rf $dir }
-    let out = (^git clone --quiet --depth 1 --branch $resolved.tag $manifest.upstream.repo $dir | complete)
-    if $out.exit_code != 0 {
-      error make {msg: $"git clone of ($manifest.upstream.repo) at ($resolved.tag) failed: ($out.stderr)"}
-    }
+    run-checked $"git clone ($manifest.upstream.repo) at ($resolved.tag)" { ^git clone --quiet --depth 1 --branch $resolved.tag $manifest.upstream.repo $dir } | ignore
   }
   let head = (^git -C $dir rev-parse HEAD | str trim)
   if $head != $resolved.sha {
@@ -32,10 +30,7 @@ export def "fetch repo" [manifest: record, resolved: record]: nothing -> path {
 export def "fetch release-asset" [manifest: record, resolved: record, asset: string]: nothing -> path {
   let slug = (manifest gh-slug $manifest)
   let dir = (mktemp -d -t crdgen-asset.XXXXXX)
-  let out = (^gh release download $resolved.tag -R $slug -p $asset -D $dir | complete)
-  if $out.exit_code != 0 {
-    error make {msg: $"gh release download ($slug) ($resolved.tag) pattern '($asset)' failed: ($out.stderr)"}
-  }
+  run-checked $"gh release download ($slug) ($resolved.tag) pattern '($asset)'" { ^gh release download $resolved.tag -R $slug -p $asset -D $dir } | ignore
   let files = (ls $dir | get name)
   if ($files | length) != 1 {
     error make {msg: $"asset pattern '($asset)' matched ($files | length) files in ($slug) ($resolved.tag); must match exactly one"}
