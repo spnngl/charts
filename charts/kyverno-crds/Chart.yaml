@@ -3,12 +3,12 @@
 apiVersion: v2
 name: kyverno-crds
 description: >-
-  CustomResourceDefinitions for Kyverno (policies, CEL policies, exceptions,
-  policy reports)
+  CustomResourceDefinitions for Kyverno (kyverno.io policies, exceptions,
+  reports, wgpolicyk8s.io policy reports)
 type: application
 version: 1.19.2
 appVersion: 1.19.1
-kubeVersion: ">=1.25.0-0"
+kubeVersion: ">=1.16.0-0"
 home: https://kyverno.io
 icon: https://raw.githubusercontent.com/kyverno/kyverno/main/img/logo.png
 sources:
@@ -50,61 +50,16 @@ annotations:
       name: clusterpolicyreports.wgpolicyk8s.io
       displayName: ClusterPolicyReport
       description: ClusterPolicyReport is the Schema for the clusterpolicyreports API
-    - kind: DeletingPolicy
-      version: v1beta1
-      name: deletingpolicies.policies.kyverno.io
-      displayName: DeletingPolicy
-      description: DeletingPolicy custom resource
     - kind: EphemeralReport
       version: v1
       name: ephemeralreports.reports.kyverno.io
       displayName: EphemeralReport
       description: EphemeralReport is the Schema for the EphemeralReports API
-    - kind: GeneratingPolicy
-      version: v1beta1
-      name: generatingpolicies.policies.kyverno.io
-      displayName: GeneratingPolicy
-      description: GeneratingPolicy custom resource
     - kind: GlobalContextEntry
       version: v2beta1
       name: globalcontextentries.kyverno.io
       displayName: GlobalContextEntry
       description: GlobalContextEntry declares resources to be cached.
-    - kind: ImageValidatingPolicy
-      version: v1beta1
-      name: imagevalidatingpolicies.policies.kyverno.io
-      displayName: ImageValidatingPolicy
-      description: ImageValidatingPolicy custom resource
-    - kind: MutatingPolicy
-      version: v1beta1
-      name: mutatingpolicies.policies.kyverno.io
-      displayName: MutatingPolicy
-      description: MutatingPolicy custom resource
-    - kind: NamespacedDeletingPolicy
-      version: v1beta1
-      name: namespaceddeletingpolicies.policies.kyverno.io
-      displayName: NamespacedDeletingPolicy
-      description: NamespacedDeletingPolicy custom resource
-    - kind: NamespacedGeneratingPolicy
-      version: v1beta1
-      name: namespacedgeneratingpolicies.policies.kyverno.io
-      displayName: NamespacedGeneratingPolicy
-      description: NamespacedGeneratingPolicy is the namespaced CEL-based generating policy.
-    - kind: NamespacedImageValidatingPolicy
-      version: v1beta1
-      name: namespacedimagevalidatingpolicies.policies.kyverno.io
-      displayName: NamespacedImageValidatingPolicy
-      description: NamespacedImageValidatingPolicy custom resource
-    - kind: NamespacedMutatingPolicy
-      version: v1beta1
-      name: namespacedmutatingpolicies.policies.kyverno.io
-      displayName: NamespacedMutatingPolicy
-      description: NamespacedMutatingPolicy custom resource
-    - kind: NamespacedValidatingPolicy
-      version: v1beta1
-      name: namespacedvalidatingpolicies.policies.kyverno.io
-      displayName: NamespacedValidatingPolicy
-      description: NamespacedValidatingPolicy custom resource
     - kind: Policy
       version: v1
       name: policies.kyverno.io
@@ -117,11 +72,6 @@ annotations:
       name: policyexceptions.kyverno.io
       displayName: PolicyException
       description: PolicyException declares resources to be excluded from specified policies.
-    - kind: PolicyException
-      version: v1beta1
-      name: policyexceptions.policies.kyverno.io
-      displayName: PolicyException
-      description: PolicyException declares resources to be excluded from specified policies.
     - kind: PolicyReport
       version: v1alpha2
       name: policyreports.wgpolicyk8s.io
@@ -132,11 +82,6 @@ annotations:
       name: updaterequests.kyverno.io
       displayName: UpdateRequest
       description: UpdateRequest is a request to process mutate and generate rules in background.
-    - kind: ValidatingPolicy
-      version: v1beta1
-      name: validatingpolicies.policies.kyverno.io
-      displayName: ValidatingPolicy
-      description: ValidatingPolicy custom resource
   artifacthub.io/links: |
     - name: Upstream project
       url: https://kyverno.io

@@ -93,7 +93,8 @@ while keeping line diffs (`.gitattributes` collapses them on GitHub). Helm
 cannot decompress anything at render time, so this is the floor. At v1.6.2:
 `gateway-api-crds` ≈ 485 kB, `gateway-api-exp-crds` ≈ 601 kB — one chart
 holding both channels would exceed the cap, hence two charts. Prefer such a
-split when it is natural; `kyverno-crds` (≈ 1.7 MB) is oversized instead.
+split when it is natural: Kyverno (≈ 1.7 MB) is split by API group into
+`kyverno-crds` and `kyverno-api-crds`, mirroring upstream's subcharts.
 
 Schema validation: kubeconform's default schema location
 (`<version>-standalone-strict`) has no `CustomResourceDefinition` schema, but

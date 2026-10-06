@@ -3,12 +3,12 @@
 "kind": "CustomResourceDefinition",
 "metadata": {
 "annotations": {
-{{- with include "kyverno-crds.crdAnnotations" . | trimPrefix "{" | trimSuffix "}" }}{{ . }},{{- end }}
+{{- with include "kyverno-api-crds.crdAnnotations" . | trimPrefix "{" | trimSuffix "}" }}{{ . }},{{- end }}
 "controller-gen.kubebuilder.io/version": "(devel)"
 },
-"name": "namespaceddeletingpolicies.policies.kyverno.io",
+"name": "namespacedgeneratingpolicies.policies.kyverno.io",
 "labels": {
-{{ include "kyverno-crds.crdLabels" . | trimPrefix "{" | trimSuffix "}" }}
+{{ include "kyverno-api-crds.crdLabels" . | trimPrefix "{" | trimSuffix "}" }}
 }
 },
 "spec": {
@@ -17,13 +17,13 @@
 "categories": [
 "kyverno"
 ],
-"kind": "NamespacedDeletingPolicy",
-"listKind": "NamespacedDeletingPolicyList",
-"plural": "namespaceddeletingpolicies",
+"kind": "NamespacedGeneratingPolicy",
+"listKind": "NamespacedGeneratingPolicyList",
+"plural": "namespacedgeneratingpolicies",
 "shortNames": [
-"ndpol"
+"ngpol"
 ],
-"singular": "namespaceddeletingpolicy"
+"singular": "namespacedgeneratingpolicy"
 },
 "scope": "Namespaced",
 "versions": [
@@ -33,16 +33,12 @@
 "jsonPath": ".metadata.creationTimestamp",
 "name": "AGE",
 "type": "date"
-},
-{
-"jsonPath": ".status.conditionStatus.ready",
-"name": "READY",
-"type": "string"
 }
 ],
 "name": "v1",
 "schema": {
 "openAPIV3Schema": {
+"description": "NamespacedGeneratingPolicy is the namespaced CEL-based generating policy.",
 "properties": {
 "apiVersion": {
 "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
@@ -56,10 +52,131 @@
 "type": "object"
 },
 "spec": {
-"description": "DeletingPolicySpec is the specification of the desired behavior of the DeletingPolicy.",
+"description": "GeneratingPolicySpec is the specification of the desired behavior of the GeneratingPolicy.",
 "properties": {
-"conditions": {
-"description": "Conditions is a list of conditions that must be met for a resource to be deleted.\nConditions filter resources that have already been matched by the match constraints,\nnamespaceSelector, and objectSelector. An empty list of conditions matches all resources.\nThere are a maximum of 64 conditions allowed.\n\nThe exact matching logic is (in order):\n  1. If ANY condition evaluates to FALSE, the policy is skipped.\n  2. If ALL conditions evaluate to TRUE, the policy is executed.",
+"auditAnnotations": {
+"description": "AuditAnnotations contains CEL expressions which are used to produce audit annotations for the audit event of the\nAPI server. auditAnnotations are evaluated after the policy has been evaluated but before the decision is logged.\nThe results of evaluating the expressions are attached to the audit event as annotations with the key\n\"<policy name>/<key>\".\nIf the expression evaluates to an empty string or null the annotation will not be included in the audit event.",
+"items": {
+"description": "AuditAnnotation describes how to produce an audit annotation for an API request.",
+"properties": {
+"key": {
+"description": "key specifies the audit annotation key. The audit annotation keys of\na ValidatingAdmissionPolicy must be unique. The key must be a qualified\nname ([A-Za-z0-9][-A-Za-z0-9_.]*) no more than 63 bytes in length.\n\nThe key is combined with the resource name of the\nValidatingAdmissionPolicy to construct an audit annotation key:\n\"{ValidatingAdmissionPolicy name}/{key}\".\n\nIf an admission webhook uses the same resource name as this ValidatingAdmissionPolicy\nand the same audit annotation key, the annotation key will be identical.\nIn this case, the first annotation written with the key will be included\nin the audit event and all subsequent annotations with the same key\nwill be discarded.\n\nRequired.",
+"type": "string"
+},
+"valueExpression": {
+"description": "valueExpression represents the expression which is evaluated by CEL to\nproduce an audit annotation value. The expression must evaluate to either\na string or null value. If the expression evaluates to a string, the\naudit annotation is included with the string value. If the expression\nevaluates to null or empty string the audit annotation will be omitted.\nThe valueExpression may be no longer than 5kb in length.\nIf the result of the valueExpression is more than 10kb in length, it\nwill be truncated to 10kb.\n\nIf multiple ValidatingAdmissionPolicyBinding resources match an\nAPI request, then the valueExpression will be evaluated for\neach binding. All unique values produced by the valueExpressions\nwill be joined together in a comma-separated list.\n\nRequired.",
+"type": "string"
+}
+},
+"required": [
+"key",
+"valueExpression"
+],
+"type": "object"
+},
+"type": "array"
+},
+"evaluation": {
+"description": "EvaluationConfiguration defines the configuration for the policy evaluation.",
+"properties": {
+"admission": {
+"description": "Admission controls policy evaluation during admission.",
+"properties": {
+"enabled": {
+"default": true,
+"description": "Enabled controls if rules are applied during admission.\nOptional. Default value is \"true\".",
+"type": "boolean"
+}
+},
+"type": "object"
+},
+"generateExisting": {
+"description": "GenerateExisting defines the configuration for generating resources for existing triggeres.",
+"properties": {
+"enabled": {
+"default": false,
+"description": "Enabled controls whether to trigger the policy for existing resources\nIf is set to \"true\" the policy will be triggered and applied to existing matched resources.\nOptional. Defaults to \"false\" if not specified.",
+"type": "boolean"
+}
+},
+"type": "object"
+},
+"orphanDownstreamOnPolicyDelete": {
+"description": "OrphanDownstreamOnPolicyDelete defines the configuration for orphaning downstream resources on policy delete.",
+"properties": {
+"enabled": {
+"default": false,
+"description": "Enabled controls whether generated resources should be deleted when the policy that generated\nthem is deleted with synchronization enabled. This option is only applicable to generate rules of the data type.\nOptional. Defaults to \"false\" if not specified.",
+"type": "boolean"
+}
+},
+"type": "object"
+},
+"skipBackgroundRequests": {
+"default": true,
+"description": "SkipBackgroundRequests bypasses admission requests that are sent by the background controller.\nThe default value is set to \"true\", it must be set to \"false\" to apply generateExisting rules to those requests.",
+"type": "boolean"
+},
+"synchronize": {
+"description": "Synchronization defines the configuration for the synchronization of generated resources.",
+"properties": {
+"enabled": {
+"default": false,
+"description": "Enabled controls if generated resources should be kept in-sync with their source resource.\nIf Synchronize is set to \"true\" changes to generated resources will be overwritten with resource\ndata from Data or the resource specified in the Clone declaration.\nOptional. Defaults to \"false\" if not specified.",
+"type": "boolean"
+}
+},
+"type": "object"
+}
+},
+"type": "object"
+},
+"generate": {
+"description": "Generation defines a set of CEL expressions that will be evaluated to generate resources.\nRequired.",
+"items": {
+"description": "Generation defines the configuration for the generation of resources.",
+"properties": {
+"expression": {
+"description": "Expression is a CEL expression that takes a list of resources to be generated.",
+"type": "string"
+},
+"template": {
+"description": "Template declares the resources to be generated as a YAML document,\nwith optional CEL interpolation.",
+"properties": {
+"interpolate": {
+"default": "none",
+"description": "Interpolate controls placeholder evaluation in Value:\n\"none\" (default) treats Value as plain YAML;\n\"cel\" evaluates `(( ... ))` placeholders as CEL expressions before the YAML is parsed.",
+"enum": [
+"none",
+"cel"
+],
+"type": "string"
+},
+"value": {
+"description": "Value is a YAML string, single or multi-document, defining the resources to generate.\nThe namespace of each generated resource is taken from its rendered metadata.namespace,\nresources without a namespace are treated as cluster-scoped.",
+"minLength": 1,
+"type": "string"
+}
+},
+"required": [
+"value"
+],
+"type": "object"
+}
+},
+"type": "object",
+"x-kubernetes-validations": [
+{
+"message": "exactly one of expression or template must be set",
+"rule": "(has(self.expression) && !has(self.template)) || (!has(self.expression) && has(self.template))"
+}
+]
+},
+"minItems": 1,
+"type": "array"
+},
+"matchConditions": {
+"description": "MatchConditions is a list of conditions that must be met for a request to be validated.\nMatch conditions filter requests that have already been matched by the rules,\nnamespaceSelector, and objectSelector. An empty list of matchConditions matches all requests.\nThere are a maximum of 64 match conditions allowed.\n\nThe exact matching logic is (in order):\n  1. If ANY matchCondition evaluates to FALSE, the policy is skipped.\n  2. If ALL matchConditions evaluate to TRUE, the policy is evaluated.\n  3. If any matchCondition evaluates to an error (but none are FALSE):\n     - If failurePolicy=Fail, reject the request\n     - If failurePolicy=Ignore, the policy is skipped",
 "items": {
 "description": "MatchCondition represents a condition which must by fulfilled for a request to be sent to a webhook.",
 "properties": {
@@ -84,17 +201,8 @@
 ],
 "x-kubernetes-list-type": "map"
 },
-"deletionPropagationPolicy": {
-"description": "DeletionPropagationPolicy defines how resources will be deleted (Foreground, Background, Orphan).",
-"enum": [
-"Foreground",
-"Background",
-"Orphan"
-],
-"type": "string"
-},
 "matchConstraints": {
-"description": "MatchConstraints specifies what resources this policy is designed to validate.\nThe AdmissionPolicy cares about a request if it matches _all_ Constraints.\nRequired.",
+"description": "MatchConstraints specifies what resources will trigger this policy.\nThe AdmissionPolicy cares about a request if it matches _all_ Constraints.\nRequired.",
 "properties": {
 "excludeResourceRules": {
 "description": "excludeResourceRules describes what operations on what resources/subresources the ValidatingAdmissionPolicy should not care about.\nThe exclude rules take precedence over include rules (if a resource matches both, it is excluded)",
@@ -308,9 +416,9 @@
 "type": "object",
 "x-kubernetes-map-type": "atomic"
 },
-"schedule": {
-"description": "The schedule in Cron format\nRequired.",
-"type": "string"
+"useServerSideApply": {
+"description": "UseServerSideApply controls whether to use server-side apply for generate rules.\nIf set to \"true\", create & update for generated resources will use apply instead of create/update.\nDefaults to \"false\" if not specified.",
+"type": "boolean"
 },
 "variables": {
 "description": "Variables contain definitions of variables that can be used in composition of other expressions.\nEach variable is defined as a named CEL expression.\nThe variables defined here will be available under `variables` in other expressions of the policy\nexcept MatchConditions because MatchConditions are evaluated before the rest of the policy.\n\nThe expression of a variable can refer to other variables defined earlier in the list but not those after.\nThus, Variables must be sorted by the order of first appearance and acyclic.",
@@ -338,10 +446,21 @@
 "name"
 ],
 "x-kubernetes-list-type": "map"
+},
+"webhookConfiguration": {
+"description": "WebhookConfiguration defines the configuration for the webhook.",
+"properties": {
+"timeoutSeconds": {
+"description": "TimeoutSeconds specifies the maximum time in seconds allowed to apply this policy.\nAfter the configured time expires, the admission request may fail, or may simply ignore the policy results,\nbased on the failure policy. The default timeout is 10s, the value must be between 1 and 30 seconds.",
+"format": "int32",
+"type": "integer"
+}
+},
+"type": "object"
 }
 },
 "required": [
-"schedule"
+"generate"
 ],
 "type": "object"
 },
@@ -415,10 +534,6 @@
 }
 },
 "type": "object"
-},
-"lastExecutionTime": {
-"format": "date-time",
-"type": "string"
 }
 },
 "type": "object"
@@ -442,16 +557,12 @@
 "jsonPath": ".metadata.creationTimestamp",
 "name": "AGE",
 "type": "date"
-},
-{
-"jsonPath": ".status.conditionStatus.ready",
-"name": "READY",
-"type": "string"
 }
 ],
 "name": "v1beta1",
 "schema": {
 "openAPIV3Schema": {
+"description": "NamespacedGeneratingPolicy is the namespaced CEL-based generating policy.",
 "properties": {
 "apiVersion": {
 "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
@@ -465,10 +576,131 @@
 "type": "object"
 },
 "spec": {
-"description": "DeletingPolicySpec is the specification of the desired behavior of the DeletingPolicy.",
+"description": "GeneratingPolicySpec is the specification of the desired behavior of the GeneratingPolicy.",
 "properties": {
-"conditions": {
-"description": "Conditions is a list of conditions that must be met for a resource to be deleted.\nConditions filter resources that have already been matched by the match constraints,\nnamespaceSelector, and objectSelector. An empty list of conditions matches all resources.\nThere are a maximum of 64 conditions allowed.\n\nThe exact matching logic is (in order):\n  1. If ANY condition evaluates to FALSE, the policy is skipped.\n  2. If ALL conditions evaluate to TRUE, the policy is executed.",
+"auditAnnotations": {
+"description": "AuditAnnotations contains CEL expressions which are used to produce audit annotations for the audit event of the\nAPI server. auditAnnotations are evaluated after the policy has been evaluated but before the decision is logged.\nThe results of evaluating the expressions are attached to the audit event as annotations with the key\n\"<policy name>/<key>\".\nIf the expression evaluates to an empty string or null the annotation will not be included in the audit event.",
+"items": {
+"description": "AuditAnnotation describes how to produce an audit annotation for an API request.",
+"properties": {
+"key": {
+"description": "key specifies the audit annotation key. The audit annotation keys of\na ValidatingAdmissionPolicy must be unique. The key must be a qualified\nname ([A-Za-z0-9][-A-Za-z0-9_.]*) no more than 63 bytes in length.\n\nThe key is combined with the resource name of the\nValidatingAdmissionPolicy to construct an audit annotation key:\n\"{ValidatingAdmissionPolicy name}/{key}\".\n\nIf an admission webhook uses the same resource name as this ValidatingAdmissionPolicy\nand the same audit annotation key, the annotation key will be identical.\nIn this case, the first annotation written with the key will be included\nin the audit event and all subsequent annotations with the same key\nwill be discarded.\n\nRequired.",
+"type": "string"
+},
+"valueExpression": {
+"description": "valueExpression represents the expression which is evaluated by CEL to\nproduce an audit annotation value. The expression must evaluate to either\na string or null value. If the expression evaluates to a string, the\naudit annotation is included with the string value. If the expression\nevaluates to null or empty string the audit annotation will be omitted.\nThe valueExpression may be no longer than 5kb in length.\nIf the result of the valueExpression is more than 10kb in length, it\nwill be truncated to 10kb.\n\nIf multiple ValidatingAdmissionPolicyBinding resources match an\nAPI request, then the valueExpression will be evaluated for\neach binding. All unique values produced by the valueExpressions\nwill be joined together in a comma-separated list.\n\nRequired.",
+"type": "string"
+}
+},
+"required": [
+"key",
+"valueExpression"
+],
+"type": "object"
+},
+"type": "array"
+},
+"evaluation": {
+"description": "EvaluationConfiguration defines the configuration for the policy evaluation.",
+"properties": {
+"admission": {
+"description": "Admission controls policy evaluation during admission.",
+"properties": {
+"enabled": {
+"default": true,
+"description": "Enabled controls if rules are applied during admission.\nOptional. Default value is \"true\".",
+"type": "boolean"
+}
+},
+"type": "object"
+},
+"generateExisting": {
+"description": "GenerateExisting defines the configuration for generating resources for existing triggeres.",
+"properties": {
+"enabled": {
+"default": false,
+"description": "Enabled controls whether to trigger the policy for existing resources\nIf is set to \"true\" the policy will be triggered and applied to existing matched resources.\nOptional. Defaults to \"false\" if not specified.",
+"type": "boolean"
+}
+},
+"type": "object"
+},
+"orphanDownstreamOnPolicyDelete": {
+"description": "OrphanDownstreamOnPolicyDelete defines the configuration for orphaning downstream resources on policy delete.",
+"properties": {
+"enabled": {
+"default": false,
+"description": "Enabled controls whether generated resources should be deleted when the policy that generated\nthem is deleted with synchronization enabled. This option is only applicable to generate rules of the data type.\nOptional. Defaults to \"false\" if not specified.",
+"type": "boolean"
+}
+},
+"type": "object"
+},
+"skipBackgroundRequests": {
+"default": true,
+"description": "SkipBackgroundRequests bypasses admission requests that are sent by the background controller.\nThe default value is set to \"true\", it must be set to \"false\" to apply generateExisting rules to those requests.",
+"type": "boolean"
+},
+"synchronize": {
+"description": "Synchronization defines the configuration for the synchronization of generated resources.",
+"properties": {
+"enabled": {
+"default": false,
+"description": "Enabled controls if generated resources should be kept in-sync with their source resource.\nIf Synchronize is set to \"true\" changes to generated resources will be overwritten with resource\ndata from Data or the resource specified in the Clone declaration.\nOptional. Defaults to \"false\" if not specified.",
+"type": "boolean"
+}
+},
+"type": "object"
+}
+},
+"type": "object"
+},
+"generate": {
+"description": "Generation defines a set of CEL expressions that will be evaluated to generate resources.\nRequired.",
+"items": {
+"description": "Generation defines the configuration for the generation of resources.",
+"properties": {
+"expression": {
+"description": "Expression is a CEL expression that takes a list of resources to be generated.",
+"type": "string"
+},
+"template": {
+"description": "Template declares the resources to be generated as a YAML document,\nwith optional CEL interpolation.",
+"properties": {
+"interpolate": {
+"default": "none",
+"description": "Interpolate controls placeholder evaluation in Value:\n\"none\" (default) treats Value as plain YAML;\n\"cel\" evaluates `(( ... ))` placeholders as CEL expressions before the YAML is parsed.",
+"enum": [
+"none",
+"cel"
+],
+"type": "string"
+},
+"value": {
+"description": "Value is a YAML string, single or multi-document, defining the resources to generate.\nThe namespace of each generated resource is taken from its rendered metadata.namespace,\nresources without a namespace are treated as cluster-scoped.",
+"minLength": 1,
+"type": "string"
+}
+},
+"required": [
+"value"
+],
+"type": "object"
+}
+},
+"type": "object",
+"x-kubernetes-validations": [
+{
+"message": "exactly one of expression or template must be set",
+"rule": "(has(self.expression) && !has(self.template)) || (!has(self.expression) && has(self.template))"
+}
+]
+},
+"minItems": 1,
+"type": "array"
+},
+"matchConditions": {
+"description": "MatchConditions is a list of conditions that must be met for a request to be validated.\nMatch conditions filter requests that have already been matched by the rules,\nnamespaceSelector, and objectSelector. An empty list of matchConditions matches all requests.\nThere are a maximum of 64 match conditions allowed.\n\nThe exact matching logic is (in order):\n  1. If ANY matchCondition evaluates to FALSE, the policy is skipped.\n  2. If ALL matchConditions evaluate to TRUE, the policy is evaluated.\n  3. If any matchCondition evaluates to an error (but none are FALSE):\n     - If failurePolicy=Fail, reject the request\n     - If failurePolicy=Ignore, the policy is skipped",
 "items": {
 "description": "MatchCondition represents a condition which must by fulfilled for a request to be sent to a webhook.",
 "properties": {
@@ -493,17 +725,8 @@
 ],
 "x-kubernetes-list-type": "map"
 },
-"deletionPropagationPolicy": {
-"description": "DeletionPropagationPolicy defines how resources will be deleted (Foreground, Background, Orphan).",
-"enum": [
-"Foreground",
-"Background",
-"Orphan"
-],
-"type": "string"
-},
 "matchConstraints": {
-"description": "MatchConstraints specifies what resources this policy is designed to validate.\nThe AdmissionPolicy cares about a request if it matches _all_ Constraints.\nRequired.",
+"description": "MatchConstraints specifies what resources will trigger this policy.\nThe AdmissionPolicy cares about a request if it matches _all_ Constraints.\nRequired.",
 "properties": {
 "excludeResourceRules": {
 "description": "excludeResourceRules describes what operations on what resources/subresources the ValidatingAdmissionPolicy should not care about.\nThe exclude rules take precedence over include rules (if a resource matches both, it is excluded)",
@@ -717,9 +940,9 @@
 "type": "object",
 "x-kubernetes-map-type": "atomic"
 },
-"schedule": {
-"description": "The schedule in Cron format\nRequired.",
-"type": "string"
+"useServerSideApply": {
+"description": "UseServerSideApply controls whether to use server-side apply for generate rules.\nIf set to \"true\", create & update for generated resources will use apply instead of create/update.\nDefaults to \"false\" if not specified.",
+"type": "boolean"
 },
 "variables": {
 "description": "Variables contain definitions of variables that can be used in composition of other expressions.\nEach variable is defined as a named CEL expression.\nThe variables defined here will be available under `variables` in other expressions of the policy\nexcept MatchConditions because MatchConditions are evaluated before the rest of the policy.\n\nThe expression of a variable can refer to other variables defined earlier in the list but not those after.\nThus, Variables must be sorted by the order of first appearance and acyclic.",
@@ -747,10 +970,21 @@
 "name"
 ],
 "x-kubernetes-list-type": "map"
+},
+"webhookConfiguration": {
+"description": "WebhookConfiguration defines the configuration for the webhook.",
+"properties": {
+"timeoutSeconds": {
+"description": "TimeoutSeconds specifies the maximum time in seconds allowed to apply this policy.\nAfter the configured time expires, the admission request may fail, or may simply ignore the policy results,\nbased on the failure policy. The default timeout is 10s, the value must be between 1 and 30 seconds.",
+"format": "int32",
+"type": "integer"
+}
+},
+"type": "object"
 }
 },
 "required": [
-"schedule"
+"generate"
 ],
 "type": "object"
 },
@@ -824,10 +1058,6 @@
 }
 },
 "type": "object"
-},
-"lastExecutionTime": {
-"format": "date-time",
-"type": "string"
 }
 },
 "type": "object"
