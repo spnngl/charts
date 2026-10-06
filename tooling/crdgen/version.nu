@@ -6,10 +6,10 @@
 #   upstream same, content changed → version = previous.PATCH+1   (tooling trigger)
 #   nothing changed                → version = previous
 
-use config.nu [ANNOTATION_PREFIX]
+use config.nu [ANNOTATION_PREFIX REPO_ROOT]
 
 def ref-exists [ref: string]: nothing -> bool {
-  (^git rev-parse --verify --quiet $ref | complete | get exit_code) == 0
+  (^git -C $REPO_ROOT rev-parse --verify --quiet $ref | complete | get exit_code) == 0
 }
 
 # Git ref the generated output is compared against. null on a repo without history.
@@ -28,7 +28,7 @@ export def "version base-ref" []: nothing -> oneof<string, nothing> {
 # Previously committed Chart.yaml for a chart at `base_ref`, or null.
 export def "version previous" [name: string, base_ref: oneof<string, nothing>]: nothing -> oneof<record, nothing> {
   if $base_ref == null { return null }
-  let out = (^git show $"($base_ref):charts/($name)/Chart.yaml" | complete)
+  let out = (^git -C $REPO_ROOT show $"($base_ref):charts/($name)/Chart.yaml" | complete)
   if $out.exit_code != 0 { return null }
   $out.stdout | from yaml
 }
@@ -36,7 +36,7 @@ export def "version previous" [name: string, base_ref: oneof<string, nothing>]: 
 # {path, hash} for every blob under charts/<name> at base_ref (paths relative to the chart dir).
 export def "version tree-hashes" [name: string, base_ref: oneof<string, nothing>]: nothing -> table<path: string, hash: string> {
   if $base_ref == null { return [] }
-  let out = (^git ls-tree -r $base_ref -- $"charts/($name)" | complete)
+  let out = (^git -C $REPO_ROOT ls-tree -r $base_ref -- $"charts/($name)" | complete)
   if $out.exit_code != 0 { return [] }
   $out.stdout
   | lines
