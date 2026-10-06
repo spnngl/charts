@@ -22,3 +22,6 @@ transform:
   include: []
   exclude: []
   patches: []
+  # ~1.7 MB release with docs: above Helm's 1 MiB release Secret (#14378
+  # upstream). Stripped: ~190 kB, one chart for all Kyverno CRDs.
+  stripDocs: true

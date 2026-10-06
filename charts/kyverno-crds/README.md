@@ -4,21 +4,19 @@
 
 CustomResourceDefinitions for Kyverno (policies, CEL policies, exceptions, policy reports).
 
-CRDs are copied verbatim from [kyverno/kyverno](https://github.com/kyverno/kyverno)
+CRDs are copied from [kyverno/kyverno](https://github.com/kyverno/kyverno)
 at tag [`v1.19.1`](https://github.com/kyverno/kyverno/tree/v1.19.1) (commit `40ec788d48bb28d83dbf85538e962a59db9d45c6`),
 path(s) `config/crds`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
+Field-level schema documentation (descriptions, titles, examples) is stripped so the Helm release fits
+Helm's 1 MiB release Secret: validation is unchanged, but `kubectl explain` shows field
+types only. Refer to the upstream documentation for field descriptions.
+
 ## Install
 
-> **Too large for Helm's default storage.** Helm stores each release in one Secret
-> (or ConfigMap), capped at 1 MiB; this chart's release exceeds it. Use the SQL
-> storage driver (PostgreSQL):
-
 ```sh
-export HELM_DRIVER=sql
-export HELM_DRIVER_SQL_CONNECTION_STRING='postgresql://<user>:<password>@<host>:5432/<db>'
-helm upgrade --install kyverno oci://ghcr.io/spnngl/charts/kyverno-crds --version <version> --history-max=1
+helm install kyverno oci://ghcr.io/spnngl/charts/kyverno-crds --version <version>
 ```
 
 Chart `version` equals the upstream version it ships; `appVersion` is always the exact upstream version.
