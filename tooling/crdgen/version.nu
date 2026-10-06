@@ -6,7 +6,6 @@
 #   upstream same, content changed → version = previous.PATCH+1   (tooling trigger)
 #   nothing changed                → version = previous
 
-use semver.nu *
 use config.nu [ANNOTATION_PREFIX]
 
 def ref-exists [ref: string]: nothing -> bool {
@@ -58,6 +57,10 @@ def strip-volatile [chart_yaml: record]: nothing -> record {
   | reject -o ([annotations "artifacthub.io/changes"] | into cell-path)
 }
 
+def bump-patch [version: string]: nothing -> string {
+  $version | into semver | semver bump patch | into string
+}
+
 # Pure decision: version, trigger and change note from the previous Chart.yaml
 # (null for a new chart), the resolved pin, the Chart.yaml record without
 # version/changes, and whether any file other than Chart.yaml differs from base.
@@ -77,7 +80,7 @@ export def "version decide" [
   let prev_version = ($prev.version | into string)
   let prev_app = ($prev.appVersion | into string)
   if $prev_app != $app_version {
-    let candidate = (if (semver cmp $app_version $prev_version) > 0 { $app_version } else { semver bump-patch $prev_version })
+    let candidate = (if ($app_version | into semver) > ($prev_version | into semver) { $app_version } else { bump-patch $prev_version })
     let prev_tag = ($prev | get -o ([annotations $"($ANNOTATION_PREFIX)/upstream-tag"] | into cell-path) | default $prev_app)
     return {
       version: $candidate
@@ -91,7 +94,7 @@ export def "version decide" [
     return {version: $prev_version, trigger: "none", changes: $prev_changes}
   }
   {
-    version: (semver bump-patch $prev_version)
+    version: (bump-patch $prev_version)
     trigger: "tooling"
     changes: [$"Chart regenerated with updated tooling \(upstream unchanged at ($resolved_tag)\)"]
   }

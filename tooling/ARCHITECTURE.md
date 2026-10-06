@@ -13,7 +13,6 @@ versions.toml            pinned tool versions; read by .github/actions/setup-too
 crdgen/mod.nu            CLI (`main regen|check|sync|notice|list`); orchestration only
 crdgen/config.nu         repo identity + policy constants; no logic
 crdgen/<step>.nu         one pipeline step per file (see Modules)
-crdgen/semver.nu         MAJOR.MINOR.PATCH helpers for resolve.nu and version.nu
 crdgen/tests/run.nu      unit + end-to-end tests; fixtures/ holds one directory per case
 release/plan.nu          which charts still need publishing (release.yml)
 release/artifacthub.nu   Artifact Hub registration + metadata push (release.yml)
@@ -80,7 +79,7 @@ Chart.yaml. The comment in `generate` explains this.
 |--------|-------------------|------|----------------|------|
 | `config.nu` | constants | — | — | yes |
 | `manifest.nu` | `manifest validate/defaults/load/list/gh-slug` | config | — | reads files |
-| `resolve.nu` | `resolve tags/current/latest` | semver | `git ls-remote` | no |
+| `resolve.nu` | `resolve tags/current/allowed/latest`, `parse-tags` | — | `git ls-remote` | no |
 | `fetch.nu` | `fetch repo/release-asset/license`, `license detect` | manifest | `git clone/rev-parse`, `gh release download` | no |
 | `render.nu` | `render source`, `docs from-yaml/normalize` | fetch | `kustomize`, `helm`, `tar`, `unzip` | no |
 | `filter.nu` | `filter crds` | — | — | yes |
@@ -88,9 +87,8 @@ Chart.yaml. The comment in `generate` explains this.
 | `dedupe.nu` | `dedupe crds` | — | — | yes |
 | `templatize.nu` | `templatize crd/helpers`, `template escape` | — | — | yes |
 | `emit.nu` | `emit *` | config, templatize | — | yes, except `emit chart-files` (writes the chart dir) |
-| `version.nu` | `version base-ref/previous/tree-hashes/dir-hashes/compute` | semver, config | `git` | no |
+| `version.nu` | `version base-ref/previous/tree-hashes/dir-hashes/decide/compute` | config | `git` | no |
 | `validate.nu` | `validate chart/size-budget` | config, render | `helm`, `kubeconform`, `gzip`, `wc`, `tar`, `git` | no |
-| `semver.nu` | `semver *` | — | — | yes |
 
 The release scripts use only `crdgen/config.nu`. Tests import the step
 modules directly. They never import `mod.nu`.
@@ -118,7 +116,8 @@ These records cross module boundaries. Treat their shapes as interfaces.
   subcommand (`"emit readme"`), and modules are imported with `use x.nu *`.
   Historical exceptions: `render.nu` (`docs …`), `fetch.nu`
   (`license detect`), `sanitize.nu` (`strip-docs …`, `pointer …`,
-  `patch …`), `templatize.nu` (`template escape`).
+  `patch …`), `templatize.nu` (`template escape`), `resolve.nu`
+  (`parse-tags`).
 - **Text:** only `templatize.nu` rewrites serialized text (sentinels,
   `{{`/`}}` escaping). `emit.nu` assembles README and NOTICE from line lists.
   Every other module works on records.

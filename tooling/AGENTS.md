@@ -31,7 +31,7 @@ security checklists. The project rules below take precedence.
   only selects which field holds its path. Only `templatize.nu` rewrites
   serialized text.
 - Keep the pure modules pure (`filter`, `sanitize`, `dedupe`, `templatize`,
-  `emit` except `emit chart-files`, `semver`, `config`). I/O belongs in
+  `emit` except `emit chart-files`, `config`). I/O belongs in
   `resolve`, `fetch`, `render`, `version`, `validate`, `mod`.
 - Repo identity and policy constants go in `config.nu`. Tool versions go in
   `versions.toml` only.

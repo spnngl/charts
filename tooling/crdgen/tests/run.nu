@@ -5,8 +5,7 @@
 
 use std/assert
 use ../manifest.nu *
-use ../semver.nu *
-use ../resolve.nu [parse-tags]
+use ../resolve.nu [parse-tags "resolve allowed"]
 use ../version.nu ["version decide"]
 use ../fetch.nu ["license detect"]
 use ../render.nu *
@@ -31,18 +30,15 @@ def expect-error [body: closure, pattern: string] {
 
 def tests []: nothing -> list<record<name: string, run: closure>> {
   [
-    {name: "semver cmp/bump/allowed", run: {
-      assert equal (semver cmp "1.2.3" "1.10.0") (-1)
-      assert equal (semver cmp "2.0.0" "1.99.99") 1
-      assert equal (semver cmp "v1.2.3" "1.2.3") 0
-      assert equal (semver bump-patch "1.6.2") "1.6.3"
-      assert (semver allowed "1.6.2" "1.7.0" "minor")
-      assert (not (semver allowed "1.6.2" "2.0.0" "minor"))
-      assert (not (semver allowed "1.6.2" "1.7.0" "patch"))
-      assert equal (["1.10.0" "1.2.0" "0.9.9"] | semver sort) ["0.9.9" "1.2.0" "1.10.0"]
+    {name: "resolve allowed", run: {
+      assert (resolve allowed "1.6.2" "1.7.0" "minor")
+      assert (not (resolve allowed "1.6.2" "2.0.0" "minor"))
+      assert (not (resolve allowed "1.6.2" "1.7.0" "patch"))
+      assert (resolve allowed "1.6.2" "2.0.0" "all")
+      expect-error { resolve allowed "1.6.2" "1.7.0" "bogus" } "unknown allow policy"
     }}
     {name: "parse-tags: ascending semver order, drops non-matching tags", run: {
-      let text = ["aaa\trefs/tags/v1.2.0" "bbb\trefs/tags/v1.10.0" "ccc\trefs/tags/nightly" "ddd\trefs/tags/v0.9.9"] | str join "\n"
+      let text = ["aaa\trefs/tags/v1.2.0" "bbb\trefs/tags/v1.10.0" "ccc\trefs/tags/nightly" "ddd\trefs/tags/v0.9.9" "eee\trefs/tags/v01.2.0"] | str join "\n"
       let tags = ($text | parse-tags '^v(\d+\.\d+\.\d+)$')
       assert equal ($tags | get appVersion) ["0.9.9" "1.2.0" "1.10.0"]
       assert equal ($tags | get tag) ["v0.9.9" "v1.2.0" "v1.10.0"]
