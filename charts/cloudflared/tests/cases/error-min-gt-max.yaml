@@ -1,0 +1,7 @@
+values:
+  autoscaling:
+    enabled: true
+    minReplicas: 6
+    maxReplicas: 5
+expect:
+  error: "minReplicas must be <= "

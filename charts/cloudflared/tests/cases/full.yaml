@@ -1,0 +1,43 @@
+values:
+  image:
+    tag: 2026.10.0
+  hostUsers: true
+  replicaCount: 5
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+  verticalPodAutoscaler:
+    enabled: true
+    updateMode: Off
+    minAllowed:
+      memory: 64Mi
+  podDisruptionBudget:
+    enabled: true
+  metrics:
+    service:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+      labels:
+        release: kube-prometheus-stack
+      interval: 30s
+  networkPolicy:
+    metrics:
+      from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+    egress:
+      enabled: true
+  podAnnotations:
+    example.com/note: hello
+  podLabels:
+    example.com/team: edge
+  priorityClassName: system-cluster-critical
+  extraVolumes:
+  - name: scratch
+    emptyDir: {}
+  extraVolumeMounts:
+  - name: scratch
+    mountPath: /tmp

@@ -1,0 +1,4 @@
+values:
+  image:
+    tag: 2026.9.0
+    digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

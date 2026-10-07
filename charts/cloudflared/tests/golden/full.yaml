@@ -1,0 +1,461 @@
+---
+# Source: cloudflared/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: cloudflared
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudflared
+    app.kubernetes.io/version: "2026.10.0"
+    helm.sh/chart: cloudflared-0.1.0
+  name: cloudflared
+  namespace: cloudflared
+spec:
+  egress:
+    - ports:
+        - port: 53
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    - ports:
+        - port: 7844
+          protocol: TCP
+        - port: 7844
+          protocol: UDP
+      to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+        - ipBlock:
+            cidr: ::/0
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+      ports:
+      - port: 2000
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: cloudflared
+      app.kubernetes.io/name: cloudflared
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+# Source: cloudflared/templates/pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    app.kubernetes.io/instance: cloudflared
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudflared
+    app.kubernetes.io/version: "2026.10.0"
+    helm.sh/chart: cloudflared-0.1.0
+  name: cloudflared
+  namespace: cloudflared
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: cloudflared
+      app.kubernetes.io/name: cloudflared
+  unhealthyPodEvictionPolicy: AlwaysAllow
+
+---
+# Source: cloudflared/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: cloudflared
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudflared
+    app.kubernetes.io/version: "2026.10.0"
+    helm.sh/chart: cloudflared-0.1.0
+  name: cloudflared
+  namespace: cloudflared
+
+---
+# Source: cloudflared/templates/configmap.yaml
+apiVersion: v1
+data:
+  config.yaml: |
+    grace-period: 30s
+    metrics: 0.0.0.0:2000
+    token-file: /etc/cloudflared/credentials/token
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: cloudflared
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudflared
+    app.kubernetes.io/version: "2026.10.0"
+    helm.sh/chart: cloudflared-0.1.0
+  name: cloudflared
+  namespace: cloudflared
+
+---
+# Source: cloudflared/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: cloudflared
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudflared
+    app.kubernetes.io/version: "2026.10.0"
+    helm.sh/chart: cloudflared-0.1.0
+  name: cloudflared-metrics
+  namespace: cloudflared
+spec:
+  ports:
+    - name: metrics
+      port: 2000
+      protocol: TCP
+      targetPort: metrics
+  selector:
+    app.kubernetes.io/instance: cloudflared
+    app.kubernetes.io/name: cloudflared
+  type: ClusterIP
+
+---
+# Source: cloudflared/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "The HPA owns the replica count; hpa-minimum-three-replicas checks its minReplicas."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read; a nodeAffinity would be replaced by a user affinity override."
+    ignore-check.kube-linter.io/unsafe-sysctls: "Both default sysctls (ip_local_port_range, ping_group_range) are Kubernetes safe sysctls (pkg/kubelet/sysctl/safe_sysctls.go, allowed by PSS restricted); the check's list predates them."
+  labels:
+    app.kubernetes.io/instance: cloudflared
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudflared
+    app.kubernetes.io/version: "2026.10.0"
+    helm.sh/chart: cloudflared-0.1.0
+  name: cloudflared
+  namespace: cloudflared
+spec:
+  minReadySeconds: 10
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: cloudflared
+      app.kubernetes.io/name: cloudflared
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/config: d3b8fdb5389b9949df28b8b147e64eb53ef89956009503a3e0c8dc7c693e2640
+        example.com/note: hello
+      labels:
+        app.kubernetes.io/instance: cloudflared
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: cloudflared
+        app.kubernetes.io/version: 2026.10.0
+        example.com/team: edge
+        helm.sh/chart: cloudflared-0.1.0
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: cloudflared
+                  app.kubernetes.io/name: cloudflared
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - tunnel
+            - --config
+            - /etc/cloudflared/config/config.yaml
+            - run
+          env:
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+          image: "docker.io/cloudflare/cloudflared:2026.10.0"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthcheck
+              port: metrics
+            periodSeconds: 10
+          name: cloudflared
+          ports:
+            - containerPort: 2000
+              name: metrics
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 1
+            httpGet:
+              path: /ready
+              port: metrics
+            periodSeconds: 10
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 60
+            httpGet:
+              path: /ready
+              port: metrics
+            periodSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/cloudflared/config
+              name: config
+              readOnly: true
+            - mountPath: /etc/cloudflared/credentials
+              name: credentials
+              readOnly: true
+            - mountPath: /tmp
+              name: scratch
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-cluster-critical
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+        sysctls:
+        - name: net.ipv4.ip_local_port_range
+          value: 11000 60999
+        - name: net.ipv4.ping_group_range
+          value: 65532 65532
+      serviceAccountName: cloudflared
+      terminationGracePeriodSeconds: 45
+      topologySpreadConstraints:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: cloudflared
+              app.kubernetes.io/name: cloudflared
+          matchLabelKeys:
+          - pod-template-hash
+          maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+      volumes:
+        - configMap:
+            name: cloudflared
+          name: config
+        - name: credentials
+          secret:
+            defaultMode: 288 # 0440
+            items:
+              - key: token
+                path: token
+            secretName: cloudflared
+        - emptyDir: {}
+          name: scratch
+
+---
+# Source: cloudflared/templates/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    app.kubernetes.io/instance: cloudflared
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudflared
+    app.kubernetes.io/version: "2026.10.0"
+    helm.sh/chart: cloudflared-0.1.0
+  name: cloudflared
+  namespace: cloudflared
+spec:
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  maxReplicas: 10
+  metrics:
+    - resource:
+        name: cpu
+        target:
+          averageUtilization: 75
+          type: Utilization
+      type: Resource
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cloudflared
+
+---
+# Source: cloudflared/templates/servicemonitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app.kubernetes.io/instance: cloudflared
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudflared
+    app.kubernetes.io/version: 2026.10.0
+    helm.sh/chart: cloudflared-0.1.0
+    release: kube-prometheus-stack
+  name: cloudflared
+  namespace: cloudflared
+spec:
+  endpoints:
+    - interval: 30s
+      path: /metrics
+      port: metrics
+  namespaceSelector:
+    matchNames:
+      - cloudflared
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: cloudflared
+      app.kubernetes.io/name: cloudflared
+
+---
+# Source: cloudflared/templates/vpa.yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    app.kubernetes.io/instance: cloudflared
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudflared
+    app.kubernetes.io/version: "2026.10.0"
+    helm.sh/chart: cloudflared-0.1.0
+  name: cloudflared
+  namespace: cloudflared
+spec:
+  resourcePolicy:
+    containerPolicies:
+      - containerName: cloudflared
+        controlledResources:
+        - cpu
+        - memory
+        controlledValues: RequestsAndLimits
+        minAllowed:
+          memory: 64Mi
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cloudflared
+  updatePolicy:
+    updateMode: "Off"
+---
+# Source: cloudflared/templates/tests/test-ready.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    ignore-check.kube-linter.io/no-liveness-probe: "One-shot hook pod that exits within seconds."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-readiness-probe: "One-shot hook pod that exits within seconds."
+    ignore-check.kube-linter.io/non-isolated-pod: "Short-lived test pod that only dials the metrics Service."
+    ignore-check.kube-linter.io/restart-policy: "Never makes a failing helm test fail fast instead of retrying until the timeout."
+    ignore-check.kube-linter.io/unsafe-sysctls: "The default sysctls are Kubernetes safe sysctls; the check's list predates them."
+  labels:
+    app.kubernetes.io/component: test
+    app.kubernetes.io/instance: cloudflared
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudflared-test
+    app.kubernetes.io/version: 2026.10.0
+    helm.sh/chart: cloudflared-0.1.0
+  name: cloudflared-test-ready
+  namespace: cloudflared
+spec:
+  automountServiceAccountToken: false
+  containers:
+    - args:
+        - tunnel
+        - --metrics
+        - "cloudflared-metrics.cloudflared.svc:2000"
+        - ready
+      image: "docker.io/cloudflare/cloudflared:2026.10.0"
+      imagePullPolicy: IfNotPresent
+      name: ready
+      resources:
+        limits:
+          memory: 256Mi
+        requests:
+          cpu: 50m
+          memory: 64Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        privileged: false
+        readOnlyRootFilesystem: true
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+  dnsConfig:
+    options:
+    - name: ndots
+      value: "2"
+  enableServiceLinks: false
+  hostUsers: true
+  nodeSelector:
+    kubernetes.io/os: linux
+  restartPolicy: Never
+  securityContext:
+    fsGroup: 65532
+    runAsGroup: 65532
+    runAsNonRoot: true
+    runAsUser: 65532
+    seccompProfile:
+      type: RuntimeDefault
+    sysctls:
+    - name: net.ipv4.ip_local_port_range
+      value: 11000 60999
+    - name: net.ipv4.ping_group_range
+      value: 65532 65532
+

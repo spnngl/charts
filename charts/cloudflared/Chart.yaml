@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: cloudflared
+description: Cloudflare Tunnel connector (cloudflared) running as a hardened, highly available Deployment
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=docker.io/cloudflare/cloudflared
+appVersion: "2026.10.0"
+kubeVersion: ">=1.33.0-0"
+home: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
+icon: https://avatars.githubusercontent.com/u/314135?s=200
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/cloudflare/cloudflared
+keywords:
+  - cloudflare
+  - cloudflared
+  - tunnel
+  - zero-trust
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: Apache-2.0
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # cloudflared.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: cloudflared
+      image: docker.io/cloudflare/cloudflared:2026.10.0@sha256:9b49eed8f62806d5d45ddf59ecefb5710429598ea6d3fcccd2af938f621b2b07
+  artifacthub.io/links: |-
+    - name: Upstream project
+      url: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
+    - name: Upstream repository
+      url: https://github.com/cloudflare/cloudflared
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/cloudflared
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

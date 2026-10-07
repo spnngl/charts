@@ -1,0 +1,128 @@
+{{- $memLimit := dig "limits" "memory" "" .Values.resources }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    {{- if .Values.autoscaling.enabled }}
+    ignore-check.kube-linter.io/minimum-three-replicas: "The HPA owns the replica count; hpa-minimum-three-replicas checks its minReplicas."
+    {{- end }}
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read; a nodeAffinity would be replaced by a user affinity override."
+    {{- if ne .Values.strategy.type "RollingUpdate" }}
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "strategy.type is a user choice."
+    {{- end }}
+    ignore-check.kube-linter.io/unsafe-sysctls: "Both default sysctls (ip_local_port_range, ping_group_range) are Kubernetes safe sysctls (pkg/kubelet/sysctl/safe_sysctls.go, allowed by PSS restricted); the check's list predates them."
+  labels:
+    {{- include "cloudflared.labels" . | nindent 4 }}
+  name: {{ include "cloudflared.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  minReadySeconds: {{ .Values.minReadySeconds }}
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "cloudflared.selectorLabels" . | nindent 6 }}
+  strategy:
+    {{- if eq .Values.strategy.type "Recreate" }}
+    type: Recreate
+    {{- else }}
+    {{- toYaml .Values.strategy | nindent 4 }}
+    {{- end }}
+  template:
+    metadata:
+      annotations:
+        {{- toYaml (merge (dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum)) (deepCopy .Values.podAnnotations)) | nindent 8 }}
+      labels:
+        {{- toYaml (merge (include "cloudflared.labels" . | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      affinity:
+        {{- include "cloudflared.affinity" . | nindent 8 }}
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - tunnel
+            - --config
+            - /etc/cloudflared/config/config.yaml
+            - run
+          {{- if $memLimit }}
+          env:
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+          {{- end }}
+          image: {{ include "cloudflared.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          name: cloudflared
+          ports:
+            - containerPort: {{ .Values.metrics.service.port }}
+              name: metrics
+              protocol: TCP
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- if $memLimit }}
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/cloudflared/config
+              name: config
+              readOnly: true
+            - mountPath: /etc/cloudflared/credentials
+              name: credentials
+              readOnly: true
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      enableServiceLinks: false
+      hostUsers: {{ .Values.hostUsers }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "cloudflared.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ add (int .Values.gracePeriodSeconds) 15 }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      topologySpreadConstraints:
+        {{- include "cloudflared.topologySpreadConstraints" . | nindent 8 }}
+      volumes:
+        - configMap:
+            name: {{ include "cloudflared.fullname" . }}
+          name: config
+        - name: credentials
+          secret:
+            defaultMode: 288 # 0440
+            items:
+              - key: {{ include "cloudflared.secretKey" . }}
+                path: {{ include "cloudflared.secretKey" . }}
+            secretName: {{ include "cloudflared.secretName" . }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}

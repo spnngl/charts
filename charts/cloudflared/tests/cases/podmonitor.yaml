@@ -1,0 +1,5 @@
+values:
+  metrics:
+    podMonitor:
+      enabled: true
+      interval: 15s

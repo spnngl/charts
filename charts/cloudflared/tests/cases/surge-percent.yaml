@@ -1,0 +1,5 @@
+values:
+  replicaCount: 20
+  strategy:
+    rollingUpdate:
+      maxSurge: 10%

@@ -1,0 +1,7 @@
+# ct install: no real tunnel exists in CI, so no pod may start. Chart wiring
+# (Secret volume, ConfigMap, NetworkPolicy, metrics Service, helm test) is
+# still created and validated by the API server.
+replicaCount: 0
+metrics:
+  service:
+    enabled: true

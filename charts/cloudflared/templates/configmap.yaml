@@ -1,0 +1,11 @@
+{{- include "cloudflared.validate" . }}
+apiVersion: v1
+data:
+  config.yaml: |
+    {{- include "cloudflared.config" . | nindent 4 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "cloudflared.labels" . | nindent 4 }}
+  name: {{ include "cloudflared.fullname" . }}
+  namespace: {{ .Release.Namespace }}
