@@ -8,7 +8,7 @@ upstream:
 version:
   tagPattern: '^v(\d+\.\d+\.\d+)$'
   allow: all
-  current: v1.6.2
+  current: v1.6.3
 sources:
   # Upstream's definition of the standard channel. Also lists
   # vap_safeupgrades.yaml (ValidatingAdmissionPolicy), dropped by the CRD filter.
