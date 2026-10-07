@@ -145,7 +145,8 @@ gains. Nodes need a container runtime with user namespace support
 (containerd 2.0+ or CRI-O), runc 1.2+ or crun, and a Linux kernel 6.3+
 (idmapped mounts on tmpfs for Secret and ConfigMap volumes); see the
 Kubernetes documentation on user namespaces. On other nodes the pod sandbox
-cannot be created (event on the pod): set `hostUsers: true`.
+cannot be created (event on the pod, for example `error mounting "sysfs" to rootfs
+... operation not permitted` on kind inside a CI runner): set `hostUsers: true`.
 
 ### Writable paths
 
@@ -173,7 +174,8 @@ add an `emptyDir` with `extraVolumes` / `extraVolumeMounts`.
 - `helm test` runs `cloudflared tunnel ready` against the metrics Service and
   succeeds once at least one connection is up (the Service only routes to ready
   pods, so it fails while no connector is registered). It exists only when the
-  metrics Service is rendered (`metrics.service.enabled` or a ServiceMonitor).
+  metrics Service is rendered (`metrics.service.enabled` or a ServiceMonitor) and
+  there is at least one connector (`replicaCount` > 0 or autoscaling).
 
 ## Compatibility
 
