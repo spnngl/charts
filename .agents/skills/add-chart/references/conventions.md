@@ -16,6 +16,8 @@ plan.
   (`oras manifest fetch --descriptor <repo>:<tag>`).
 - `# renovate: datasource=docker depName=<repo>` on the line above
   `appVersion`.
+- No `artifacthub.io/changes`: Renovate bumps would leave it stale;
+  release notes link the chart's commit history.
 - Default image = annotation digest, parsed by the image helper when
   `image.tag` is empty and `image.repository` matches. `image.digest`
   without `image.tag` fails the render.

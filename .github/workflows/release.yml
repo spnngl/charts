@@ -128,10 +128,13 @@ jobs:
       - name: GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          CHART_DIR: ${{ matrix.chart.dir }}
         run: |
           set -euo pipefail
           tag="${{ matrix.chart.name }}-${{ matrix.chart.version }}"
-          notes="$(nu -c 'open "${{ matrix.chart.dir }}/Chart.yaml" | get annotations."artifacthub.io/changes" | from yaml | each {|c| $"- ($c)" } | str join "\n"')"
+          # artifacthub.io/changes is optional: hand-written charts omit it (Renovate
+          # version bumps would leave it stale). Every release links the chart history.
+          notes="$(nu -c 'open $"($env.CHART_DIR)/Chart.yaml" | get -o annotations."artifacthub.io/changes" | default "" | from yaml | default [] | each {|l| $"- ($l)" } | append $"Commits: ($env.GITHUB_SERVER_URL)/($env.GITHUB_REPOSITORY)/commits/($env.GITHUB_SHA)/($env.CHART_DIR)" | str join "\n"')"
           cat > notes.md <<EOF
           ## ${{ matrix.chart.name }} ${{ matrix.chart.version }}
 
