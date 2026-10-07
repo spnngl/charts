@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema.json
 name: gateway-api-exp-crds
 description: CustomResourceDefinitions for Kubernetes Gateway API, experimental channel
 upstream:

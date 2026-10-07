@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema.json
 name: agentgateway-crds
 description: CustomResourceDefinitions for agentgateway (backends, models, parameters, policies)
 upstream:

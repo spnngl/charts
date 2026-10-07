@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema.json
 name: cluster-api-crds
 description: CustomResourceDefinitions for Cluster API core (clusters, machines, ClusterClass, IPAM, runtime extensions)
 upstream:

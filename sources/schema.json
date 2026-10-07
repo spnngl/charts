@@ -1,0 +1,304 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CRD chart manifest",
+  "description": "sources/<name>-crds.yaml. Editor aid: tooling/crdgen/manifest.nu is the authoritative validator; keep both in sync (ARCHITECTURE.md documents the fields).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "description",
+    "upstream",
+    "version",
+    "sources"
+  ],
+  "properties": {
+    "name": {
+      "description": "Chart name; must equal the file name without .yaml.",
+      "$ref": "#/$defs/chartName"
+    },
+    "description": {
+      "description": "One line, used as the chart description.",
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "upstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repo",
+        "homepage",
+        "license"
+      ],
+      "properties": {
+        "repo": {
+          "description": "Upstream git repository.",
+          "type": "string",
+          "pattern": "^https://\\S+$"
+        },
+        "homepage": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "icon": {
+          "description": "Logo URL (Artifact Hub).",
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "license": {
+          "description": "SPDX id; must match the upstream LICENSE. Allowlist: tooling/crdgen/config.nu LICENSE_ALLOWLIST.",
+          "enum": [
+            "Apache-2.0",
+            "MIT",
+            "BSD-2-Clause",
+            "BSD-3-Clause"
+          ]
+        }
+      }
+    },
+    "version": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tagPattern",
+        "current"
+      ],
+      "properties": {
+        "tagPattern": {
+          "description": "Regex on upstream tags; capture group 1 = appVersion. Pre-releases must not match.",
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "allow": {
+          "description": "Which upstream bumps sync may propose.",
+          "enum": [
+            "all",
+            "minor",
+            "patch"
+          ],
+          "default": "all"
+        },
+        "current": {
+          "description": "Pinned upstream tag. Edited by sync.yml only.",
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "sources": {
+      "description": "Where to read CRDs from; merged, deduped by metadata.name.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "conflictsWith": {
+      "description": "Charts defining the same CRD names (README warning only).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/chartName"
+      }
+    },
+    "transform": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "include": {
+          "description": "Keep only CRDs whose metadata.name matches one of these regexes (empty = all).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "exclude": {
+          "description": "Drop CRDs whose metadata.name matches one of these regexes.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "patches": {
+          "description": "JSON6902-style patches applied to every CRD.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/patch"
+          }
+        },
+        "stripDocs": {
+          "description": "Drop schema documentation to fit the release-size budget. Enable only when needed.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "chartName": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-crds$"
+    },
+    "source": {
+      "description": "Source kinds and their path field: tooling/crdgen/config.nu SOURCE_PATH_FIELD.",
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "git-path",
+            "kustomize",
+            "helm-template",
+            "release-asset"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "git-path"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "path"
+            ],
+            "properties": {
+              "kind": true,
+              "path": {
+                "description": "File or directory of CRD YAML, relative to the repo root.",
+                "$ref": "#/$defs/nonEmptyString"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "kustomize"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "path"
+            ],
+            "properties": {
+              "kind": true,
+              "path": {
+                "description": "Directory holding kustomization.yaml, relative to the repo root.",
+                "$ref": "#/$defs/nonEmptyString"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "helm-template"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "chartPath"
+            ],
+            "properties": {
+              "kind": true,
+              "chartPath": {
+                "description": "Chart directory, relative to the repo root.",
+                "$ref": "#/$defs/nonEmptyString"
+              },
+              "values": {
+                "description": "Values passed to helm template.",
+                "type": "object"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "release-asset"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "asset"
+            ],
+            "properties": {
+              "kind": true,
+              "asset": {
+                "description": "GitHub release asset name or regex.",
+                "$ref": "#/$defs/nonEmptyString"
+              },
+              "archivePath": {
+                "description": "Path inside the extracted archive.",
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "patch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "path",
+        "reason"
+      ],
+      "properties": {
+        "op": {
+          "enum": [
+            "add",
+            "replace",
+            "remove"
+          ]
+        },
+        "path": {
+          "description": "JSON pointer into the CRD, e.g. /spec/versions/0/served.",
+          "type": "string",
+          "pattern": "^(/([^~/]|~[01])*)+$"
+        },
+        "value": {
+          "description": "Required for add/replace, forbidden for remove."
+        },
+        "reason": {
+          "description": "Why this patch exists (mandatory).",
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      },
+      "if": {
+        "properties": {
+          "op": {
+            "const": "remove"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "value"
+          ]
+        }
+      },
+      "else": {
+        "required": [
+          "value"
+        ]
+      }
+    }
+  }
+}

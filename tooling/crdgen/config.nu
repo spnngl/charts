@@ -14,7 +14,19 @@ export const ANNOTATION_PREFIX = "charts.spnngl.io"
 export const LICENSE_ALLOWLIST = ["Apache-2.0" "MIT" "BSD-2-Clause" "BSD-3-Clause"]
 # Source kinds, each with the manifest field that holds its path.
 export const SOURCE_PATH_FIELD = {git-path: path, kustomize: path, helm-template: chartPath, release-asset: asset}
+# Optional fields per source kind, besides `kind` and its path field.
+export const SOURCE_OPTIONAL_FIELDS = {git-path: [], kustomize: [], helm-template: [values], release-asset: [archivePath]}
 export const ALLOW_VALUES = ["all" "minor" "patch"]
+export const PATCH_OPS = ["add" "replace" "remove"]
+# Allowed keys per manifest section; anything else is rejected (typos must not be silently ignored).
+# `sources/schema.json` mirrors these (tests/run.nu checks it).
+export const MANIFEST_KEYS = {
+  root: [name description upstream version sources conflictsWith transform]
+  upstream: [repo homepage icon license]
+  version: [tagPattern allow current]
+  transform: [include exclude patches stripDocs]
+  patch: [op path value reason]
+}
 
 # Labels/annotations injected by the chart template; stripped from upstream
 # input (sanitize) and from rendered output before round-trip comparison (validate).

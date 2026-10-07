@@ -14,6 +14,7 @@ keyless signature, SBOM + SLSA provenance attestations, Artifact Hub listing.
 
 ```
 sources/<name>-crds.yaml   per-CRD-chart manifest (hand-written)
+sources/schema.json        JSON Schema for the manifests (editor aid; manifest.nu is authoritative)
 charts/<name>-crds/        generated chart; drift-checked in CI
 charts/<name>/             hand-written chart; ci/*-values.yaml for ct; README.md.gotmpl for helm-docs
 tooling/crdgen/            nushell generator, one file per pipeline step; `mod.nu` is the CLI
@@ -37,6 +38,7 @@ LICENSE, README.md, CONTRIBUTING.md, SECURITY.md, AGENTS.md
 ## CRD chart manifest (`sources/<name>-crds.yaml`)
 
 ```yaml
+# yaml-language-server: $schema=./schema.json
 name: <name>-crds                       # == filename
 description: <one line>
 upstream:

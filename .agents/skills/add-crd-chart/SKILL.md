@@ -48,6 +48,7 @@ Never hand-edit `charts/`. Everything there comes from the generator.
 3. **Write the manifest** `sources/<name>-crds.yaml`:
 
    ```yaml
+   # yaml-language-server: $schema=./schema.json
    name: <name>-crds
    description: CustomResourceDefinitions for <Project> (<what the CRDs are>)
    upstream:
