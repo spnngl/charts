@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema.json
 name: vertical-pod-autoscaler-crds
 description: CustomResourceDefinitions for the Kubernetes Vertical Pod Autoscaler (VerticalPodAutoscaler, checkpoints)
 upstream:

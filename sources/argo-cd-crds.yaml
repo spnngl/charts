@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema.json
 name: argo-cd-crds
 description: CustomResourceDefinitions for Argo CD (Applications, ApplicationSets, AppProjects)
 upstream:

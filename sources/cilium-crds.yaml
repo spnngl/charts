@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema.json
 name: cilium-crds
 description: CustomResourceDefinitions for Cilium (cilium.io v2 and v2alpha1)
 upstream:

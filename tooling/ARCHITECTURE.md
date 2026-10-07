@@ -108,7 +108,11 @@ These records cross module boundaries. Treat their shapes as interfaces.
   `manifest defaults`, the optional fields always exist (`upstream.icon` may be
   null, `version.allow`, `conflictsWith`, and `transform.{include, exclude,
   patches, stripDocs}`). Downstream code reads them directly and never
-  re-defaults them.
+  re-defaults them. Unknown keys are rejected at every level
+  (`MANIFEST_KEYS`, `SOURCE_OPTIONAL_FIELDS` in `config.nu`).
+  `sources/schema.json` (JSON Schema 2020-12) mirrors `manifest validate` for
+  editors; change both together. A test keeps its keys and enums equal to the
+  `config.nu` constants.
 - **resolved**: `{tag, appVersion, sha}`. `appVersion` is capture group 1 of
   `tagPattern`. `sha` is the peeled commit.
 - **license**: `{license_text, spdx, notice_text}`.

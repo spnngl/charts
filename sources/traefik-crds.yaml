@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema.json
 name: traefik-crds
 description: CustomResourceDefinitions for Traefik Proxy (IngressRoutes, Middlewares, TLS options, transports)
 upstream:

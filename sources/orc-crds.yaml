@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema.json
 name: orc-crds
 description: CustomResourceDefinitions for the OpenStack Resource Controller (ORC)
 upstream:

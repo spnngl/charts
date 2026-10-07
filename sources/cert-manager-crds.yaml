@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema.json
 name: cert-manager-crds
 description: CustomResourceDefinitions for cert-manager (certificates, issuers, ACME orders and challenges)
 upstream:

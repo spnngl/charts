@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema.json
 name: topolvm-crds
 description: CustomResourceDefinitions for TopoLVM (LogicalVolume, topolvm.io and legacy topolvm.cybozu.com groups)
 upstream:

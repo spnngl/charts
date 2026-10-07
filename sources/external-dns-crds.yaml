@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema.json
 name: external-dns-crds
 description: CustomResourceDefinitions for ExternalDNS (DNSEndpoint, DNSRecord)
 upstream:

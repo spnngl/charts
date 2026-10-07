@@ -15,6 +15,7 @@ use ../dedupe.nu *
 use ../templatize.nu *
 use ../emit.nu *
 use ../validate.nu *
+use ../config.nu [REPO_ROOT LICENSE_ALLOWLIST SOURCE_PATH_FIELD SOURCE_OPTIONAL_FIELDS ALLOW_VALUES PATCH_OPS MANIFEST_KEYS]
 
 const FIXTURES = (path self | path dirname | path join "fixtures")
 const NO_TRANSFORM = {include: [], exclude: [], patches: [], stripDocs: false}
@@ -103,10 +104,40 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
       expect-error { manifest validate ($good | upsert transform {patches: [{op: add, path: "/a"}]}) "x-crds" } "reason"
       expect-error { manifest validate ($good | upsert name "x") "x" } "must end with '-crds'"
       expect-error { manifest validate ($good | upsert transform {stripDocs: "yes"}) "x-crds" } "stripDocs.*boolean"
+      expect-error { manifest validate ($good | insert stripDocs true) "x-crds" } "unknown keys: 'stripDocs'"
+      expect-error { manifest validate ($good | insert version.alow "minor" | insert upstream.licence "MIT") "x-crds" } "unknown keys: 'upstream.licence', 'version.alow'"
+      expect-error { manifest validate ($good | upsert transform {stripdocs: true}) "x-crds" } "'transform.stripdocs'"
+      expect-error { manifest validate ($good | upsert sources [{kind: "git-path", path: "p", values: {}}]) "x-crds" } r#'unknown 'sources\[0\]\.values' for git-path'#
+      expect-error { manifest validate ($good | upsert transform {patches: [{op: add, path: "/a", value: 1, reason: "r", target: "x"}]}) "x-crds" } 'transform\.patches\[0\]\.target'
+      expect-error { manifest validate ($good | upsert transform {patches: [{op: add, path: "/a", reason: "r"}]}) "x-crds" } "value' is required"
+      expect-error { manifest validate ($good | upsert transform {patches: [{op: remove, path: "/a", value: 1, reason: "r"}]}) "x-crds" } "forbidden for remove"
+      manifest validate ($good | upsert transform {patches: [{op: remove, path: "/a", reason: "r"}]}) "x-crds"
+      manifest validate ($good | upsert sources [{kind: "release-asset", asset: "a", archivePath: "p"}]) "x-crds"
       manifest validate ($good | upsert transform {stripDocs: true}) "x-crds"
       let d = (manifest defaults $good)
       assert equal $d.transform $NO_TRANSFORM
       assert equal $d.version.allow "all"
+    }}
+    {name: "sources/schema.json matches config.nu", run: {
+      let schema = (open ($REPO_ROOT | path join "sources" "schema.json"))
+      let defs = ($schema | get '$defs')
+      let keys = {|s| $s.properties | columns | sort }
+      assert equal (do $keys $schema) ($MANIFEST_KEYS.root | sort)
+      assert equal (do $keys $schema.properties.upstream) ($MANIFEST_KEYS.upstream | sort)
+      assert equal (do $keys $schema.properties.version) ($MANIFEST_KEYS.version | sort)
+      assert equal (do $keys $schema.properties.transform) ($MANIFEST_KEYS.transform | sort)
+      assert equal (do $keys $defs.patch) ($MANIFEST_KEYS.patch | sort)
+      assert equal $defs.patch.properties.op.enum $PATCH_OPS
+      assert equal $schema.properties.upstream.properties.license.enum $LICENSE_ALLOWLIST
+      assert equal $schema.properties.version.properties.allow.enum $ALLOW_VALUES
+      assert equal $defs.source.properties.kind.enum ($SOURCE_PATH_FIELD | columns)
+      for c in $defs.source.allOf {
+        let kind = $c.if.properties.kind.const
+        let field = ($SOURCE_PATH_FIELD | get $kind)
+        assert equal $c.then.required [$field]
+        assert equal (do $keys $c.then) ([kind $field] ++ ($SOURCE_OPTIONAL_FIELDS | get $kind) | sort)
+      }
+      assert equal ($defs.source.allOf | length) ($SOURCE_PATH_FIELD | columns | length)
     }}
     {name: "render git-path dir: multi-doc, comment docs, recursion", run: {
       let docs = (fixture-docs "layout-a")

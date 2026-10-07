@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema.json
 name: chaos-mesh-crds
 description: CustomResourceDefinitions for Chaos Mesh (chaos experiments, schedules, workflows)
 upstream:

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema.json
 name: kyverno-crds
 description: CustomResourceDefinitions for Kyverno (policies, CEL policies, exceptions, policy reports)
 upstream:

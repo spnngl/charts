@@ -1,9 +1,14 @@
 # Load and validate sources/<name>-crds.yaml manifests.
 
-use config.nu [LICENSE_ALLOWLIST SOURCE_PATH_FIELD ALLOW_VALUES]
+use config.nu [LICENSE_ALLOWLIST SOURCE_PATH_FIELD SOURCE_OPTIONAL_FIELDS ALLOW_VALUES PATCH_OPS MANIFEST_KEYS]
 
 def fail [name: string, msg: string] {
   error make {msg: $"manifest ($name): ($msg)"}
+}
+
+# Keys of the input record not in `allowed`, prefixed with `at` (their location).
+def unknown-keys [allowed: list<string>, at: string]: record -> list<string> {
+  columns | where {|k| $k not-in $allowed } | each {|k| $"($at)($k)" }
 }
 
 def require-string [m: record, name: string, path: string] {
@@ -25,6 +30,8 @@ def validate-source [name: string, s: any, idx: int] {
   }
   let field = ($SOURCE_PATH_FIELD | get $kind)
   if ($s | get -o $field | default "" | is-empty) { fail $name $"sources[($idx)].($field) is required for ($kind)" }
+  let unknown = ($s | unknown-keys ([kind $field] ++ ($SOURCE_OPTIONAL_FIELDS | get $kind)) $"sources[($idx)].")
+  if ($unknown | is-not-empty) { fail $name $"unknown '($unknown | first)' for ($kind)" }
 }
 
 # Validate a manifest record. `name` is the file stem; must equal manifest.name.
@@ -69,15 +76,22 @@ export def "manifest validate" [m: record, name: string]: nothing -> nothing {
     if ($c | describe -d).type != string { fail $name "'conflictsWith' entries must be strings" }
   }
   let t = ($m | get -o transform | default {})
-  for k in ($t | columns) {
-    if $k not-in [include exclude patches stripDocs] { fail $name $"unknown 'transform.($k)'" }
-  }
   if ($t | get -o stripDocs | default false | describe -d).type != bool { fail $name "'transform.stripDocs' must be a boolean" }
-  for p in ($t | get -o patches | default []) {
+  let patches = ($t | get -o patches | default [])
+  for p in $patches {
     if ($p | get -o reason | default "" | is-empty) { fail $name "every 'transform.patches' entry needs a 'reason'" }
-    if ($p | get -o op) not-in [add replace remove] { fail $name "'transform.patches[].op' must be add|replace|remove" }
+    if ($p | get -o op) not-in $PATCH_OPS { fail $name $"'transform.patches[].op' must be ($PATCH_OPS | str join '|')" }
     if ($p | get -o path | default "" | is-empty) { fail $name "'transform.patches[].path' is required" }
+    if ($p.op == "remove") == ("value" in ($p | columns)) { fail $name "'transform.patches[].value' is required for add/replace and forbidden for remove" }
   }
+  let unknown = (
+    ($m | unknown-keys $MANIFEST_KEYS.root "")
+    | append ($m.upstream | unknown-keys $MANIFEST_KEYS.upstream "upstream.")
+    | append ($m.version | unknown-keys $MANIFEST_KEYS.version "version.")
+    | append ($t | unknown-keys $MANIFEST_KEYS.transform "transform.")
+    | append ($patches | enumerate | each {|e| $e.item | unknown-keys $MANIFEST_KEYS.patch $"transform.patches[($e.index)]." } | flatten)
+  )
+  if ($unknown | is-not-empty) { fail $name $"unknown keys: ($unknown | each {|k| $"'($k)'" } | str join ', ')" }
 }
 
 # Fill optional fields with defaults so downstream code never needs `get -o`.

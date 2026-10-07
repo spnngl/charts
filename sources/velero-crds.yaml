@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema.json
 name: velero-crds
 description: CustomResourceDefinitions for Velero (backups, restores, schedules, locations, data movers)
 upstream:
