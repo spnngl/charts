@@ -6,7 +6,7 @@ description: Install the tool versions pinned in tooling/versions.toml (linux/am
 inputs:
   tools:
     description: Space-separated subset of tools to install (default all). `helm4` installs Helm 4 as `helm`; do not combine it with `helm`.
-    default: "nushell helm kustomize kubeconform cosign oras syft kube-linter helm-docs"
+    default: "nushell helm kustomize kubeconform cosign oras syft kube-linter helm-docs helm-schema"
 
 runs:
   using: composite
@@ -45,6 +45,7 @@ runs:
         SYFT_VERSION: ${{ steps.versions.outputs.syft }}
         KUBE_LINTER_VERSION: ${{ steps.versions.outputs.kube_linter }}
         HELM_DOCS_VERSION: ${{ steps.versions.outputs.helm_docs }}
+        HELM_SCHEMA_VERSION: ${{ steps.versions.outputs.helm_schema }}
         TOOLS: ${{ inputs.tools }}
       run: |
         set -euo pipefail
@@ -102,6 +103,11 @@ runs:
           fetch "https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.tar.gz" "$tmp/helm-docs.tgz"
           tar -xzf "$tmp/helm-docs.tgz" -C "$tmp"
           install -m 0755 "$tmp/helm-docs" "$bin/helm-docs"
+        fi
+        if want helm-schema; then
+          fetch "https://github.com/dadav/helm-schema/releases/download/${HELM_SCHEMA_VERSION}/helm-schema_${HELM_SCHEMA_VERSION}_Linux_x86_64.tar.gz" "$tmp/helm-schema.tgz"
+          tar -xzf "$tmp/helm-schema.tgz" -C "$tmp"
+          install -m 0755 "$tmp/helm-schema" "$bin/helm-schema"
         fi
 
     - name: Expose tools

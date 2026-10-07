@@ -19,6 +19,7 @@ charts/<name>-crds/        generated chart; drift-checked in CI
 charts/<name>/             hand-written chart; ci/*-values.yaml for ct; README.md.gotmpl for helm-docs
 tooling/crdgen/            nushell generator, one file per pipeline step; `mod.nu` is the CLI
 tooling/crdgen/tests/      fixtures + `run.nu` unit tests (no network)
+tooling/charttest/         render tests (cases + golden) for hand-written charts
 tooling/release/           plan.nu (what to publish), artifacthub.nu, verify.nu (smoke test)
 tooling/versions.toml      pinned tool versions, read by CI (.github/actions/setup-tools) and local runs
 tooling/ARCHITECTURE.md    code-level view: modules, data flow, contracts, env vars (tooling/AGENTS.md: coding rules)
@@ -131,7 +132,7 @@ nu lint/format → manifest validation + naming invariant (`charts/*-crds` ⇔
 `sources/*.yaml`) → generator tests → `regen --all` + drift-check →
 `ct lint` (Chart.yaml schema, yamllint, `helm lint --strict`, version
 increment) → `values.schema.json` present (+ kubeconform, kube-linter,
-helm-docs drift for hand-written charts) → `ct install --upgrade` in kind,
+helm-docs and helm-schema drift, charttest render tests for hand-written charts) → `ct install --upgrade` in kind,
 matrix {oldest upstream-supported k8s, latest} × {Helm 3, Helm 4 (server-side
 apply)}, releases stored in a PostgreSQL service container (`HELM_DRIVER=sql`,
 so oversized charts install too; `HELM_MAX_HISTORY=1`). Each CRD chart ships

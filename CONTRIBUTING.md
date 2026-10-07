@@ -16,7 +16,7 @@
 Versions are pinned in `tooling/versions.toml`. Locally you need at least:
 `nu` (nushell), `helm`, `kustomize`, `kubeconform`, `git`, `gzip`; for the full
 CI experience also `ct` (chart-testing, with `yamllint` and `yamale`), `kind`,
-`kube-linter`, `helm-docs`. Offline? `CRDGEN_OFFLINE=1` skips the kubeconform
+`kube-linter`, `helm-docs`, `helm-schema`. Offline? `CRDGEN_OFFLINE=1` skips the kubeconform
 step; `CRDGEN_SCHEMA_LOCATION` can point at a local clone of
 yannh/kubernetes-json-schema.
 
@@ -55,9 +55,15 @@ generic; per-upstream quirks belong in the manifest (`include`, `exclude`,
 
 ## Adding a hand-written chart
 
-- `values.schema.json` is mandatory (`additionalProperties: false` recommended).
+- `values.schema.json` is mandatory (`additionalProperties: false` recommended). Write
+  `# @schema` blocks in `values.yaml` and generate it, never edit it by hand:
+  `helm-schema -k title,default,required -c charts/<name>` (the Helm plugin
+  `helm schema` takes the same flags). CI fails on drift.
 - Provide `README.md.gotmpl` and run `helm-docs`; CI checks the README is current.
 - Add `ci/*-values.yaml` scenarios for `ct install`; add `templates/tests/` for `helm test`.
+- Add render tests when the chart has logic: `tests/cases/<case>.yaml` (values, optional
+  expected error) and golden output, run by `nu tooling/charttest/mod.nu run <name>`
+  (`--update` rewrites golden files; `CHARTTEST_OFFLINE=1` skips kubeconform).
 - Bump `version` in `Chart.yaml` on every change (`ct lint` enforces it).
 - Set `sources[0]` to `https://github.com/spnngl/charts` so GHCR links the package to this repo.
 
