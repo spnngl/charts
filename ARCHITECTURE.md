@@ -165,7 +165,7 @@ actions (they read `~/.docker/config.json`). GHCR package is linked to this repo
 `Chart.yaml` `sources[0]` → `org.opencontainers.image.source`, which also
 makes it public automatically.
 
-### `sync.yml` (daily + manual)
+### `sync.yml` (every 6 h + manual)
 
 Per manifest: list upstream tags → newest matching `tagPattern` and `allow`
 above `current` → rewrite `current` → run generator → branch
