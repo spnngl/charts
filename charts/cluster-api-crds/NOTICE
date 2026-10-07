@@ -1,6 +1,6 @@
 The CustomResourceDefinition manifests under templates/ were copied from
   https://github.com/kubernetes-sigs/cluster-api
-at tag v1.14.2 (commit 5f7d58c9ad647f31bd342bf8de33092c27f7fc38), path(s): core/config/crd/bases
+at tag v1.14.3 (commit 825a79dc92ddcca6acc935e233201c697a2f7488), path(s): core/config/crd/bases
 and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
 added; server-side metadata and upstream Helm release metadata were removed.
 Upstream license: Apache-2.0 (see LICENSE in this directory).

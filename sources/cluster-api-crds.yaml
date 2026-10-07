@@ -8,7 +8,7 @@ upstream:
 version:
   tagPattern: '^v(\d+\.\d+\.\d+)$'
   allow: all
-  current: v1.14.2
+  current: v1.14.3
 sources:
   # Core CRDs only (not bootstrap/kubeadm, controlplane/kubeadm or clusterctl).
   # Moved from config/crd/bases to core/config/crd/bases in v1.11.
