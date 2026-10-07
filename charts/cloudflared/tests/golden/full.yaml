@@ -50,7 +50,6 @@ spec:
   policyTypes:
     - Ingress
     - Egress
-
 ---
 # Source: cloudflared/templates/pdb.yaml
 apiVersion: policy/v1
@@ -71,7 +70,6 @@ spec:
       app.kubernetes.io/instance: cloudflared
       app.kubernetes.io/name: cloudflared
   unhealthyPodEvictionPolicy: AlwaysAllow
-
 ---
 # Source: cloudflared/templates/serviceaccount.yaml
 apiVersion: v1
@@ -86,7 +84,6 @@ metadata:
     helm.sh/chart: cloudflared-0.1.0
   name: cloudflared
   namespace: cloudflared
-
 ---
 # Source: cloudflared/templates/configmap.yaml
 apiVersion: v1
@@ -105,7 +102,6 @@ metadata:
     helm.sh/chart: cloudflared-0.1.0
   name: cloudflared
   namespace: cloudflared
-
 ---
 # Source: cloudflared/templates/service.yaml
 apiVersion: v1
@@ -129,7 +125,6 @@ spec:
     app.kubernetes.io/instance: cloudflared
     app.kubernetes.io/name: cloudflared
   type: ClusterIP
-
 ---
 # Source: cloudflared/templates/deployment.yaml
 apiVersion: apps/v1
@@ -297,7 +292,6 @@ spec:
             secretName: cloudflared
         - emptyDir: {}
           name: scratch
-
 ---
 # Source: cloudflared/templates/hpa.yaml
 apiVersion: autoscaling/v2
@@ -328,7 +322,6 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: cloudflared
-
 ---
 # Source: cloudflared/templates/servicemonitor.yaml
 apiVersion: monitoring.coreos.com/v1
@@ -355,7 +348,6 @@ spec:
     matchLabels:
       app.kubernetes.io/instance: cloudflared
       app.kubernetes.io/name: cloudflared
-
 ---
 # Source: cloudflared/templates/vpa.yaml
 apiVersion: autoscaling.k8s.io/v1
@@ -458,4 +450,3 @@ spec:
       value: 11000 60999
     - name: net.ipv4.ping_group_range
       value: 65532 65532
-
