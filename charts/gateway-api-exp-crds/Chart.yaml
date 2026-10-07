@@ -4,8 +4,8 @@ apiVersion: v2
 name: gateway-api-exp-crds
 description: CustomResourceDefinitions for Kubernetes Gateway API, experimental channel
 type: application
-version: 1.6.5
-appVersion: 1.6.2
+version: 1.6.6
+appVersion: 1.6.3
 kubeVersion: ">=1.25.0-0"
 home: https://gateway-api.sigs.k8s.io
 icon: >-
@@ -111,13 +111,13 @@ annotations:
       url: https://github.com/kubernetes-sigs/gateway-api
     - name: Upstream CRD source (config/crd/experimental)
       url: >-
-        https://github.com/kubernetes-sigs/gateway-api/tree/v1.6.2/config/crd/experimental
+        https://github.com/kubernetes-sigs/gateway-api/tree/v1.6.3/config/crd/experimental
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/gateway-api-exp-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/kubernetes-sigs/gateway-api
-  charts.spnngl.io/upstream-tag: v1.6.2
-  charts.spnngl.io/upstream-commit: ca6c2a65454737236fb7a937bd9b17e42b07e9de
+  charts.spnngl.io/upstream-tag: v1.6.3
+  charts.spnngl.io/upstream-commit: c0836133e24073fcdcdbb1713aba3cc73a89d0b5
   artifacthub.io/changes: |
-    - Chart regenerated with updated tooling (upstream unchanged at v1.6.2)
+    - Upstream CRDs updated from v1.6.2 to v1.6.3
