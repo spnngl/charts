@@ -1,0 +1,611 @@
+# yaml-language-server: $schema=values.schema.json
+# @schema.root
+# title: cloudflared values
+# allOf:
+#   # mode=token: ingress and originRequest/warp-routing are owned by the remote (dashboard/API) configuration
+#   - if:
+#       required: [tunnel]
+#       properties:
+#         tunnel:
+#           required: [mode]
+#           properties:
+#             mode:
+#               const: token
+#     then:
+#       properties:
+#         tunnel:
+#           properties:
+#             credentials:
+#               properties:
+#                 ingress:
+#                   maxItems: 0
+#                 tunnel:
+#                   maxLength: 0
+#         config:
+#           not:
+#             anyOf:
+#               - required: [originRequest]
+#               - required: [warp-routing]
+#   # mode=credentials: UUID (name lookup needs cert.pem, never mounted) and an ingress ruleset are required
+#   - if:
+#       required: [tunnel]
+#       properties:
+#         tunnel:
+#           required: [mode]
+#           properties:
+#             mode:
+#               const: credentials
+#     then:
+#       properties:
+#         tunnel:
+#           properties:
+#             credentials:
+#               properties:
+#                 ingress:
+#                   minItems: 1
+#                 tunnel:
+#                   pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+#   # a ServiceMonitor and a PodMonitor would scrape every replica twice
+#   - not:
+#       required: [metrics]
+#       properties:
+#         metrics:
+#           required: [serviceMonitor, podMonitor]
+#           properties:
+#             serviceMonitor:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+#             podMonitor:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+# @schema.root
+# -- Override the chart name used in resource names and labels.
+nameOverride: ""
+# -- Override the full resource name (default `<release>-<chart>`).
+fullnameOverride: ""
+
+image:
+  # -- Image repository.
+  repository: docker.io/cloudflare/cloudflared
+  # -- Image tag. Empty: `appVersion` pinned by the digest recorded in `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.
+  tag: ""
+  # @schema
+  # type: string
+  # pattern: "^(sha256:[a-f0-9]{64})?$"
+  # @schema
+  # -- Image digest, only valid together with `image.tag`.
+  digest: ""
+  # @schema
+  # type: string
+  # enum: [Always, IfNotPresent, Never]
+  # @schema
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+# @schema
+# -- Image pull secrets (list of `{name: <secret>}`).
+imagePullSecrets: []
+
+tunnel:
+  # @schema
+  # type: string
+  # enum: [token, credentials]
+  # @schema
+  # -- `token`: remotely-managed tunnel (ingress rules live in the Cloudflare dashboard/API). `credentials`: locally-managed tunnel (ingress rules in `tunnel.credentials.ingress`).
+  mode: token
+  token:
+    existingSecret:
+      # -- Name of the Secret holding the tunnel token. Empty: `<fullname>`. The chart never creates it.
+      name: ""
+      # @schema
+      # type: string
+      # minLength: 1
+      # @schema
+      # -- Key of the token in the Secret.
+      key: token
+  credentials:
+    # -- Tunnel UUID (required in `credentials` mode; a name lookup would need `cert.pem`).
+    tunnel: ""
+    existingSecret:
+      # -- Name of the Secret holding `credentials.json`. Empty: `<fullname>`. The chart never creates it.
+      name: ""
+      # @schema
+      # type: string
+      # minLength: 1
+      # @schema
+      # -- Key of the credentials file in the Secret.
+      key: credentials.json
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Ingress rules, last one must be a catch-all (validated by cloudflared). Required in `credentials` mode.
+    ingress: []
+
+# @schema
+# type: integer
+# minimum: 1
+# @schema
+# -- Drain time after SIGTERM (`grace-period`); `terminationGracePeriodSeconds` is this + 15.
+gracePeriodSeconds: 30
+
+# @schema
+# type: object
+# additionalProperties: true
+# propertyNames:
+#   not:
+#     enum: [metrics, token, token-file, credentials-file, credentials-contents, tunnel, ingress, grace-period, no-autoupdate]
+# @schema
+# -- Free-form cloudflared configuration (`config.yaml`), any flag works (loglevel, protocol, edge-ip-version, warp-routing, originRequest, ...). Chart-owned keys are rejected; `originRequest` and `warp-routing` are also rejected in `token` mode (remote configuration owns them).
+config: {}
+
+# @schema
+# type: integer
+# minimum: 0
+# maximum: 25
+# @schema
+# -- Number of connectors. Cloudflare allows 25 replicas per tunnel (the rollout surge counts). Ignored when `autoscaling.enabled`.
+replicaCount: 3
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Seconds a new connector must be Ready before an old one is retired (`/ready` is 200 after the first of four edge connections).
+minReadySeconds: 10
+# -- Old ReplicaSets to keep.
+revisionHistoryLimit: 3
+strategy:
+  # @schema
+  # type: string
+  # enum: [RollingUpdate, Recreate]
+  # @schema
+  # -- Deployment strategy type.
+  type: RollingUpdate
+  rollingUpdate:
+    # @schema
+    # type: [integer, string]
+    # @schema
+    # -- Extra connectors during a rollout (count toward the 25 per tunnel cap).
+    maxSurge: 1
+    # @schema
+    # type: [integer, string]
+    # @schema
+    # -- Connectors that may be unavailable during a rollout.
+    maxUnavailable: 0
+
+serviceAccount:
+  # -- Create the ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false).
+  name: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- ServiceAccount annotations.
+  annotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Pod annotations (for example `reloader.stakater.com/auto: "true"` to restart on Secret rotation).
+podAnnotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Extra pod labels.
+podLabels: {}
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Pod security context. Overrides are merged onto these defaults.
+podSecurityContext:
+  fsGroup: 65532
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  #   additionalProperties: true
+  # @schema
+  sysctls:
+    # 50k ephemeral ports (Cloudflare sizing guide)
+    - name: net.ipv4.ip_local_port_range
+      value: "11000 60999"
+    # ICMP proxy through unprivileged ICMP sockets
+    - name: net.ipv4.ping_group_range
+      value: "65532 65532"
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Container security context. Overrides are merged onto these defaults.
+securityContext:
+  allowPrivilegeEscalation: false
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: boolean
+# @schema
+# -- Run the pod in a user namespace (`false`: container root/uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+); pods fail to start otherwise. `true` uses host users.
+hostUsers: false
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Resources. A scheduling floor, not a sizing: measure, then tune (VPA in `Off` mode gives recommendations). No CPU limit on purpose. With a memory limit, `GOMEMLIMIT` follows it.
+resources:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  limits:
+    memory: 256Mi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  requests:
+    cpu: 50m
+    memory: 64Mi
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- DNS config.
+dnsConfig:
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  #   additionalProperties: true
+  # @schema
+  # -- DNS options (fewer search-list lookups for origin FQDNs).
+  options:
+    - name: ndots
+      value: "2"
+
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Startup probe, `/ready` (waits for the first edge connection).
+startupProbe:
+  failureThreshold: 60
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  httpGet:
+    path: /ready
+    port: metrics
+  periodSeconds: 2
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Readiness probe, `/ready` (at least one active edge connection).
+readinessProbe:
+  failureThreshold: 1
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  httpGet:
+    path: /ready
+    port: metrics
+  periodSeconds: 10
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Liveness probe, `/healthcheck` (process alive only). Not `/ready`: an edge outage must not restart every pod, cloudflared reconnects by itself.
+livenessProbe:
+  failureThreshold: 3
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  httpGet:
+    path: /healthcheck
+    port: metrics
+  periodSeconds: 10
+
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Node selector. Merged with (and cannot drop) the default `kubernetes.io/os: linux`.
+nodeSelector:
+  kubernetes.io/os: linux
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Tolerations.
+tolerations: []
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Affinity. Empty: preferred podAntiAffinity on hostname. A non-empty value replaces that default wholesale.
+affinity: {}
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Topology spread constraints. Empty: spread over `topology.kubernetes.io/zone` (`ScheduleAnyway`). A non-empty value replaces that default.
+topologySpreadConstraints: []
+# -- Priority class name.
+priorityClassName: ""
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volumes (for example an origin CA bundle for `originRequest.caPool`, or an emptyDir for `logfile`/`pidfile`: the root filesystem is read-only).
+extraVolumes: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volume mounts for the cloudflared container.
+extraVolumeMounts: []
+
+podDisruptionBudget:
+  # -- Create a PodDisruptionBudget (`unhealthyPodEvictionPolicy: AlwaysAllow`).
+  enabled: false
+  # @schema
+  # type: [integer, string]
+  # @schema
+  # -- Connectors that may be evicted at once.
+  maxUnavailable: 1
+
+autoscaling:
+  # -- Create a HorizontalPodAutoscaler. Enabling it drops `replicas` from the Deployment: it falls to 1 until the HPA reacts.
+  enabled: false
+  # @schema
+  # type: integer
+  # minimum: 1
+  # maximum: 25
+  # @schema
+  # -- HPA minimum replicas.
+  minReplicas: 3
+  # @schema
+  # type: integer
+  # minimum: 1
+  # maximum: 25
+  # @schema
+  # -- HPA maximum replicas (the rollout surge counts toward the 25 per tunnel cap).
+  maxReplicas: 10
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Raw `autoscaling/v2` MetricSpec list. CPU `Utilization` is a percentage of `resources.requests.cpu`: with the 50m floor, 75% fires at ~38m, so size requests first.
+  metrics:
+    - resource:
+        name: cpu
+        target:
+          averageUtilization: 75
+          type: Utilization
+      type: Resource
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- HPA behavior. Slow scale-down: each removed pod drops four edge connections.
+  behavior:
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    scaleDown:
+      stabilizationWindowSeconds: 300
+
+verticalPodAutoscaler:
+  # -- Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).
+  enabled: false
+  # @schema
+  # type: string
+  # enum: ["Off", Initial, Recreate, InPlaceOrRecreate]
+  # @schema
+  # -- VPA update mode. Not combinable with an HPA acting on the same resource.
+  updateMode: "Off"
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   enum: [cpu, memory]
+  # @schema
+  # -- Resources VPA controls.
+  controlledResources:
+    - cpu
+    - memory
+  # @schema
+  # type: string
+  # enum: [RequestsAndLimits, RequestsOnly]
+  # @schema
+  # -- Whether VPA also scales limits.
+  controlledValues: RequestsAndLimits
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Lower bound of recommendations (for example `{cpu: 25m, memory: 64Mi}`).
+  minAllowed: {}
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Upper bound of recommendations.
+  maxAllowed: {}
+
+metrics:
+  service:
+    # -- Render the metrics Service (also rendered when `serviceMonitor.enabled`; adds the `helm test` pod).
+    enabled: false
+    # @schema
+    # type: integer
+    # minimum: 1
+    # maximum: 65535
+    # @schema
+    # -- Metrics port (cloudflared `metrics` listen port and Service port).
+    port: 2000
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Service annotations.
+    annotations: {}
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor. Exclusive with `podMonitor`.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels (for example `release: kube-prometheus-stack`).
+    labels: {}
+    # -- Scrape interval (empty: Prometheus default).
+    interval: ""
+    # -- Scrape timeout (empty: Prometheus default).
+    scrapeTimeout: ""
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Relabelings.
+    relabelings: []
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Metric relabelings.
+    metricRelabelings: []
+  podMonitor:
+    # -- Create a Prometheus Operator PodMonitor (no Service needed). Exclusive with `serviceMonitor`.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels.
+    labels: {}
+    # -- Scrape interval (empty: Prometheus default).
+    interval: ""
+    # -- Scrape timeout (empty: Prometheus default).
+    scrapeTimeout: ""
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Relabelings.
+    relabelings: []
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Metric relabelings.
+    metricRelabelings: []
+
+networkPolicy:
+  # -- Create a NetworkPolicy (ingress: metrics port only).
+  enabled: true
+  metrics:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach the metrics port. Empty: any source. The port also serves `/debug/pprof`, `/config` and `/diag/*`: restrict it to your Prometheus.
+    from: []
+  egress:
+    # -- Restrict egress (DNS, Cloudflare edge, `extraEgress`). Origins must be allowed through `extraEgress`.
+    enabled: false
+    dns:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels.
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    edge:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- Cloudflare edge peers (port 7844 TCP/UDP).
+      to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+        - ipBlock:
+            cidr: ::/0
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Extra `NetworkPolicyEgressRule`s (origins).
+    extraEgress: []

@@ -1,0 +1,7 @@
+values:
+  replicaCount: 25
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+expect:
+  error: a rollout would run 26 connectors

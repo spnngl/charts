@@ -1,0 +1,1000 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "tunnel": {
+            "properties": {
+              "mode": {
+                "const": "token",
+                "required": []
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          }
+        },
+        "required": [
+          "tunnel"
+        ]
+      },
+      "required": [],
+      "then": {
+        "properties": {
+          "config": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "originRequest"
+                  ]
+                },
+                {
+                  "required": [
+                    "warp-routing"
+                  ]
+                }
+              ],
+              "required": []
+            },
+            "required": []
+          },
+          "tunnel": {
+            "properties": {
+              "credentials": {
+                "properties": {
+                  "ingress": {
+                    "maxItems": 0,
+                    "required": []
+                  },
+                  "tunnel": {
+                    "maxLength": 0,
+                    "required": []
+                  }
+                },
+                "required": []
+              }
+            },
+            "required": []
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "tunnel": {
+            "properties": {
+              "mode": {
+                "const": "credentials",
+                "required": []
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          }
+        },
+        "required": [
+          "tunnel"
+        ]
+      },
+      "required": [],
+      "then": {
+        "properties": {
+          "tunnel": {
+            "properties": {
+              "credentials": {
+                "properties": {
+                  "ingress": {
+                    "minItems": 1,
+                    "required": []
+                  },
+                  "tunnel": {
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+                    "required": []
+                  }
+                },
+                "required": []
+              }
+            },
+            "required": []
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "not": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "podMonitor": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              },
+              "serviceMonitor": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "serviceMonitor",
+              "podMonitor"
+            ]
+          }
+        },
+        "required": [
+          "metrics"
+        ]
+      },
+      "required": []
+    }
+  ],
+  "properties": {
+    "affinity": {
+      "additionalProperties": true,
+      "description": "Affinity. Empty: preferred podAntiAffinity on hostname. A non-empty value replaces that default wholesale.",
+      "required": [],
+      "type": "object"
+    },
+    "autoscaling": {
+      "additionalProperties": false,
+      "properties": {
+        "behavior": {
+          "additionalProperties": true,
+          "description": "HPA behavior. Slow scale-down: each removed pod drops four edge connections.",
+          "properties": {
+            "scaleDown": {
+              "additionalProperties": true,
+              "properties": {
+                "stabilizationWindowSeconds": {
+                  "type": "integer"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "enabled": {
+          "description": "Create a HorizontalPodAutoscaler. Enabling it drops `replicas` from the Deployment: it falls to 1 until the HPA reacts.",
+          "type": "boolean"
+        },
+        "maxReplicas": {
+          "description": "HPA maximum replicas (the rollout surge counts toward the 25 per tunnel cap).",
+          "maximum": 25,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "metrics": {
+          "description": "Raw `autoscaling/v2` MetricSpec list. CPU `Utilization` is a percentage of `resources.requests.cpu`: with the 50m floor, 75% fires at ~38m, so size requests first.",
+          "items": {
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "minReplicas": {
+          "description": "HPA minimum replicas.",
+          "maximum": 25,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "config": {
+      "additionalProperties": true,
+      "description": "Free-form cloudflared configuration (`config.yaml`), any flag works (loglevel, protocol, edge-ip-version, warp-routing, originRequest, ...). Chart-owned keys are rejected; `originRequest` and `warp-routing` are also rejected in `token` mode (remote configuration owns them).",
+      "propertyNames": {
+        "not": {
+          "enum": [
+            "metrics",
+            "token",
+            "token-file",
+            "credentials-file",
+            "credentials-contents",
+            "tunnel",
+            "ingress",
+            "grace-period",
+            "no-autoupdate"
+          ],
+          "required": []
+        },
+        "required": []
+      },
+      "required": [],
+      "type": "object"
+    },
+    "dnsConfig": {
+      "additionalProperties": true,
+      "description": "DNS config.",
+      "properties": {
+        "options": {
+          "description": "DNS options (fewer search-list lookups for origin FQDNs).",
+          "items": {
+            "additionalProperties": true,
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "extraVolumeMounts": {
+      "description": "Extra volume mounts for the cloudflared container.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumes": {
+      "description": "Extra volumes (for example an origin CA bundle for `originRequest.caPool`, or an emptyDir for `logfile`/`pidfile`: the root filesystem is read-only).",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "fullnameOverride": {
+      "description": "Override the full resource name (default `\u003crelease\u003e-\u003cchart\u003e`).",
+      "type": "string"
+    },
+    "global": {
+      "description": "Global values are values that can be accessed from any chart or subchart by exactly the same name.",
+      "required": [],
+      "type": "object"
+    },
+    "gracePeriodSeconds": {
+      "description": "Drain time after SIGTERM (`grace-period`); `terminationGracePeriodSeconds` is this + 15.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "hostUsers": {
+      "description": "Run the pod in a user namespace (`false`: container root/uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+); pods fail to start otherwise. `true` uses host users.",
+      "type": "boolean"
+    },
+    "image": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "description": "Image digest, only valid together with `image.tag`.",
+          "pattern": "^(sha256:[a-f0-9]{64})?$",
+          "type": "string"
+        },
+        "pullPolicy": {
+          "description": "Image pull policy.",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ],
+          "type": "string"
+        },
+        "repository": {
+          "description": "Image repository.",
+          "type": "string"
+        },
+        "tag": {
+          "description": "Image tag. Empty: `appVersion` pinned by the digest recorded in `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "imagePullSecrets": {
+      "description": "Image pull secrets (list of `{name: \u003csecret\u003e}`).",
+      "items": {
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "livenessProbe": {
+      "additionalProperties": true,
+      "description": "Liveness probe, `/healthcheck` (process alive only). Not `/ready`: an edge outage must not restart every pod, cloudflared reconnects by itself.",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "httpGet": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "port": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "metrics": {
+      "additionalProperties": false,
+      "properties": {
+        "podMonitor": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Create a Prometheus Operator PodMonitor (no Service needed). Exclusive with `serviceMonitor`.",
+              "type": "boolean"
+            },
+            "interval": {
+              "description": "Scrape interval (empty: Prometheus default).",
+              "type": "string"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels.",
+              "required": [],
+              "type": "object"
+            },
+            "metricRelabelings": {
+              "description": "Metric relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "relabelings": {
+              "description": "Relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "scrapeTimeout": {
+              "description": "Scrape timeout (empty: Prometheus default).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "service": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Service annotations.",
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Render the metrics Service (also rendered when `serviceMonitor.enabled`; adds the `helm test` pod).",
+              "type": "boolean"
+            },
+            "port": {
+              "description": "Metrics port (cloudflared `metrics` listen port and Service port).",
+              "maximum": 65535,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "serviceMonitor": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Create a Prometheus Operator ServiceMonitor. Exclusive with `podMonitor`.",
+              "type": "boolean"
+            },
+            "interval": {
+              "description": "Scrape interval (empty: Prometheus default).",
+              "type": "string"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels (for example `release: kube-prometheus-stack`).",
+              "required": [],
+              "type": "object"
+            },
+            "metricRelabelings": {
+              "description": "Metric relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "relabelings": {
+              "description": "Relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "scrapeTimeout": {
+              "description": "Scrape timeout (empty: Prometheus default).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "minReadySeconds": {
+      "description": "Seconds a new connector must be Ready before an old one is retired (`/ready` is 200 after the first of four edge connections).",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "nameOverride": {
+      "description": "yaml-language-server: $schema=values.schema.json\nOverride the chart name used in resource names and labels.",
+      "type": "string"
+    },
+    "networkPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "egress": {
+          "additionalProperties": false,
+          "properties": {
+            "dns": {
+              "additionalProperties": false,
+              "properties": {
+                "to": {
+                  "description": "DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "edge": {
+              "additionalProperties": false,
+              "properties": {
+                "to": {
+                  "description": "Cloudflare edge peers (port 7844 TCP/UDP).",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Restrict egress (DNS, Cloudflare edge, `extraEgress`). Origins must be allowed through `extraEgress`.",
+              "type": "boolean"
+            },
+            "extraEgress": {
+              "description": "Extra `NetworkPolicyEgressRule`s (origins).",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "enabled": {
+          "description": "Create a NetworkPolicy (ingress: metrics port only).",
+          "type": "boolean"
+        },
+        "metrics": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to reach the metrics port. Empty: any source. The port also serves `/debug/pprof`, `/config` and `/diag/*`: restrict it to your Prometheus.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "nodeSelector": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Node selector. Merged with (and cannot drop) the default `kubernetes.io/os: linux`.",
+      "properties": {
+        "kubernetes.io/os": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "podAnnotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Pod annotations (for example `reloader.stakater.com/auto: \"true\"` to restart on Secret rotation).",
+      "required": [],
+      "type": "object"
+    },
+    "podDisruptionBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Create a PodDisruptionBudget (`unhealthyPodEvictionPolicy: AlwaysAllow`).",
+          "type": "boolean"
+        },
+        "maxUnavailable": {
+          "description": "Connectors that may be evicted at once.",
+          "required": [],
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "podLabels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Extra pod labels.",
+      "required": [],
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "additionalProperties": true,
+      "description": "Pod security context. Overrides are merged onto these defaults.",
+      "properties": {
+        "fsGroup": {
+          "type": "integer"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "sysctls": {
+          "items": {
+            "additionalProperties": true,
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "priorityClassName": {
+      "description": "Priority class name.",
+      "type": "string"
+    },
+    "readinessProbe": {
+      "additionalProperties": true,
+      "description": "Readiness probe, `/ready` (at least one active edge connection).",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "httpGet": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "port": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "replicaCount": {
+      "description": "Number of connectors. Cloudflare allows 25 replicas per tunnel (the rollout surge counts). Ignored when `autoscaling.enabled`.",
+      "maximum": 25,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "resources": {
+      "additionalProperties": true,
+      "description": "Resources. A scheduling floor, not a sizing: measure, then tune (VPA in `Off` mode gives recommendations). No CPU limit on purpose. With a memory limit, `GOMEMLIMIT` follows it.",
+      "properties": {
+        "limits": {
+          "additionalProperties": true,
+          "properties": {
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "requests": {
+          "additionalProperties": true,
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "revisionHistoryLimit": {
+      "description": "Old ReplicaSets to keep.",
+      "type": "integer"
+    },
+    "securityContext": {
+      "additionalProperties": true,
+      "description": "Container security context. Overrides are merged onto these defaults.",
+      "properties": {
+        "allowPrivilegeEscalation": {
+          "type": "boolean"
+        },
+        "capabilities": {
+          "additionalProperties": true,
+          "properties": {
+            "drop": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ],
+                "required": []
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "privileged": {
+          "type": "boolean"
+        },
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "serviceAccount": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "ServiceAccount annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "create": {
+          "description": "Create the ServiceAccount.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "ServiceAccount name. Empty: `\u003cfullname\u003e` (or `default` when `create` is false).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "startupProbe": {
+      "additionalProperties": true,
+      "description": "Startup probe, `/ready` (waits for the first edge connection).",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "httpGet": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "port": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "strategy": {
+      "additionalProperties": false,
+      "properties": {
+        "rollingUpdate": {
+          "additionalProperties": false,
+          "properties": {
+            "maxSurge": {
+              "description": "Extra connectors during a rollout (count toward the 25 per tunnel cap).",
+              "required": [],
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "maxUnavailable": {
+              "description": "Connectors that may be unavailable during a rollout.",
+              "required": [],
+              "type": [
+                "integer",
+                "string"
+              ]
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "type": {
+          "description": "Deployment strategy type.",
+          "enum": [
+            "RollingUpdate",
+            "Recreate"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "tolerations": {
+      "description": "Tolerations.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "topologySpreadConstraints": {
+      "description": "Topology spread constraints. Empty: spread over `topology.kubernetes.io/zone` (`ScheduleAnyway`). A non-empty value replaces that default.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "tunnel": {
+      "additionalProperties": false,
+      "properties": {
+        "credentials": {
+          "additionalProperties": false,
+          "properties": {
+            "existingSecret": {
+              "additionalProperties": false,
+              "properties": {
+                "key": {
+                  "description": "Key of the credentials file in the Secret.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "name": {
+                  "description": "Name of the Secret holding `credentials.json`. Empty: `\u003cfullname\u003e`. The chart never creates it.",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "ingress": {
+              "description": "Ingress rules, last one must be a catch-all (validated by cloudflared). Required in `credentials` mode.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "tunnel": {
+              "description": "Tunnel UUID (required in `credentials` mode; a name lookup would need `cert.pem`).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "mode": {
+          "description": "`token`: remotely-managed tunnel (ingress rules live in the Cloudflare dashboard/API). `credentials`: locally-managed tunnel (ingress rules in `tunnel.credentials.ingress`).",
+          "enum": [
+            "token",
+            "credentials"
+          ],
+          "type": "string"
+        },
+        "token": {
+          "additionalProperties": false,
+          "properties": {
+            "existingSecret": {
+              "additionalProperties": false,
+              "properties": {
+                "key": {
+                  "description": "Key of the token in the Secret.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "name": {
+                  "description": "Name of the Secret holding the tunnel token. Empty: `\u003cfullname\u003e`. The chart never creates it.",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "verticalPodAutoscaler": {
+      "additionalProperties": false,
+      "properties": {
+        "controlledResources": {
+          "description": "Resources VPA controls.",
+          "items": {
+            "enum": [
+              "cpu",
+              "memory"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "controlledValues": {
+          "description": "Whether VPA also scales limits.",
+          "enum": [
+            "RequestsAndLimits",
+            "RequestsOnly"
+          ],
+          "type": "string"
+        },
+        "enabled": {
+          "description": "Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).",
+          "type": "boolean"
+        },
+        "maxAllowed": {
+          "additionalProperties": true,
+          "description": "Upper bound of recommendations.",
+          "required": [],
+          "type": "object"
+        },
+        "minAllowed": {
+          "additionalProperties": true,
+          "description": "Lower bound of recommendations (for example `{cpu: 25m, memory: 64Mi}`).",
+          "required": [],
+          "type": "object"
+        },
+        "updateMode": {
+          "description": "VPA update mode. Not combinable with an HPA acting on the same resource.",
+          "enum": [
+            "Off",
+            "Initial",
+            "Recreate",
+            "InPlaceOrRecreate"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    }
+  },
+  "required": [],
+  "title": "cloudflared values",
+  "type": "object"
+}

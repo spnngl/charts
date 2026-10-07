@@ -1,0 +1,23 @@
+{{ include "cloudflared.fullname" . }} runs {{ .Values.replicaCount }} cloudflared connector(s) in `{{ .Values.tunnel.mode }}` mode.
+
+The chart never creates the tunnel Secret. It must exist in namespace {{ .Release.Namespace }}:
+
+  kubectl -n {{ .Release.Namespace }} create secret generic {{ include "cloudflared.secretName" . }} \
+    --from-file={{ include "cloudflared.secretKey" . }}=<path to the {{ ternary "token" "credentials.json" (eq .Values.tunnel.mode "token") }} file>
+
+Secret changes are read at startup only: roll the pods after rotating it.
+
+  kubectl -n {{ .Release.Namespace }} rollout restart deployment/{{ include "cloudflared.fullname" . }}
+
+Check that connectors are registered:
+
+  kubectl -n {{ .Release.Namespace }} get pods -l {{ include "cloudflared.selectorLabels" . | replace ": " "=" | replace "\n" "," }}
+{{- if include "cloudflared.metricsService" . }}
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+{{- end }}
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: pods run in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) cannot start them; set
+hostUsers=true to use host users.
+{{- end }}

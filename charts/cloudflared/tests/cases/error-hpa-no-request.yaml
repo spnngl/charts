@@ -1,0 +1,8 @@
+values:
+  autoscaling:
+    enabled: true
+  resources:
+    requests:
+      cpu: null
+expect:
+  error: needs resources.requests.cpu
