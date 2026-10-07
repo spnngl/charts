@@ -115,7 +115,7 @@ of files, a bundled manifest, a kustomize base, a Helm chart, a release
 asset — every project does it differently). A generator fetches the pinned
 upstream tag, extracts only `CustomResourceDefinition` objects, strips
 build noise, adds Helm labels, and writes the chart. A scheduled workflow
-checks upstream tags daily, regenerates, and merges automatically once CI
+checks upstream tags every 6 hours, regenerates, and merges automatically once CI
 (lint, schema validation, install and upgrade in a real cluster) passes.
 Details in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 

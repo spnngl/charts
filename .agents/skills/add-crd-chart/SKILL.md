@@ -106,7 +106,7 @@ Never hand-edit `charts/`. Everything there comes from the generator.
    ```
 
    Do not push. Merging to `main` publishes the chart automatically; the
-   daily sync keeps it current.
+   scheduled sync keeps it current.
 
 ## Optional: real-cluster check
 
