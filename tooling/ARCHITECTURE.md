@@ -17,6 +17,7 @@ crdgen/<step>.nu         one pipeline step per file (see Modules)
 crdgen/static/           verbatim chart files: values.yaml, ci-values.yaml, helmignore,
                          _helpers.tpl (`<chart>` placeholder); shared by every chart
 crdgen/tests/run.nu      unit + end-to-end tests; fixtures/ holds one directory per case
+charttest/mod.nu         render tests for hand-written charts (`run <chart>|--all [--update]`)
 release/plan.nu          which charts still need publishing (release.yml)
 release/artifacthub.nu   Artifact Hub registration + metadata push (release.yml)
 release/verify.nu        post-publish smoke test, runs the documented verify commands (release.yml)
@@ -32,6 +33,7 @@ release/verify.nu        post-publish smoke test, runs the documented verify com
 | `crdgen/mod.nu notice` | `regen`, `sync` | `NOTICE` |
 | `crdgen/mod.nu list [--json]` | humans | nothing |
 | `crdgen/tests/run.nu` | `pr.yml` | temp dirs only |
+| `charttest/mod.nu run <chart>\|--all [--update]` | `pr.yml`, humans | `charts/<name>/tests/golden/` with `--update`, temp files otherwise |
 | `release/plan.nu [--all]` | `release.yml` | JSON matrix on stdout, log on stderr |
 | `release/artifacthub.nu <chart>…\|--all` | `release.yml` | Artifact Hub API, `oras push <chart>:artifacthub.io` |
 | `release/verify.nu <chart> <version>` | `release.yml` | nothing |
@@ -157,6 +159,7 @@ These records cross module boundaries. Treat their shapes as interfaces.
 | `CRDGEN_OFFLINE` | `validate.nu` | non-empty: skip kubeconform (`tests/run.nu` sets it) |
 | `CRDGEN_SCHEMA_LOCATION` | `validate.nu` | kubeconform schema-location template (e.g. local clone) |
 | `CRDGEN_K8S_SCHEMA_VERSION` | `validate.nu` | override `k8s-json-schema` from `versions.toml` |
+| `CHARTTEST_OFFLINE` | `charttest/mod.nu` | non-empty: skip kubeconform (it fetches schemas) |
 | `AH_API_KEY_ID`, `AH_API_KEY_SECRET` | `artifacthub.nu` | API auth; if unset, the script warns and skips |
 
 By default, kubeconform reads schemas from the `master` branch of
