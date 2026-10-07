@@ -9,7 +9,7 @@ version:
   # Pre-releases (-rc) are excluded by the pattern.
   tagPattern: '^v(\d+\.\d+\.\d+)$'
   allow: all
-  current: v3.5.3
+  current: v3.5.4
 sources:
   # Upstream's CRD-only kustomization, also consumed by manifests/install.yaml.
   - kind: kustomize
