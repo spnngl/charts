@@ -52,6 +52,12 @@ Full procedure: `.agents/skills/add-crd-chart/SKILL.md`. Short version:
    must make sense.
 4. Commit manifest + generated chart together: `feat(<upstream>-crds): add chart`.
 
+## Adding a hand-written chart
+
+Full procedure: `.agents/skills/add-chart/SKILL.md` (research, plan,
+questions, chart, render tests, Renovate, kind smoke test, commits).
+`charts/cloudflared/` is the reference implementation.
+
 ## Changing the generator
 
 - Any change under `tooling/` must be followed by `regen --all`; expect many
