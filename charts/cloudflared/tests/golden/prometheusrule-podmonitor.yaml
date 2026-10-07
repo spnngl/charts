@@ -116,7 +116,7 @@ spec:
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
-          image: "docker.io/cloudflare/cloudflared:2026.9.0"
+          image: "docker.io/cloudflare/cloudflared:2026.10.0@sha256:9b49eed8f62806d5d45ddf59ecefb5710429598ea6d3fcccd2af938f621b2b07"
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 3
@@ -214,3 +214,60 @@ spec:
               - key: token
                 path: token
             secretName: cloudflared
+---
+# Source: cloudflared/templates/podmonitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  labels:
+    app.kubernetes.io/instance: cloudflared
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudflared
+    app.kubernetes.io/version: 2026.10.0
+    helm.sh/chart: cloudflared-0.2.0
+  name: cloudflared
+  namespace: cloudflared
+spec:
+  namespaceSelector:
+    matchNames:
+      - cloudflared
+  podMetricsEndpoints:
+    - path: /metrics
+      port: metrics
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: cloudflared
+      app.kubernetes.io/name: cloudflared
+---
+# Source: cloudflared/templates/prometheusrule.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app.kubernetes.io/instance: cloudflared
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cloudflared
+    app.kubernetes.io/version: 2026.10.0
+    helm.sh/chart: cloudflared-0.2.0
+  name: cloudflared
+  namespace: cloudflared
+spec:
+  groups:
+    - name: cloudflared
+      rules:
+        - alert: CloudflaredRegistrationFailing
+          annotations:
+            description: "{{ $labels.namespace }}/{{ $labels.pod }} has failed to register tunnel connections for 15 minutes (invalid or revoked token, deleted tunnel): check its logs."
+            summary: cloudflared cannot register tunnel connections.
+          expr: "sum by (namespace, pod) (increase(cloudflared_tunnel_tunnel_register_fail{job=\"cloudflared/cloudflared\", namespace=\"cloudflared\"}[10m])) > 0"
+          for: 15m
+          labels:
+            severity: warning
+        - alert: CloudflaredOriginErrors
+          annotations:
+            description: "{{ $value | humanizePercentage }} of the requests proxied by cloudflared/cloudflared failed to reach the origin for 15 minutes."
+            summary: cloudflared cannot reach its origins.
+          expr: "sum(rate(cloudflared_tunnel_request_errors{job=\"cloudflared/cloudflared\", namespace=\"cloudflared\"}[5m])) / sum(rate(cloudflared_tunnel_total_requests{job=\"cloudflared/cloudflared\", namespace=\"cloudflared\"}[5m])) > 0.1"
+          for: 15m
+          labels:
+            severity: warning

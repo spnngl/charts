@@ -45,13 +45,21 @@ spec:
             - tunnel
             - --config
             - /etc/cloudflared/config/config.yaml
+            {{- with .Values.extraArgs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
             - run
-          {{- if $memLimit }}
+          {{- if or $memLimit .Values.extraEnv }}
           env:
+            {{- if $memLimit }}
             - name: GOMEMLIMIT
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- end }}
           image: {{ include "cloudflared.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}

@@ -147,6 +147,80 @@
         ]
       },
       "required": []
+    },
+    {
+      "if": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "prometheusRule": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "prometheusRule"
+            ]
+          }
+        },
+        "required": [
+          "metrics"
+        ]
+      },
+      "required": [],
+      "then": {
+        "properties": {
+          "metrics": {
+            "anyOf": [
+              {
+                "properties": {
+                  "serviceMonitor": {
+                    "properties": {
+                      "enabled": {
+                        "const": true,
+                        "required": []
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  }
+                },
+                "required": [
+                  "serviceMonitor"
+                ]
+              },
+              {
+                "properties": {
+                  "podMonitor": {
+                    "properties": {
+                      "enabled": {
+                        "const": true,
+                        "required": []
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  }
+                },
+                "required": [
+                  "podMonitor"
+                ]
+              }
+            ],
+            "required": []
+          }
+        },
+        "required": []
+      }
     }
   ],
   "properties": {
@@ -244,6 +318,30 @@
       },
       "required": [],
       "type": "object"
+    },
+    "extraArgs": {
+      "description": "Extra `cloudflared tunnel` options, placed after `--config` and before `run` (for example `--output=json`). `run`-only options do not parse there: set them in `config`.",
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "extraEnv": {
+      "description": "Extra environment variables (`EnvVar` list) for the cloudflared container, for flags `config.yaml` does not read (for example `TUNNEL_LOG_OUTPUT: json`). Rendered after `GOMEMLIMIT`.",
+      "items": {
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
     },
     "extraVolumeMounts": {
       "description": "Extra volume mounts for the cloudflared container.",
@@ -391,6 +489,45 @@
             "scrapeTimeout": {
               "description": "Scrape timeout (empty: Prometheus default).",
               "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "prometheusRule": {
+          "additionalProperties": false,
+          "properties": {
+            "disabled": {
+              "description": "Alerts to leave out (at most two: disable `prometheusRule` instead). `CloudflaredTunnelDown` reads kube-state-metrics (`kube_deployment_status_replicas_available`, `kube_deployment_spec_replicas`): without it, it never fires.",
+              "items": {
+                "enum": [
+                  "CloudflaredTunnelDown",
+                  "CloudflaredRegistrationFailing",
+                  "CloudflaredOriginErrors"
+                ],
+                "type": "string"
+              },
+              "maxItems": 2,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "enabled": {
+              "description": "Create a Prometheus Operator PrometheusRule (alerts `CloudflaredTunnelDown`, `CloudflaredRegistrationFailing`, `CloudflaredOriginErrors`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.",
+              "type": "boolean"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels (for example `release: kube-prometheus-stack`).",
+              "required": [],
+              "type": "object"
+            },
+            "originErrorRatio": {
+              "description": "`CloudflaredOriginErrors` threshold: share of proxied requests that failed to reach the origin (`request_errors / total_requests`, 5m rate).",
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "type": "number"
             }
           },
           "required": [],

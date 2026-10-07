@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudflared
     app.kubernetes.io/version: "2026.10.0"
-    helm.sh/chart: cloudflared-0.1.0
+    helm.sh/chart: cloudflared-0.2.0
   name: cloudflared
   namespace: cloudflared
 spec:
@@ -33,7 +33,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudflared
     app.kubernetes.io/version: "2026.10.0"
-    helm.sh/chart: cloudflared-0.1.0
+    helm.sh/chart: cloudflared-0.2.0
   name: cloudflared
   namespace: cloudflared
 ---
@@ -51,7 +51,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudflared
     app.kubernetes.io/version: "2026.10.0"
-    helm.sh/chart: cloudflared-0.1.0
+    helm.sh/chart: cloudflared-0.2.0
   name: cloudflared
   namespace: cloudflared
 ---
@@ -68,7 +68,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudflared
     app.kubernetes.io/version: "2026.10.0"
-    helm.sh/chart: cloudflared-0.1.0
+    helm.sh/chart: cloudflared-0.2.0
   name: cloudflared
   namespace: cloudflared
 spec:
@@ -84,13 +84,13 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: d3b8fdb5389b9949df28b8b147e64eb53ef89956009503a3e0c8dc7c693e2640
+        checksum/config: f2f01f5b4da6a27802525d21c0da80f8d955e9cf901edd8bb815522ddd5a286f
       labels:
         app.kubernetes.io/instance: cloudflared
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: cloudflared
         app.kubernetes.io/version: 2026.10.0
-        helm.sh/chart: cloudflared-0.1.0
+        helm.sh/chart: cloudflared-0.2.0
     spec:
       affinity:
         podAntiAffinity:

@@ -62,6 +62,36 @@
 #               properties:
 #                 enabled:
 #                   const: true
+#   # the alert rules select the `job` label set by the ServiceMonitor or PodMonitor
+#   - if:
+#       required: [metrics]
+#       properties:
+#         metrics:
+#           required: [prometheusRule]
+#           properties:
+#             prometheusRule:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+#     then:
+#       properties:
+#         metrics:
+#           anyOf:
+#             - required: [serviceMonitor]
+#               properties:
+#                 serviceMonitor:
+#                   required: [enabled]
+#                   properties:
+#                     enabled:
+#                       const: true
+#             - required: [podMonitor]
+#               properties:
+#                 podMonitor:
+#                   required: [enabled]
+#                   properties:
+#                     enabled:
+#                       const: true
 # @schema.root
 # -- Override the chart name used in resource names and labels.
 nameOverride: ""
@@ -396,6 +426,26 @@ extraVolumes: []
 # @schema
 # -- Extra volume mounts for the cloudflared container.
 extraVolumeMounts: []
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+#       minLength: 1
+# @schema
+# -- Extra environment variables (`EnvVar` list) for the cloudflared container, for flags `config.yaml` does not read (for example `TUNNEL_LOG_OUTPUT: json`). Rendered after `GOMEMLIMIT`.
+extraEnv: []
+# @schema
+# type: array
+# items:
+#   type: string
+#   minLength: 1
+# @schema
+# -- Extra `cloudflared tunnel` options, placed after `--config` and before `run` (for example `--output=json`). `run`-only options do not parse there: set them in `config`.
+extraArgs: []
 
 podDisruptionBudget:
   # -- Create a PodDisruptionBudget (`unhealthyPodEvictionPolicy: AlwaysAllow`).
@@ -561,6 +611,33 @@ metrics:
     # @schema
     # -- Metric relabelings.
     metricRelabelings: []
+  prometheusRule:
+    # -- Create a Prometheus Operator PrometheusRule (alerts `CloudflaredTunnelDown`, `CloudflaredRegistrationFailing`, `CloudflaredOriginErrors`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels (for example `release: kube-prometheus-stack`).
+    labels: {}
+    # @schema
+    # type: array
+    # uniqueItems: true
+    # maxItems: 2
+    # items:
+    #   type: string
+    #   enum: [CloudflaredTunnelDown, CloudflaredRegistrationFailing, CloudflaredOriginErrors]
+    # @schema
+    # -- Alerts to leave out (at most two: disable `prometheusRule` instead). `CloudflaredTunnelDown` reads kube-state-metrics (`kube_deployment_status_replicas_available`, `kube_deployment_spec_replicas`): without it, it never fires.
+    disabled: []
+    # @schema
+    # type: number
+    # exclusiveMinimum: 0
+    # maximum: 1
+    # @schema
+    # -- `CloudflaredOriginErrors` threshold: share of proxied requests that failed to reach the origin (`request_errors / total_requests`, 5m rate).
+    originErrorRatio: 0.05
 
 networkPolicy:
   # -- Create a NetworkPolicy (ingress: metrics port only).

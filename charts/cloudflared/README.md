@@ -1,6 +1,6 @@
 # cloudflared
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 2026.10.0](https://img.shields.io/badge/AppVersion-2026.10.0-informational?style=flat-square)
+![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 2026.10.0](https://img.shields.io/badge/AppVersion-2026.10.0-informational?style=flat-square)
 
 Cloudflare Tunnel connector (cloudflared) running as a hardened, highly available Deployment
 
@@ -171,6 +171,13 @@ add an `emptyDir` with `extraVolumes` / `extraVolumeMounts`.
   connects over 7844 (checked on kind with the policy enforced).
 - `metrics.serviceMonitor` or `metrics.podMonitor` (not both) integrate with
   the Prometheus Operator; a PodMonitor needs no Service.
+- `metrics.prometheusRule` adds alerts and needs one of the monitors (the
+  rules select the `job` label it sets; do not rewrite `job` in
+  `relabelings`). `CloudflaredTunnelDown` (critical) fires when no replica is
+  ready while some are desired, from kube-state-metrics: `cloudflared_tunnel_ha_connections` cannot
+  tell, it counts connections still retrying (an invalid token keeps it at 1
+  while `/ready` returns 503). `CloudflaredRegistrationFailing` and
+  `CloudflaredOriginErrors` (warning) read cloudflared's own metrics.
 - `helm test` runs `cloudflared tunnel ready` against the metrics Service and
   succeeds once at least one connection is up (the Service only routes to ready
   pods, so it fails while no connector is registered). It exists only when the
@@ -211,6 +218,8 @@ Kubernetes: `>=1.33.0-0`
 | config | object | `{}` | Free-form cloudflared configuration (`config.yaml`), any flag works (loglevel, protocol, edge-ip-version, warp-routing, originRequest, ...). Chart-owned keys are rejected; `originRequest` and `warp-routing` are also rejected in `token` mode (remote configuration owns them). |
 | dnsConfig | object | `{"options":[{"name":"ndots","value":"2"}]}` | DNS config. |
 | dnsConfig.options | list | `[{"name":"ndots","value":"2"}]` | DNS options (fewer search-list lookups for origin FQDNs). |
+| extraArgs | list | `[]` | Extra `cloudflared tunnel` options, placed after `--config` and before `run` (for example `--output=json`). `run`-only options do not parse there: set them in `config`. |
+| extraEnv | list | `[]` | Extra environment variables (`EnvVar` list) for the cloudflared container, for flags `config.yaml` does not read (for example `TUNNEL_LOG_OUTPUT: json`). Rendered after `GOMEMLIMIT`. |
 | extraVolumeMounts | list | `[]` | Extra volume mounts for the cloudflared container. |
 | extraVolumes | list | `[]` | Extra volumes (for example an origin CA bundle for `originRequest.caPool`, or an emptyDir for `logfile`/`pidfile`: the root filesystem is read-only). |
 | fullnameOverride | string | `""` | Override the full resource name (default `<release>-<chart>`). |
@@ -228,6 +237,10 @@ Kubernetes: `>=1.33.0-0`
 | metrics.podMonitor.metricRelabelings | list | `[]` | Metric relabelings. |
 | metrics.podMonitor.relabelings | list | `[]` | Relabelings. |
 | metrics.podMonitor.scrapeTimeout | string | `""` | Scrape timeout (empty: Prometheus default). |
+| metrics.prometheusRule.disabled | list | `[]` | Alerts to leave out (at most two: disable `prometheusRule` instead). `CloudflaredTunnelDown` reads kube-state-metrics (`kube_deployment_status_replicas_available`, `kube_deployment_spec_replicas`): without it, it never fires. |
+| metrics.prometheusRule.enabled | bool | `false` | Create a Prometheus Operator PrometheusRule (alerts `CloudflaredTunnelDown`, `CloudflaredRegistrationFailing`, `CloudflaredOriginErrors`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets. |
+| metrics.prometheusRule.labels | object | `{}` | Extra labels (for example `release: kube-prometheus-stack`). |
+| metrics.prometheusRule.originErrorRatio | float | `0.05` | `CloudflaredOriginErrors` threshold: share of proxied requests that failed to reach the origin (`request_errors / total_requests`, 5m rate). |
 | metrics.service.annotations | object | `{}` | Service annotations. |
 | metrics.service.enabled | bool | `false` | Render the metrics Service (also rendered when `serviceMonitor.enabled`; adds the `helm test` pod). |
 | metrics.service.port | int | `2000` | Metrics port (cloudflared `metrics` listen port and Service port). |

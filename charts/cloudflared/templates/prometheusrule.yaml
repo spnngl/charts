@@ -1,0 +1,50 @@
+{{- if .Values.metrics.prometheusRule.enabled }}
+{{- $m := .Values.metrics.prometheusRule }}
+{{- $fullname := include "cloudflared.fullname" . }}
+{{- /* job label set by the Prometheus Operator: Service name (ServiceMonitor) or <namespace>/<name> (PodMonitor). */}}
+{{- $job := ternary (printf "%s-metrics" $fullname) (printf "%s/%s" .Release.Namespace $fullname) .Values.metrics.serviceMonitor.enabled }}
+{{- $sel := printf "job=%q, namespace=%q" $job .Release.Namespace }}
+{{- $deploy := printf "namespace=%q, deployment=%q" .Release.Namespace $fullname }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    {{- toYaml (merge (include "cloudflared.labels" . | fromYaml) (deepCopy $m.labels)) | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: {{ $fullname }}
+      rules:
+        {{- if not (has "CloudflaredTunnelDown" $m.disabled) }}
+        - alert: CloudflaredTunnelDown
+          annotations:
+            description: {{ printf "No ready cloudflared replica in %s/%s for 5 minutes: the tunnel has no edge connection from this cluster (readiness is cloudflared /ready)." .Release.Namespace $fullname | quote }}
+            summary: Cloudflare Tunnel is down.
+          {{- /* Scaled to zero on purpose (replicaCount: 0) is not an outage. */}}
+          expr: {{ printf "kube_deployment_status_replicas_available{%s} < 1 and on (namespace, deployment) kube_deployment_spec_replicas{%s} > 0" $deploy $deploy | quote }}
+          for: 5m
+          labels:
+            severity: critical
+        {{- end }}
+        {{- if not (has "CloudflaredRegistrationFailing" $m.disabled) }}
+        - alert: CloudflaredRegistrationFailing
+          annotations:
+            description: {{ printf "%s has failed to register tunnel connections for 15 minutes (invalid or revoked token, deleted tunnel): check its logs." "{{ $labels.namespace }}/{{ $labels.pod }}" | quote }}
+            summary: cloudflared cannot register tunnel connections.
+          expr: {{ printf "sum by (namespace, pod) (increase(cloudflared_tunnel_tunnel_register_fail{%s}[10m])) > 0" $sel | quote }}
+          for: 15m
+          labels:
+            severity: warning
+        {{- end }}
+        {{- if not (has "CloudflaredOriginErrors" $m.disabled) }}
+        - alert: CloudflaredOriginErrors
+          annotations:
+            description: {{ printf "%s of the requests proxied by %s/%s failed to reach the origin for 15 minutes." "{{ $value | humanizePercentage }}" .Release.Namespace $fullname | quote }}
+            summary: cloudflared cannot reach its origins.
+          expr: {{ printf "sum(rate(cloudflared_tunnel_request_errors{%s}[5m])) / sum(rate(cloudflared_tunnel_total_requests{%s}[5m])) > %v" $sel $sel $m.originErrorRatio | quote }}
+          for: 15m
+          labels:
+            severity: warning
+        {{- end }}
+{{- end }}

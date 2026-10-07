@@ -3,7 +3,7 @@ apiVersion: v2
 name: cloudflared
 description: Cloudflare Tunnel connector (cloudflared) running as a hardened, highly available Deployment
 type: application
-version: 0.1.0
+version: 0.2.0
 # renovate: datasource=docker depName=docker.io/cloudflare/cloudflared
 appVersion: "2026.10.0"
 kubeVersion: ">=1.33.0-0"

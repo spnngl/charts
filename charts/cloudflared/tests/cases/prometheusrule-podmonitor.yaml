@@ -1,0 +1,9 @@
+values:
+  metrics:
+    podMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+      disabled:
+        - CloudflaredTunnelDown
+      originErrorRatio: 0.1
