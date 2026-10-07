@@ -25,7 +25,9 @@ def render [chart_dir: path, values: record]: nothing -> record<exit_code: int, 
   try {
     # JSON, not YAML: nushell writes `Off` unquoted and Helm reads it as a boolean.
     $values | to json | save -f $tmp
-    ^helm template $name $chart_dir --namespace $name -f $tmp | complete
+    let out = (^helm template $name $chart_dir --namespace $name -f $tmp | complete)
+    # Helm versions differ on blank lines between documents: drop them so goldens do not depend on the Helm version.
+    $out | update stdout ($out.stdout | lines | where {|l| ($l | str trim) != "" } | str join "\n" | $in + "\n")
   } finally { rm -f $tmp }
 }
 
