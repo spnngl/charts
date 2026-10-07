@@ -1,0 +1,6 @@
+values:
+  resources:
+    limits: null
+  extraEnv:
+    - name: TUNNEL_LOG_OUTPUT
+      value: json

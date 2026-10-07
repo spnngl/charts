@@ -1,0 +1,5 @@
+values:
+  extraArgs:
+    - ""
+expect:
+  error: extraArgs

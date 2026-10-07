@@ -22,6 +22,10 @@ values:
       labels:
         release: kube-prometheus-stack
       interval: 30s
+    prometheusRule:
+      enabled: true
+      labels:
+        release: kube-prometheus-stack
   networkPolicy:
     metrics:
       from:
@@ -41,3 +45,8 @@ values:
   extraVolumeMounts:
   - name: scratch
     mountPath: /tmp
+  extraEnv:
+  - name: TUNNEL_LOG_OUTPUT
+    value: json
+  extraArgs:
+  - --edge-ip-version=4

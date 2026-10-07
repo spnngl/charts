@@ -1,0 +1,5 @@
+values:
+  extraEnv:
+    - value: json
+expect:
+  error: name

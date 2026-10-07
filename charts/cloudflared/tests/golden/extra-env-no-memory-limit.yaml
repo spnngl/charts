@@ -112,11 +112,9 @@ spec:
             - /etc/cloudflared/config/config.yaml
             - run
           env:
-            - name: GOMEMLIMIT
-              valueFrom:
-                resourceFieldRef:
-                  resource: limits.memory
-          image: "docker.io/cloudflare/cloudflared:2026.9.0"
+            - name: TUNNEL_LOG_OUTPUT
+              value: json
+          image: "docker.io/cloudflare/cloudflared:2026.10.0@sha256:9b49eed8f62806d5d45ddf59ecefb5710429598ea6d3fcccd2af938f621b2b07"
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 3
@@ -135,12 +133,7 @@ spec:
               path: /ready
               port: metrics
             periodSeconds: 10
-          resizePolicy:
-            - resourceName: memory
-              restartPolicy: RestartContainer
           resources:
-            limits:
-              memory: 256Mi
             requests:
               cpu: 50m
               memory: 64Mi
