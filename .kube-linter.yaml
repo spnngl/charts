@@ -7,3 +7,8 @@ checks:
     - unset-memory-requirements
     # Helm-managed workloads commonly rely on default service accounts; judged per chart.
     - default-service-account
+    # Org policy checks: they need an owner label / contact annotation no chart can invent.
+    - required-label-owner
+    - required-annotation-email
+    # The check only accepts a preset class name; workloads pick their own (priorityClassName value).
+    - priority-class-name
