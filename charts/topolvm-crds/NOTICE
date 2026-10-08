@@ -1,6 +1,6 @@
 The CustomResourceDefinition manifests under templates/ were copied from
   https://github.com/topolvm/topolvm
-at tag v0.41.1 (commit 2d0c5174afb93856d9fc5105e7c04ed50b65628f), path(s): config/crd/bases
+at tag v0.42.0 (commit b874ea753210dc85cdc1fb6ebc76a2608aa33684), path(s): config/crd/bases
 and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
 added; server-side metadata and upstream Helm release metadata were removed.
 Upstream license: Apache-2.0 (see LICENSE in this directory).
