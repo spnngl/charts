@@ -10,7 +10,7 @@ helm = "3.22.0"
 # renovate: datasource=github-releases depName=helm/helm
 helm4 = "4.3.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize extractVersion=^kustomize/v(?<version>.*)$
-kustomize = "5.8.2"
+kustomize = "5.8.3"
 # renovate: datasource=github-releases depName=yannh/kubeconform
 kubeconform = "0.8.0"
 # Kubernetes version whose OpenAPI-derived JSON schemas validate rendered CRDs (kubeconform).
