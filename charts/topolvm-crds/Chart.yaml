@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for TopoLVM (LogicalVolume, topolvm.io and legacy
   topolvm.cybozu.com groups)
 type: application
-version: 0.41.4
-appVersion: 0.41.1
+version: 0.42.0
+appVersion: 0.42.0
 kubeVersion: ">=1.16.0-0"
 home: https://github.com/topolvm/topolvm
 icon: https://raw.githubusercontent.com/topolvm/topolvm/main/docs/img/TopoLVM_logo.svg
@@ -39,13 +39,13 @@ annotations:
     - name: Upstream repository
       url: https://github.com/topolvm/topolvm
     - name: Upstream CRD source (config/crd/bases)
-      url: https://github.com/topolvm/topolvm/tree/v0.41.1/config/crd/bases
+      url: https://github.com/topolvm/topolvm/tree/v0.42.0/config/crd/bases
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/topolvm-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/topolvm/topolvm
-  charts.spnngl.io/upstream-tag: v0.41.1
-  charts.spnngl.io/upstream-commit: 2d0c5174afb93856d9fc5105e7c04ed50b65628f
+  charts.spnngl.io/upstream-tag: v0.42.0
+  charts.spnngl.io/upstream-commit: b874ea753210dc85cdc1fb6ebc76a2608aa33684
   artifacthub.io/changes: |
-    - Chart regenerated with updated tooling (upstream unchanged at v0.41.1)
+    - Upstream CRDs updated from v0.41.1 to v0.42.0

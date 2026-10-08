@@ -5,7 +5,7 @@
 CustomResourceDefinitions for TopoLVM (LogicalVolume, topolvm.io and legacy topolvm.cybozu.com groups).
 
 CRDs are copied verbatim from [topolvm/topolvm](https://github.com/topolvm/topolvm)
-at tag [`v0.41.1`](https://github.com/topolvm/topolvm/tree/v0.41.1) (commit `2d0c5174afb93856d9fc5105e7c04ed50b65628f`),
+at tag [`v0.42.0`](https://github.com/topolvm/topolvm/tree/v0.42.0) (commit `b874ea753210dc85cdc1fb6ebc76a2608aa33684`),
 path(s) `config/crd/bases`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
