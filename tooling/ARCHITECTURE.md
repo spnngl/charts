@@ -127,29 +127,6 @@ These records cross module boundaries. Treat their shapes as interfaces.
   upstream are external data, so read their optional fields with `get -o` /
   `?`.
 
-## Conventions
-
-- **Naming:** a command name starts with its module name, written as a quoted
-  subcommand (`"emit readme"`), and modules are imported with `use x.nu *`.
-  Historical exceptions: `render.nu` (`docs …`), `fetch.nu`
-  (`license detect`), `sanitize.nu` (`strip-docs …`, `pointer …`,
-  `patch …`), `templatize.nu` (`template escape`), `resolve.nu`
-  (`parse-tags`), `exec.nu` (`run-checked`).
-- **Pure cores:** decisions live in pure commands (`version decide`,
-  `parse-tags`, `resolve allowed`) that the tests call directly. The wrappers
-  around them (`version compute`, `resolve tags`) only gather inputs from git.
-- **Text:** only `templatize.nu` rewrites serialized text (sentinels,
-  `{{`/`}}` escaping). `emit.nu` assembles README and NOTICE from line lists.
-  Every other module works on records.
-- **Errors:** `error make {msg}` with enough context to act on: chart,
-  manifest, path, and the external command's output. When an external
-  failure matters: `run-checked` (`exec.nu`). When failure is an expected
-  answer (probing whether a ref or tag exists): `| complete`, then check only
-  `exit_code`.
-- **Output:** human progress goes to stdout (`ok` / `DRIFT` lines). Machine
-  output goes through `--json`. GitHub annotations (`::warning::…`) go to
-  stderr.
-
 ## Environment variables
 
 | Variable | Read by | Effect |

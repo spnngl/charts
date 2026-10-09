@@ -1,6 +1,7 @@
 # Gotchas
 
-Symptom -> cause -> fix. All hit on `charts/cloudflared`.
+Symptom -> cause -> fix. All hit on `charts/cloudflared` or
+`charts/cs-firewall-bouncer`.
 
 ## helm-schema (0.23.5)
 
@@ -26,6 +27,9 @@ Symptom -> cause -> fix. All hit on `charts/cloudflared`.
 - Errors read `at '/config': 'not' failed`: match that in `error-*` cases,
   explain the rule in the `# --` doc.
 - `global` is auto-added: keep it.
+- **Schema rejects `limits.memory: 300000000`** -> a quantity default like
+  `256Mi` makes the inferred type `string` -> quote byte counts in values
+  and docs (`"300000000"`).
 
 ## kube-linter
 
@@ -54,6 +58,8 @@ the workload `metadata.annotations` (not the pod template):
   .Values.x)`. Always `deepCopy` values before merging.
 - Optional nested values: `dig "limits" "memory" "" .Values.resources`.
 - File modes: decimal (`288` = 0440); YAML octal parsing varies.
+- `ternary` evaluates both branches: a failing `include` or `fail` in the
+  unused branch still fires. Use `if`/`else`.
 - Guard helper renders nothing: include it from an always-rendered
   template (`{{- include "<name>.validate" . }}` in the ConfigMap).
 - **`helm test` pod missing** (`could not find template
@@ -80,9 +86,26 @@ the workload `metadata.annotations` (not the pod template):
   permitted`** -> `hostUsers: false` on kind inside GitHub runners (works on
   Docker Desktop kind) -> never start such a pod in CI, or set
   `hostUsers: true` in `ci/*-values.yaml`.
-- `ct lint` needs `--target-branch main` and a `version` bump vs `main`.
-- Matrix: kind 1.35/1.37 × Helm 3/4, `HELM_DRIVER=sql`; Helm 3 and 4
+- `ct lint` needs a `version` bump vs `main` (`ct.yaml` sets the target
+  branch).
+- Matrix: kind × Helm 3/4 (`pr.yml`), `HELM_DRIVER=sql`; Helm 3 and 4
   renders must be byte-identical.
+- **Local kind cluster with the newest `kindest/node` never gets ready on
+  Docker Desktop arm64** (seen with v1.37.0) -> not investigated -> smoke
+  test on the older image of the `pr.yml` matrix.
+- **`no matches for kind "PodMonitor"`** on kind -> no Prometheus Operator
+  CRDs -> install them before enabling a monitor or rule; CI values keep
+  them off.
+- **`hostUsers: Forbidden`** with `hostNetwork: true` -> user namespaces
+  require pod-level namespaces -> host-network charts have no `hostUsers`
+  value.
+
+## Renovate
+
+- **`bumpVersions` reported as invalid** -> `npx renovate-config-validator`
+  resolves an old Renovate -> validate with the image pinned in
+  `.github/workflows/renovate.yml` (SKILL step 9), without a file argument
+  (a file argument is validated as global config).
 
 ## Upstream and cluster
 
@@ -92,4 +115,6 @@ the workload `metadata.annotations` (not the pod template):
   `startupProbe.failureThreshold`.
 - Fake credentials on kind verify: security context, probes, logs, egress
   policy, metrics, resize. Not: real traffic, `helm test` success, Secret
-  rotation. Report those as untested.
+  rotation. Report those as untested. A real backend in a docker container
+  on the `kind` network (cs-firewall-bouncer: CrowdSec LAPI) verifies the
+  app's effect too.

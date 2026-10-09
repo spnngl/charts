@@ -5,7 +5,7 @@ Helm charts repository. Two chart kinds, one release pipeline.
 | Kind | Location | Source of truth | Versioning |
 |------|----------|-----------------|------------|
 | CRD charts | `charts/*-crds/` (generated) | `sources/*-crds.yaml` | automatic, tracks upstream |
-| Hand-written charts | `charts/<name>/` | the chart itself | manual bump, CI-enforced |
+| Hand-written charts | `charts/<name>/` | the chart itself | bumped by hand or by Renovate (`bumpVersions`); `ct lint` enforces the increment |
 
 Output for both: OCI chart at `oci://ghcr.io/spnngl/charts/<name>`, cosign
 keyless signature, SBOM + SLSA provenance attestations, Artifact Hub listing.
@@ -16,7 +16,8 @@ keyless signature, SBOM + SLSA provenance attestations, Artifact Hub listing.
 sources/<name>-crds.yaml   per-CRD-chart manifest (hand-written)
 sources/schema.json        JSON Schema for the manifests (editor aid; manifest.nu is authoritative)
 charts/<name>-crds/        generated chart; drift-checked in CI
-charts/<name>/             hand-written chart; ci/*-values.yaml for ct; README.md.gotmpl for helm-docs
+charts/<name>/             hand-written chart; ci/*-values.yaml for ct; README.md.gotmpl for helm-docs;
+                           tests/{cases,golden}/ for charttest
 tooling/crdgen/            nushell generator, one file per pipeline step; `mod.nu` is the CLI
 tooling/crdgen/tests/      fixtures + `run.nu` unit tests (no network)
 tooling/charttest/         render tests (cases + golden) for hand-written charts
@@ -28,11 +29,12 @@ tooling/ARCHITECTURE.md    code-level view: modules, data flow, contracts, env v
 .github/workflows/sync.yml     scheduled upstream tracking, opens automerging PRs
 .github/actions/setup-tools/   installs the pinned tool versions on runners
 ct.yaml                    chart-testing config (lint + install)
-renovate.json              our own dependency updates (tool pins, Actions SHAs, kind images)
+renovate.json5             dependency updates: tool pins, Actions SHAs, kind images, hand-written chart images
 .kube-linter.yaml          hand-written charts only
 artifacthub-repo.yml       Artifact Hub metadata template; repositoryID injected at release
 cosign.pub                 retired signing key, kept to verify versions signed before keyless
 NOTICE                     generated: redistributed upstreams + licenses (no versions)
+.agents/skills/            agent skills: add-crd-chart, add-chart (.claude is a symlink to .agents)
 LICENSE, README.md, CONTRIBUTING.md, SECURITY.md, AGENTS.md
 ```
 
@@ -123,6 +125,25 @@ Chart values interface (all CRD charts, nothing else):
 `values.schema.json` has `additionalProperties: false`.
 
 CRDs live in `templates/`, not `crds/`, so `helm upgrade` updates them.
+
+## Hand-written charts
+
+- Image: the `artifacthub.io/images` annotation in `Chart.yaml` holds
+  `<image>:<tag>@sha256:<digest>`; templates read the image from it, so the
+  chart pins one digest in one place. `appVersion` = the image tag.
+- Updates: a Renovate custom manager bumps `appVersion` and the annotation in
+  one PR; a per-chart package rule decides automerge and release age, and
+  `bumpVersions` raises the chart `version` PATCH.
+- `values.schema.json` is generated from `values.yaml` annotations by
+  helm-schema; `README.md` by helm-docs from `README.md.gotmpl`. CI fails on
+  drift of either.
+- Tests: `tooling/charttest` renders each `tests/cases/<case>.yaml`, compares
+  it with `tests/golden/<case>.yaml` (or with the expected error), then runs
+  kubeconform and kube-linter on it. `pr.yml` also runs kubeconform and
+  kube-linter on the default values, and `ct install` with
+  `ci/*-values.yaml`.
+- Reference implementations: `charts/cloudflared/` (Deployment),
+  `charts/cs-firewall-bouncer/` (DaemonSet, host network).
 
 ## Workflows
 
