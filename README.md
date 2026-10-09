@@ -18,16 +18,16 @@ Two kinds of charts live here:
 |-------|----------|----------|
 | [`cloudflared`](./charts/cloudflared) | [cloudflare/cloudflared](https://github.com/cloudflare/cloudflared) | Cloudflare Tunnel connector Deployment (HPA, VPA, ServiceMonitor/PodMonitor) |
 | [`cs-firewall-bouncer`](./charts/cs-firewall-bouncer) | [crowdsecurity/cs-firewall-bouncer](https://github.com/crowdsecurity/cs-firewall-bouncer) | CrowdSec firewall bouncer DaemonSet (nftables, PodMonitor/PrometheusRule) |
-| [`external-dns-crds`](./charts/external-dns-crds) | [kubernetes-sigs/external-dns](https://github.com/kubernetes-sigs/external-dns) | DNSEndpoint, DNSRecord |
-| [`external-secrets-crds`](./charts/external-secrets-crds) | [external-secrets/external-secrets](https://github.com/external-secrets/external-secrets) | stores, (Cluster)ExternalSecret, (Cluster)PushSecret, generators |
-| [`gateway-api-crds`](./charts/gateway-api-crds) | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | standard channel |
-| [`gateway-api-exp-crds`](./charts/gateway-api-exp-crds) | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | experimental channel (mutually exclusive with the standard chart) |
 | [`agentgateway-crds`](./charts/agentgateway-crds) | [agentgateway/agentgateway](https://github.com/agentgateway/agentgateway) | backends, models, parameters, policies |
 | [`argo-cd-crds`](./charts/argo-cd-crds) | [argoproj/argo-cd](https://github.com/argoproj/argo-cd) | Application, ApplicationSet, AppProject |
 | [`cert-manager-crds`](./charts/cert-manager-crds) | [cert-manager/cert-manager](https://github.com/cert-manager/cert-manager) | certificates, (Cluster)Issuer, ACME orders and challenges |
 | [`chaos-mesh-crds`](./charts/chaos-mesh-crds) | [chaos-mesh/chaos-mesh](https://github.com/chaos-mesh/chaos-mesh) | chaos experiments, schedules, workflows |
 | [`cilium-crds`](./charts/cilium-crds) | [cilium/cilium](https://github.com/cilium/cilium) | cilium.io v2 + v2alpha1 |
 | [`cluster-api-crds`](./charts/cluster-api-crds) | [kubernetes-sigs/cluster-api](https://github.com/kubernetes-sigs/cluster-api) | core CRDs (clusters, machines, ClusterClass, IPAM, runtime) |
+| [`external-dns-crds`](./charts/external-dns-crds) | [kubernetes-sigs/external-dns](https://github.com/kubernetes-sigs/external-dns) | DNSEndpoint, DNSRecord |
+| [`external-secrets-crds`](./charts/external-secrets-crds) | [external-secrets/external-secrets](https://github.com/external-secrets/external-secrets) | stores, (Cluster)ExternalSecret, (Cluster)PushSecret, generators |
+| [`gateway-api-crds`](./charts/gateway-api-crds) | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | standard channel |
+| [`gateway-api-exp-crds`](./charts/gateway-api-exp-crds) | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | experimental channel (mutually exclusive with the standard chart) |
 | [`kyverno-crds`](./charts/kyverno-crds) | [kyverno/kyverno](https://github.com/kyverno/kyverno) | kyverno.io and CEL (policies.kyverno.io) policies, exceptions, policy reports (schema docs stripped, see below) |
 | [`orc-crds`](./charts/orc-crds) | [k-orc/openstack-resource-controller](https://github.com/k-orc/openstack-resource-controller) | OpenStack resources |
 | [`topolvm-crds`](./charts/topolvm-crds) | [topolvm/topolvm](https://github.com/topolvm/topolvm) | LogicalVolume |
