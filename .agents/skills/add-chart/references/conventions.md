@@ -1,7 +1,8 @@
 # Conventions
 
-As implemented in `charts/cloudflared/`. Deviate only with a reason in the
-plan.
+As implemented in `charts/cloudflared/` (Deployment) and
+`charts/cs-firewall-bouncer/` (DaemonSet, see its section). Deviate only
+with a reason in the plan.
 
 ## Chart.yaml
 
@@ -37,7 +38,10 @@ Standard list plus `/tests/` (anchored), `README.md.gotmpl`, `PLAN*.md`.
   override them; maps deep-merge, lists replace).
 - Secrets: existing Secret only (`existingSecret.name` defaulting to
   fullname, `key`), mounted as a file, `defaultMode: 288` (0440),
-  `fsGroup` = image gid.
+  `fsGroup` = image gid. Env `secretKeyRef` only when upstream reads the
+  secret from env alone (say so in the README).
+- `extraEnv`, `extraArgs`, `extraVolumes`, `extraVolumeMounts`: schema
+  rejects env names the chart sets (`items.properties.name.not.enum`).
 - App config: free-form `config` map -> ConfigMap, chart-owned keys win;
   schema rejects them: `propertyNames: {not: {enum: [...]}}`.
 - Upstream hard limits -> schema `maximum` + template guard for derived
@@ -56,7 +60,9 @@ Standard list plus `/tests/` (anchored), `README.md.gotmpl`, `PLAN*.md`.
 - `terminationGracePeriodSeconds` = app grace + margin;
   `terminationMessagePolicy: FallbackToLogsOnError`.
 - Go app with memory limit: env `GOMEMLIMIT` from `resourceFieldRef:
-  limits.memory` + `resizePolicy` memory `RestartContainer`.
+  limits.memory` + `resizePolicy` memory `RestartContainer`. When much
+  memory is outside the Go heap (netlink buffers, cgo), compute 90 % of the
+  limit in a helper instead (`cs-firewall-bouncer.goMemLimit`).
 - `validate` helper: `fail` messages state what to change.
 
 ## Security defaults (PSS restricted, no override needed)
@@ -96,6 +102,23 @@ Standard list plus `/tests/` (anchored), `README.md.gotmpl`, `PLAN*.md`.
   configurable); egress opt-in, DNS and upstream peers configurable.
 - ServiceMonitor xor PodMonitor (schema); metrics Service only when needed;
   no debug endpoints exposed by default.
+- PrometheusRule opt-in; schema requires the monitor (alerts select its
+  `job` label); each alert can be disabled; thresholds are values.
+
+## DaemonSet (node agents)
+
+- No `replicaCount`, HPA, PDB or anti-affinity. RollingUpdate
+  `maxSurge: 0` (not a value: a surge pod would fight over host state),
+  `maxUnavailable` a value, guard rejects `0`; `OnDelete` allowed.
+- `tolerations: []` with a commented `operator: Exists` example: running on
+  tainted nodes is the user's choice.
+- Host access (`hostNetwork`, capabilities like `NET_ADMIN`, root) is fixed
+  in the template, not a value; README states the namespace needs PSS
+  `privileged`. `hostNetwork` implies `dnsPolicy: ClusterFirstWithHostNet`.
+- kube-linter ignores on the DaemonSet `metadata.annotations`, one reason
+  each (`host-network`, `run-as-non-root`, `no-node-affinity`, ...).
+- Metrics on loopback by default; with a PodMonitor, bind the node IP
+  (`status.hostIP` env) and probes follow the bind address.
 
 ## helm test
 
@@ -111,4 +134,4 @@ Standard list plus `/tests/` (anchored), `README.md.gotmpl`, `PLAN*.md`.
 - Minimum cases: defaults, each mode, `full` (all optional objects), each
   rendering toggle, each guard, each schema rule, unknown top-level key.
 - `ci/<mode>-values.yaml` per mode, commented; `replicaCount: 0` when the
-  app needs a real backend.
+  app needs a real backend (DaemonSet: a `nodeSelector` matching no node).

@@ -1,18 +1,16 @@
 ---
 name: add-crd-chart
-description: Add a new CRD-only Helm chart for an upstream project (sources/<name>-crds.yaml + generated chart). Use when asked to "add <project> CRDs".
+description: Add a generated CRD-only Helm chart for an upstream project (sources/<name>-crds.yaml + charts/<name>-crds/). Use when asked to add, package or track the CRDs of a project.
 ---
 
 Add a generated CRD chart for an upstream project. Input: an upstream GitHub
 repo URL, optionally a version to pin. Output: `sources/<name>-crds.yaml`,
 `charts/<name>-crds/` (generated), README table row, one commit.
 
-Never hand-edit `charts/`. Everything there comes from the generator.
-
 ## Steps
 
 1. **Pick the chart name**: `<upstream-short-name>-crds` (lowercase, dashes).
-   Must not collide with an existing `sources/*.yaml`.
+   Check that no `sources/*.yaml` already uses it.
 
 2. **Probe the upstream** (no clone needed):
 
@@ -94,8 +92,9 @@ Never hand-edit `charts/`. Everything there comes from the generator.
    names match upstream, versions/storage look right, the "Not included"
    list contains only things that should be excluded.
 
-6. **README table**: add a row to the "Charts" table in `README.md`
-   (alphabetical order).
+6. **README table**: add a row to the "Charts" table in `README.md`, among
+   the CRD charts (they follow the hand-written charts), in alphabetical
+   order.
 
 7. **Confirm no drift and commit** (manifest + generated chart + README +
    root `NOTICE`, which `regen` rewrites):
@@ -103,10 +102,10 @@ Never hand-edit `charts/`. Everything there comes from the generator.
    ```sh
    nu tooling/crdgen/mod.nu check <name>-crds
    git add sources/<name>-crds.yaml charts/<name>-crds NOTICE README.md
-   git commit -m "feat(charts): add <name> CRD chart" -m "<source path, CRD count, pin, anything notable (size, dropped kinds, path moves)>"
+   git commit -m "feat(<name>-crds): add chart" -m "<source path, CRD count, pin, anything notable (size, dropped kinds, path moves)>"
    ```
 
-   Do not push. Merging to `main` publishes the chart automatically; the
+   Done when `check` prints `ok`. Leave pushing to the user. Merging to `main` publishes the chart automatically; the
    scheduled sync keeps it current.
 
 ## Optional: real-cluster check

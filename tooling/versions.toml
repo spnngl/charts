@@ -1,5 +1,5 @@
 # Pinned tool versions. Single source of truth for CI (.github/actions/setup-tools)
-# and local runs. Renovate updates these lines (see renovate.json).
+# and local runs. Renovate updates these lines (see renovate.json5).
 
 [tools]
 # renovate: datasource=github-releases depName=nushell/nushell
