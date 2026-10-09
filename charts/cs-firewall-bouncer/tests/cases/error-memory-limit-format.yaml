@@ -1,0 +1,6 @@
+values:
+  resources:
+    limits:
+      memory: 1.5Gi
+expect:
+  error: integer quantity

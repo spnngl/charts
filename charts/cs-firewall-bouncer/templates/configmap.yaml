@@ -1,0 +1,11 @@
+{{- include "cs-firewall-bouncer.validate" . }}
+apiVersion: v1
+data:
+  crowdsec-firewall-bouncer.yaml.local: |
+    {{- include "cs-firewall-bouncer.config" . | nindent 4 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "cs-firewall-bouncer.labels" . | nindent 4 }}
+  name: {{ include "cs-firewall-bouncer.fullname" . }}
+  namespace: {{ .Release.Namespace }}

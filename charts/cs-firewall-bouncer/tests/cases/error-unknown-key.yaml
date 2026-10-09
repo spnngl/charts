@@ -1,0 +1,4 @@
+values:
+  bogus: true
+expect:
+  error: bogus

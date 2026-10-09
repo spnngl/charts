@@ -1,0 +1,42 @@
+# Patterns to ignore when building packages.
+# This supports shell glob matching, relative path matching, and
+# negation (prefixed with !). Only one pattern per line.
+# This file is only needed to package; keep it out of the release.
+.helmignore
+.DS_Store
+Thumbs.db
+# Common VCS dirs
+.git/
+.gitignore
+.bzr/
+.bzrignore
+.hg/
+.hgignore
+.svn/
+# Common backup files
+*.swp
+*.bak
+*.tmp
+*~
+# Various IDEs
+.project
+.idea/
+*.tmproj
+# Ignore local testing values or charts
+*.local.*
+*.tgz
+# helm/charts
+OWNERS
+hack/
+ci/
+
+unittests/
+files/dashboards/
+
+UPGRADE.md
+CONTRIBUTING.md
+.editorconfig
+
+/tests/
+README.md.gotmpl
+PLAN*.md

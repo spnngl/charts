@@ -1,0 +1,13 @@
+values:
+  lapi:
+    url: https://crowdsec.example.com:8080
+  config:
+    ca_cert_path: /etc/ssl/lapi/ca.crt
+  extraVolumes:
+    - name: lapi-ca
+      secret:
+        secretName: lapi-ca
+  extraVolumeMounts:
+    - mountPath: /etc/ssl/lapi
+      name: lapi-ca
+      readOnly: true

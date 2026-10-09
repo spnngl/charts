@@ -1,0 +1,131 @@
+{{- $memLimit := dig "limits" "memory" "" .Values.resources }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/env-value-from: "The API key Secret is created out of band; the chart never creates it."
+    ignore-check.kube-linter.io/host-network: "The bouncer edits the node's netfilter: it must run in the host network namespace."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read; a nodeAffinity would be replaced by a user affinity override."
+    {{- if ne .Values.updateStrategy.type "RollingUpdate" }}
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "updateStrategy.type is a user choice."
+    {{- end }}
+    ignore-check.kube-linter.io/non-isolated-pod: "A host-network pod is not subject to NetworkPolicy."
+    ignore-check.kube-linter.io/read-secret-from-env-var: "The bouncer reads its API key from the API_KEY environment variable only; it has no key-file option."
+    ignore-check.kube-linter.io/run-as-non-root: "Kubernetes has no ambient capabilities: only root holds NET_ADMIN, needed to edit the node's nftables."
+  labels:
+    {{- include "cs-firewall-bouncer.labels" . | nindent 4 }}
+  name: {{ include "cs-firewall-bouncer.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  minReadySeconds: {{ .Values.minReadySeconds }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "cs-firewall-bouncer.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- toYaml (merge (dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum)) (deepCopy .Values.podAnnotations)) | nindent 8 }}
+      labels:
+        {{- toYaml (merge (include "cs-firewall-bouncer.labels" . | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - -c
+            - /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml
+            {{- with .Values.extraArgs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          env:
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: {{ .Values.lapi.existingSecret.key }}
+                  name: {{ include "cs-firewall-bouncer.secretName" . }}
+            - name: API_URL
+              value: {{ .Values.lapi.url | quote }}
+            {{- if $memLimit }}
+            - name: GOMEMLIMIT
+              value: {{ include "cs-firewall-bouncer.goMemLimit" $memLimit | quote }}
+            {{- end }}
+            {{- if .Values.metrics.podMonitor.enabled }}
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          image: {{ include "cs-firewall-bouncer.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            {{- include "cs-firewall-bouncer.probe" (dict "probe" .Values.livenessProbe "root" .) | nindent 12 }}
+          name: cs-firewall-bouncer
+          ports:
+            - containerPort: {{ .Values.metrics.port }}
+              name: metrics
+              protocol: TCP
+          readinessProbe:
+            {{- include "cs-firewall-bouncer.probe" (dict "probe" .Values.readinessProbe "root" .) | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- include "cs-firewall-bouncer.probe" (dict "probe" .Values.startupProbe "root" .) | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml.local
+              name: config
+              readOnly: true
+              subPath: crowdsec-firewall-bouncer.yaml.local
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      dnsPolicy: ClusterFirstWithHostNet
+      enableServiceLinks: false
+      hostNetwork: true
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "cs-firewall-bouncer.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - configMap:
+            name: {{ include "cs-firewall-bouncer.fullname" . }}
+          name: config
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+  updateStrategy:
+    {{- if eq .Values.updateStrategy.type "RollingUpdate" }}
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: {{ .Values.updateStrategy.rollingUpdate.maxUnavailable }}
+    type: RollingUpdate
+    {{- else }}
+    type: {{ .Values.updateStrategy.type }}
+    {{- end }}

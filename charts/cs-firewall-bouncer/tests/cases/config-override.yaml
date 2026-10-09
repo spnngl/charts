@@ -1,0 +1,9 @@
+values:
+  config:
+    deny_log: true
+    log_level: debug
+    nftables:
+      ipv6:
+        enabled: false
+    nftables_hooks:
+      - input

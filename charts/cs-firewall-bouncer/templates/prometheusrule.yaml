@@ -1,0 +1,38 @@
+{{- if .Values.metrics.prometheusRule.enabled }}
+{{- $m := .Values.metrics.prometheusRule }}
+{{- $fullname := include "cs-firewall-bouncer.fullname" . }}
+{{- /* job label set by the Prometheus Operator for a PodMonitor: <namespace>/<name>. */}}
+{{- $sel := printf "job=%q, namespace=%q" (printf "%s/%s" .Release.Namespace $fullname) .Release.Namespace }}
+{{- $ds := printf "namespace=%q, daemonset=%q" .Release.Namespace $fullname }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    {{- toYaml (merge (include "cs-firewall-bouncer.labels" . | fromYaml) (deepCopy $m.labels)) | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: {{ $fullname }}
+      rules:
+        {{- if not (has "CSFirewallBouncerNotReady" $m.disabled) }}
+        - alert: CSFirewallBouncerNotReady
+          annotations:
+            description: {{ printf "%s node(s) running %s/%s have had no ready bouncer for 15 minutes: they are not protected (or not up to date)." "{{ $value }}" .Release.Namespace $fullname | quote }}
+            summary: CrowdSec firewall bouncer is not ready on some nodes.
+          expr: {{ printf "kube_daemonset_status_desired_number_scheduled{%s} - kube_daemonset_status_number_ready{%s} > 0" $ds $ds | quote }}
+          for: 15m
+          labels:
+            severity: critical
+        {{- end }}
+        {{- if not (has "CSFirewallBouncerLapiErrors" $m.disabled) }}
+        - alert: CSFirewallBouncerLapiErrors
+          annotations:
+            description: {{ printf "%s of the LAPI calls of %s failed for 15 minutes: its node gets no new decision (check the LAPI URL, the API key and the network)." "{{ $value | humanizePercentage }}" "{{ $labels.namespace }}/{{ $labels.pod }}" | quote }}
+            summary: CrowdSec firewall bouncer cannot reach the LAPI.
+          expr: {{ printf "sum by (namespace, pod) (rate(lapi_requests_failures_total{%s}[5m])) / sum by (namespace, pod) (rate(lapi_requests_total{%s}[5m])) > %v" $sel $sel $m.lapiErrorRatio | quote }}
+          for: 15m
+          labels:
+            severity: warning
+        {{- end }}
+{{- end }}

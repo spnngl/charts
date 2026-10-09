@@ -1,0 +1,5 @@
+# ct install: no LAPI nor API key Secret exist in CI, so no pod may start. The
+# selector matches no node (desired pods = 0); the chart wiring (ConfigMap,
+# ServiceAccount, DaemonSet) is still created and validated by the API server.
+nodeSelector:
+  cs-firewall-bouncer.spnngl.dev/ci: "no-node-has-this-label"

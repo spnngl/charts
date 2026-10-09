@@ -1,0 +1,5 @@
+values:
+  config:
+    api_key: secret
+expect:
+  error: api_key

@@ -1,0 +1,248 @@
+# cs-firewall-bouncer
+
+![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.0.38](https://img.shields.io/badge/AppVersion-0.0.38-informational?style=flat-square)
+
+CrowdSec firewall bouncer (nftables mode) running as a hardened DaemonSet that bans CrowdSec decisions in every node's netfilter
+
+Runs the [CrowdSec firewall bouncer](https://github.com/crowdsecurity/cs-firewall-bouncer)
+in `nftables` mode as a DaemonSet. On every node it pulls the decisions of a
+CrowdSec Local API (LAPI) and drops the banned source addresses in the node's
+netfilter, in the `input` hook (host services) and the `forward` hook
+(NodePort, load balancer and hostPort traffic routed to pods, with the
+original source address). Other modes (`iptables`, `ipset`, `pf`) are not
+offered.
+
+## Install
+
+The pods edit the node's netfilter: they run as root in the host network
+namespace with `NET_ADMIN`. The namespace must allow that (Pod Security
+Standard `privileged`):
+
+```sh
+kubectl create namespace cs-firewall-bouncer
+kubectl label namespace cs-firewall-bouncer pod-security.kubernetes.io/enforce=privileged
+```
+
+The chart never creates the API key Secret: the key must not live in Helm
+values, release history or Git. Register one key on the LAPI, then create the
+Secret.
+
+With the [`crowdsec` chart](https://github.com/crowdsecurity/helm-charts), set
+the key on the LAPI from a Secret (`lapi.env`: `BOUNCER_KEY_<name>`), or
+register it with `cscli bouncers add <name>`:
+
+```sh
+kubectl -n cs-firewall-bouncer create secret generic cs-firewall-bouncer --from-literal=api-key=<key>
+helm install cs-firewall-bouncer oci://ghcr.io/spnngl/charts/cs-firewall-bouncer --version <version> -n cs-firewall-bouncer \
+  --set lapi.url=http://crowdsec-service.crowdsec.svc.cluster.local:8080
+```
+
+- The Secret is named after the release (`lapi.existingSecret.name` to
+  override, `key` defaults to `api-key`). The default `lapi.url` is the LAPI
+  Service of the `crowdsec` chart installed as release `crowdsec` in namespace
+  `crowdsec`.
+- One key serves every node: the LAPI registers a bouncer `<name>@<node IP>` for
+  each source address, check with `cscli bouncers list`.
+- Only API key authentication is offered (no client certificates).
+- Other bouncer options go in `config` (bouncer `crowdsec-firewall-bouncer.yaml`
+  keys, merged over the image's defaults: maps merge, lists replace). Keys the
+  chart owns (`mode`, `api_url`, `api_key`, `cert_path`, `key_path`,
+  `prometheus`, `log_mode`, `log_dir`) are rejected. The bouncer replaces
+  `$VAR` / `${VAR}` in the whole file by environment variables (`extraEnv`);
+  unset variables are left as is, so a literal `$` in a value may be expanded.
+- HTTPS LAPI: the image is built `FROM scratch` and has no CA bundle. Mount the
+  CA with `extraVolumes` / `extraVolumeMounts` and set `config.ca_cert_path`.
+
+### Secret rotation
+
+The bouncer reads the API key once at startup. After rotating the Secret,
+restart the pods:
+
+```sh
+kubectl -n cs-firewall-bouncer rollout restart daemonset/cs-firewall-bouncer
+```
+
+or let [Reloader](https://github.com/stakater/Reloader) do it with
+`podAnnotations: {reloader.stakater.com/auto: "true"}`.
+
+## Image
+
+The default image is `appVersion` pinned by the digest recorded in the
+`artifacthub.io/images` annotation of `Chart.yaml` (Renovate updates both
+together). Setting `image.tag` drops that digest; add `image.digest` to pin
+the tag again (`image.digest` without `image.tag` is an error).
+
+The image is built in [spnngl/images](https://github.com/spnngl/images)
+(`FROM scratch`, static upstream binary, rebuilt weekly: the tag is the
+bouncer version, the digest moves). It is signed with a key, not keyless like
+the charts, and carries a SLSA provenance attestation:
+
+```sh
+gh attestation verify oci://ghcr.io/spnngl/images/cs-firewall-bouncer:<tag> -R spnngl/images
+cosign verify --insecure-ignore-tlog=true --new-bundle-format=false \
+  --key https://raw.githubusercontent.com/spnngl/images/main/images/fedora/sysroot/usr/share/pki/containers/spnngl-images.pub \
+  ghcr.io/spnngl/images/cs-firewall-bouncer@<digest>
+```
+
+The signature is made with podman, which does not upload to the Rekor
+transparency log (`--insecure-ignore-tlog`) and uses the legacy signature
+format (`--new-bundle-format=false`).
+
+## What it covers
+
+- Covered: host services (`input` hook) and DNATed NodePort / load balancer /
+  hostPort traffic to pods (`forward` hook).
+- Not covered: datapaths that bypass netfilter (Cilium with
+  `kubeProxyReplacement`, XDP), and traffic arriving through a proxy or load
+  balancer that hides the client address (the source is the proxy's: use an L7
+  bouncer).
+- **Allowlist your own ranges on the LAPI** (`cscli allowlists`: nodes, pod
+  and service CIDRs, SNAT addresses, admin networks). A ban on one of them
+  drops cluster traffic.
+- The bouncer owns the tables `ip crowdsec` and `ip6 crowdsec6` (priority -10,
+  hooks `nftables_hooks`). A bouncer installed directly on a node with the same
+  table names conflicts: stopping one deletes the other's tables. Rename them
+  with `config.nftables.<family>.table`.
+- Nodes need the `nf_tables` kernel modules (sets, counters, `log`, `reject`).
+  SELinux policies that deny the container `netlink_netfilter_socket` need
+  `securityContext.seLinuxOptions.type: spc_t`.
+
+## Availability and scheduling
+
+- One pod per node, `RollingUpdate` with `maxUnavailable: 1` and `maxSurge: 0`
+  (not configurable: two bouncers on a node would delete each other's tables),
+  `minReadySeconds: 5`. Per node, the old pod deletes its tables when it stops
+  and the new pod recreates them and pulls the whole decision list again: a
+  node is unprotected for a few seconds during an update. `updateStrategy.type:
+  OnDelete` gives full control.
+- Deleting the DaemonSet or the release deletes the tables (kill switch). Do
+  not `nft delete table` by hand while a pod runs: it is not recreated.
+- After an unclean stop (OOM kill, SIGKILL) the tables stay. The restart
+  reuses them and appends the rules again: duplicated rules are harmless (a
+  counter and a drop per copy) and disappear at the next clean stop.
+- Control-plane and other tainted nodes are skipped. Set `tolerations`
+  (`- operator: Exists`) to protect them too. `priorityClassName:
+  system-node-critical` is recommended for a node-level security agent.
+- No PodDisruptionBudget, HorizontalPodAutoscaler or NetworkPolicy: the pods
+  are one per node and use the host network (NetworkPolicy does not apply).
+- A LAPI outage never fails the probes: the bouncer retries the first pull
+  every 10 s and keeps the last decisions afterwards.
+
+## Resources
+
+The defaults are scheduling floors, not a sizing: requests `10m` CPU / `32Mi`
+memory, a `256Mi` memory limit and no CPU limit. Memory grows with the number of
+decisions (one set element each). Measured on kind (bouncer 0.0.38): 50000
+decisions use about 75 MiB of RSS (90 MiB peak for the container) and 1.6 s of
+CPU for the initial load; the default limit holds about 150000 decisions.
+Raise it for larger blocklists: a pod killed by the OOM killer leaves the node
+without updates until it restarts.
+
+With a memory limit set, `GOMEMLIMIT` is 90% of it (integer quantities only):
+the Go runtime only counts its own heap, and the netlink buffers and stacks
+need room under the container limit. A different limit rolls the pods.
+
+## Security
+
+Root is required: Kubernetes has no ambient capabilities, so only root can use
+`NET_ADMIN`. Defaults: all capabilities dropped but `NET_ADMIN`, no privilege
+escalation, read-only root filesystem, `RuntimeDefault` seccomp, no
+ServiceAccount token, no Service environment variables. The pod uses the host
+network, so it never runs in a user namespace (`hostUsers` is not offered).
+
+The bouncer logs to stdout and writes nothing to disk.
+
+## Network
+
+- The metrics (`/metrics`, also the probe endpoint) listen on `127.0.0.1`,
+  port `metrics.port` (a port of every node). With `metrics.podMonitor.enabled`
+  they listen on the node IP instead (`status.hostIP`) so Prometheus can reach
+  them: they are then readable from any network that reaches the node, firewall
+  the port if the node is public. Without a PodMonitor, `cscli metrics show
+  bouncers` reports the bouncer usage on the LAPI.
+- `metrics.prometheusRule` adds alerts and needs the PodMonitor (the rules
+  select the `job` label it sets; do not rewrite `job` in `relabelings`).
+  `CSFirewallBouncerNotReady` (critical) fires when a node that should run a
+  bouncer has no ready one for 15 minutes, from kube-state-metrics.
+  `CSFirewallBouncerLapiErrors` (warning) fires when more than
+  `lapiErrorRatio` of a pod's LAPI calls fail for 15 minutes: that node gets no
+  new decision. A bouncer that is up but has no decision is not alerted: a
+  LAPI without blocklists legitimately has none.
+- Pods use the cluster DNS (`ClusterFirstWithHostNet`, `ndots: 2`) to resolve
+  the LAPI Service name.
+
+## Compatibility
+
+The values schema is strict: unknown keys fail the install. A breaking change
+to values bumps the chart MAJOR version; deprecations are announced one MINOR
+version ahead. Requires Kubernetes 1.33 or later and a CrowdSec LAPI 1.6.5 or
+later (the first release where several nodes can share one API key).
+
+## Maintainers
+
+| Name | Email | Url |
+| ---- | ------ | --- |
+| spnngl |  | <https://github.com/spnngl> |
+
+## Source Code
+
+* <https://github.com/spnngl/charts>
+* <https://github.com/crowdsecurity/cs-firewall-bouncer>
+* <https://github.com/spnngl/images/tree/main/images/cs-firewall-bouncer>
+
+## Requirements
+
+Kubernetes: `>=1.33.0-0`
+
+## Values
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| affinity | object | `{}` | Affinity. |
+| config | object | `{}` | Free-form bouncer configuration, merged over the image's default config (maps merge, lists replace), any key works (`nftables_hooks`, `deny_log`, `log_level`, `nftables`, `ca_cert_path`, `insecure_skip_verify`, ...). Chart-owned keys are rejected. `$VAR` / `${VAR}` in values are replaced by environment variables (see `extraEnv`). |
+| dnsConfig | object | `{"options":[{"name":"ndots","value":"2"}]}` | DNS config (the pod uses the host network with `dnsPolicy: ClusterFirstWithHostNet`, to resolve the LAPI Service name). |
+| dnsConfig.options | list | `[{"name":"ndots","value":"2"}]` | DNS options. |
+| extraArgs | list | `[]` | Extra bouncer command-line arguments, placed after `-c <config>` (for example `-v` for verbose logs). Settings belong in `config`. `-t` and `-T` make the bouncer exit after testing / printing the config. |
+| extraEnv | list | `[]` | Extra environment variables (list of `EnvVar`), for example to reference in `config` as `${VAR}`. `API_URL`, `API_KEY`, `HOST_IP` and `GOMEMLIMIT` are chart-owned and rejected. |
+| extraVolumeMounts | list | `[]` | Extra volume mounts for the bouncer container. |
+| extraVolumes | list | `[]` | Extra volumes (for example a CA bundle for an `https://` LAPI). |
+| fullnameOverride | string | `""` | Override the full resource name (default `<release>-<chart>`). |
+| image.digest | string | `""` | Image digest, only valid together with `image.tag`. |
+| image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. |
+| image.repository | string | `"ghcr.io/spnngl/images/cs-firewall-bouncer"` | Image repository. |
+| image.tag | string | `""` | Image tag. Empty: `appVersion` pinned by the digest recorded in `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it. |
+| imagePullSecrets | list | `[]` | Image pull secrets (list of `{name: <secret>}`). |
+| lapi.existingSecret.key | string | `"api-key"` | Key of the API key in the Secret (env `API_KEY`; the bouncer has no key-file option). |
+| lapi.existingSecret.name | string | `""` | Name of the Secret holding the bouncer API key. Empty: `<fullname>`. The chart never creates it. |
+| lapi.url | string | `"http://crowdsec-service.crowdsec.svc.cluster.local:8080"` | CrowdSec LAPI URL (env `API_URL`). The default is the Service of the `crowdsec` chart installed as release `crowdsec` in namespace `crowdsec`. The image has no CA bundle: for `https://` add the CA with `extraVolumes` and set `config.ca_cert_path`. |
+| livenessProbe | object | `{"failureThreshold":3,"httpGet":{"path":"/metrics","port":"metrics"},"periodSeconds":10}` | Liveness probe, `/metrics` (the process serves HTTP). The bouncer has no other health endpoint. |
+| metrics.podMonitor.enabled | bool | `false` | Create a Prometheus Operator PodMonitor. The metrics then listen on the node IP instead of `127.0.0.1`: they are reachable from the node's network, firewall them if the node is public. |
+| metrics.podMonitor.interval | string | `""` | Scrape interval (empty: Prometheus default). |
+| metrics.podMonitor.labels | object | `{}` | Extra labels (for example `release: kube-prometheus-stack`). |
+| metrics.podMonitor.metricRelabelings | list | `[]` | Metric relabelings. |
+| metrics.podMonitor.relabelings | list | `[]` | Relabelings. |
+| metrics.podMonitor.scrapeTimeout | string | `""` | Scrape timeout (empty: Prometheus default). |
+| metrics.port | int | `60601` | Metrics listen port. It is a port of every node (host network): the pod does not schedule on a node where it is taken. |
+| metrics.prometheusRule.disabled | list | `[]` | Alerts to leave out (at most one: disable `prometheusRule` instead). `CSFirewallBouncerNotReady` reads kube-state-metrics (`kube_daemonset_status_desired_number_scheduled`, `kube_daemonset_status_number_ready`): without it, it never fires. |
+| metrics.prometheusRule.enabled | bool | `false` | Create a Prometheus Operator PrometheusRule (alerts `CSFirewallBouncerNotReady`, `CSFirewallBouncerLapiErrors`). Needs `podMonitor`: the rules select the `job` label it sets. |
+| metrics.prometheusRule.labels | object | `{}` | Extra labels (for example `release: kube-prometheus-stack`). |
+| metrics.prometheusRule.lapiErrorRatio | float | `0.5` | `CSFirewallBouncerLapiErrors` threshold: share of failed LAPI calls (`lapi_requests_failures_total / lapi_requests_total`, 5m rate) of a pod. While they fail, no new decision reaches the node. |
+| minReadySeconds | int | `5` | Seconds a new bouncer must be Ready before the next node is updated. |
+| nameOverride | string | `""` | Override the chart name used in resource names and labels. |
+| nodeSelector | object | `{"kubernetes.io/os":"linux"}` | Node selector. Merged with the default `kubernetes.io/os: linux`: set that key to `null` to drop it. |
+| podAnnotations | object | `{}` | Pod annotations (for example `reloader.stakater.com/auto: "true"` to restart on Secret rotation). |
+| podLabels | object | `{}` | Extra pod labels. |
+| podSecurityContext | object | `{"runAsGroup":0,"runAsNonRoot":false,"runAsUser":0,"seccompProfile":{"type":"RuntimeDefault"}}` | Pod security context. Overrides are merged onto these defaults. Root is required: Kubernetes has no ambient capabilities, so only root holds `NET_ADMIN`. |
+| priorityClassName | string | `""` | Priority class name. `system-node-critical` is recommended for a node-level security agent. |
+| readinessProbe | object | `{"failureThreshold":1,"httpGet":{"path":"/metrics","port":"metrics"},"periodSeconds":10}` | Readiness probe, `/metrics` (the nftables tables exist). A LAPI outage never fails it. |
+| resources | object | `{"limits":{"memory":"256Mi"},"requests":{"cpu":"10m","memory":"32Mi"}}` | Resources. A scheduling floor, not a sizing: memory grows with the number of decisions (about 1.1 MiB per 1000, measured 90 MiB peak for 50000), so the limit holds about 150000 decisions. No CPU limit on purpose. With a memory limit, `GOMEMLIMIT` is set to 90% of it (the limit must then be an integer quantity: plain, `Ki`, `Mi`, `Gi`, `Ti`, `k`, `M`, `G` or `T`). Like the other maps, `limits` and `requests` merge with these defaults: set a key to `null` to drop it. |
+| revisionHistoryLimit | int | `3` | Old ControllerRevisions to keep. |
+| securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"add":["NET_ADMIN"],"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsGroup":0,"runAsNonRoot":false,"runAsUser":0,"seccompProfile":{"type":"RuntimeDefault"}}` | Container security context. Overrides are merged onto these defaults. `NET_ADMIN` is the only capability, needed to edit the node's nftables. On SELinux nodes that deny `netlink_netfilter_socket`, set `seLinuxOptions: {type: spc_t}`. |
+| serviceAccount.annotations | object | `{}` | ServiceAccount annotations. |
+| serviceAccount.create | bool | `true` | Create the ServiceAccount. |
+| serviceAccount.name | string | `""` | ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false). |
+| startupProbe | object | `{"failureThreshold":30,"httpGet":{"path":"/metrics","port":"metrics"},"periodSeconds":2}` | Startup probe, `/metrics`. The bouncer serves it once its nftables tables exist. The chart sets `httpGet.host: 127.0.0.1` unless `metrics.podMonitor.enabled`. |
+| terminationGracePeriodSeconds | int | `15` | Termination grace period. On SIGTERM the bouncer deletes its nftables tables, which is instant. |
+| tolerations | list | `[]` | Tolerations. None by default: tainted nodes (control plane) are skipped. Uncomment `operator: Exists` to run on every node. |
+| updateStrategy.rollingUpdate.maxUnavailable | int | `1` | Nodes updated at once. A node is briefly unprotected while its bouncer restarts and pulls the decisions again. |
+| updateStrategy.type | string | `"RollingUpdate"` | DaemonSet update strategy. There is no `maxSurge`: a second bouncer on a node would have its tables deleted when the first one stops. |

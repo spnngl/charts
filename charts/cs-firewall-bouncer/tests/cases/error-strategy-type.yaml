@@ -1,0 +1,5 @@
+values:
+  updateStrategy:
+    type: Recreate
+expect:
+  error: type

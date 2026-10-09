@@ -1,0 +1,174 @@
+---
+# Source: cs-firewall-bouncer/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: cs-firewall-bouncer
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cs-firewall-bouncer
+    app.kubernetes.io/version: "0.0.38"
+    helm.sh/chart: cs-firewall-bouncer-0.1.0
+  name: cs-firewall-bouncer
+  namespace: cs-firewall-bouncer
+---
+# Source: cs-firewall-bouncer/templates/configmap.yaml
+apiVersion: v1
+data:
+  crowdsec-firewall-bouncer.yaml.local: |
+    ca_cert_path: /etc/ssl/lapi/ca.crt
+    prometheus:
+      enabled: true
+      listen_addr: 127.0.0.1
+      listen_port: "60601"
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: cs-firewall-bouncer
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cs-firewall-bouncer
+    app.kubernetes.io/version: "0.0.38"
+    helm.sh/chart: cs-firewall-bouncer-0.1.0
+  name: cs-firewall-bouncer
+  namespace: cs-firewall-bouncer
+---
+# Source: cs-firewall-bouncer/templates/daemonset.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/env-value-from: "The API key Secret is created out of band; the chart never creates it."
+    ignore-check.kube-linter.io/host-network: "The bouncer edits the node's netfilter: it must run in the host network namespace."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read; a nodeAffinity would be replaced by a user affinity override."
+    ignore-check.kube-linter.io/non-isolated-pod: "A host-network pod is not subject to NetworkPolicy."
+    ignore-check.kube-linter.io/read-secret-from-env-var: "The bouncer reads its API key from the API_KEY environment variable only; it has no key-file option."
+    ignore-check.kube-linter.io/run-as-non-root: "Kubernetes has no ambient capabilities: only root holds NET_ADMIN, needed to edit the node's nftables."
+  labels:
+    app.kubernetes.io/instance: cs-firewall-bouncer
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cs-firewall-bouncer
+    app.kubernetes.io/version: "0.0.38"
+    helm.sh/chart: cs-firewall-bouncer-0.1.0
+  name: cs-firewall-bouncer
+  namespace: cs-firewall-bouncer
+spec:
+  minReadySeconds: 5
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: cs-firewall-bouncer
+      app.kubernetes.io/name: cs-firewall-bouncer
+  template:
+    metadata:
+      annotations:
+        checksum/config: 155eb9c23d2e3fe8c272a29d6bb4548327377ce00013ba916e36e3acfbd651fe
+      labels:
+        app.kubernetes.io/instance: cs-firewall-bouncer
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: cs-firewall-bouncer
+        app.kubernetes.io/version: 0.0.38
+        helm.sh/chart: cs-firewall-bouncer-0.1.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - -c
+            - /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml
+          env:
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: api-key
+                  name: cs-firewall-bouncer
+            - name: API_URL
+              value: "https://crowdsec.example.com:8080"
+            - name: GOMEMLIMIT
+              value: "241591910B"
+          image: "ghcr.io/spnngl/images/cs-firewall-bouncer:0.0.38@sha256:77b75bd70eed82b89b1dd19e93c45f43a527da196f044e5dbd3fa3d485d516a6"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              host: 127.0.0.1
+              path: /metrics
+              port: metrics
+            periodSeconds: 10
+          name: cs-firewall-bouncer
+          ports:
+            - containerPort: 60601
+              name: metrics
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 1
+            httpGet:
+              host: 127.0.0.1
+              path: /metrics
+              port: metrics
+            periodSeconds: 10
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+              - NET_ADMIN
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 0
+            runAsNonRoot: false
+            runAsUser: 0
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              host: 127.0.0.1
+              path: /metrics
+              port: metrics
+            periodSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml.local
+              name: config
+              readOnly: true
+              subPath: crowdsec-firewall-bouncer.yaml.local
+            - mountPath: /etc/ssl/lapi
+              name: lapi-ca
+              readOnly: true
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      dnsPolicy: ClusterFirstWithHostNet
+      enableServiceLinks: false
+      hostNetwork: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        runAsGroup: 0
+        runAsNonRoot: false
+        runAsUser: 0
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: cs-firewall-bouncer
+      terminationGracePeriodSeconds: 15
+      volumes:
+        - configMap:
+            name: cs-firewall-bouncer
+          name: config
+        - name: lapi-ca
+          secret:
+            secretName: lapi-ca
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate

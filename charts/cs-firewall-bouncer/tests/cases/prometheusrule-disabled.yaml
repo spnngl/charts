@@ -1,0 +1,7 @@
+values:
+  metrics:
+    podMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+      disabled: [CSFirewallBouncerLapiErrors]

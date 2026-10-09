@@ -1,0 +1,5 @@
+values:
+  lapi:
+    url: crowdsec:8080
+expect:
+  error: url

@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: API_KEY
+      value: secret
+expect:
+  error: /extraEnv/0/name
