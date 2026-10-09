@@ -1,0 +1,395 @@
+# yaml-language-server: $schema=values.schema.json
+# @schema.root
+# title: cs-firewall-bouncer values
+# allOf:
+#   # the alert rules select the `job` label set by the PodMonitor
+#   - if:
+#       required: [metrics]
+#       properties:
+#         metrics:
+#           required: [prometheusRule]
+#           properties:
+#             prometheusRule:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+#     then:
+#       properties:
+#         metrics:
+#           required: [podMonitor]
+#           properties:
+#             podMonitor:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+# @schema.root
+# -- Override the chart name used in resource names and labels.
+nameOverride: ""
+# -- Override the full resource name (default `<release>-<chart>`).
+fullnameOverride: ""
+
+image:
+  # -- Image repository.
+  repository: ghcr.io/spnngl/images/cs-firewall-bouncer
+  # -- Image tag. Empty: `appVersion` pinned by the digest recorded in `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.
+  tag: ""
+  # @schema
+  # type: string
+  # pattern: "^(sha256:[a-f0-9]{64})?$"
+  # @schema
+  # -- Image digest, only valid together with `image.tag`.
+  digest: ""
+  # @schema
+  # type: string
+  # enum: [Always, IfNotPresent, Never]
+  # @schema
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+# @schema
+# -- Image pull secrets (list of `{name: <secret>}`).
+imagePullSecrets: []
+
+lapi:
+  # @schema
+  # type: string
+  # pattern: "^https?://"
+  # @schema
+  # -- CrowdSec LAPI URL (env `API_URL`). The default is the Service of the `crowdsec` chart installed as release `crowdsec` in namespace `crowdsec`. The image has no CA bundle: for `https://` add the CA with `extraVolumes` and set `config.ca_cert_path`.
+  url: http://crowdsec-service.crowdsec.svc.cluster.local:8080
+  existingSecret:
+    # -- Name of the Secret holding the bouncer API key. Empty: `<fullname>`. The chart never creates it.
+    name: ""
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the API key in the Secret (env `API_KEY`; the bouncer has no key-file option).
+    key: api-key
+
+# @schema
+# type: object
+# additionalProperties: true
+# propertyNames:
+#   not:
+#     enum: [mode, api_url, api_key, cert_path, key_path, prometheus, log_mode, log_dir]
+# @schema
+# -- Free-form bouncer configuration, merged over the image's default config (maps merge, lists replace), any key works (`nftables_hooks`, `deny_log`, `log_level`, `nftables`, `ca_cert_path`, `insecure_skip_verify`, ...). Chart-owned keys are rejected. `$VAR` / `${VAR}` in values are replaced by environment variables (see `extraEnv`).
+config: {}
+# nftables_hooks: [input]
+# deny_log: true
+# nftables:
+#   ipv6:
+#     enabled: false
+
+metrics:
+  # @schema
+  # type: integer
+  # minimum: 1024
+  # maximum: 65535
+  # @schema
+  # -- Metrics listen port. It is a port of every node (host network): the pod does not schedule on a node where it is taken.
+  port: 60601
+  podMonitor:
+    # -- Create a Prometheus Operator PodMonitor. The metrics then listen on the node IP instead of `127.0.0.1`: they are reachable from the node's network, firewall them if the node is public.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels (for example `release: kube-prometheus-stack`).
+    labels: {}
+    # -- Scrape interval (empty: Prometheus default).
+    interval: ""
+    # -- Scrape timeout (empty: Prometheus default).
+    scrapeTimeout: ""
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Relabelings.
+    relabelings: []
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Metric relabelings.
+    metricRelabelings: []
+  prometheusRule:
+    # -- Create a Prometheus Operator PrometheusRule (alerts `CSFirewallBouncerNotReady`, `CSFirewallBouncerLapiErrors`). Needs `podMonitor`: the rules select the `job` label it sets.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels (for example `release: kube-prometheus-stack`).
+    labels: {}
+    # @schema
+    # type: array
+    # uniqueItems: true
+    # maxItems: 1
+    # items:
+    #   type: string
+    #   enum: [CSFirewallBouncerNotReady, CSFirewallBouncerLapiErrors]
+    # @schema
+    # -- Alerts to leave out (at most one: disable `prometheusRule` instead). `CSFirewallBouncerNotReady` reads kube-state-metrics (`kube_daemonset_status_desired_number_scheduled`, `kube_daemonset_status_number_ready`): without it, it never fires.
+    disabled: []
+    # @schema
+    # type: number
+    # exclusiveMinimum: 0
+    # maximum: 1
+    # @schema
+    # -- `CSFirewallBouncerLapiErrors` threshold: share of failed LAPI calls (`lapi_requests_failures_total / lapi_requests_total`, 5m rate) of a pod. While they fail, no new decision reaches the node.
+    lapiErrorRatio: 0.5
+
+updateStrategy:
+  # @schema
+  # type: string
+  # enum: [RollingUpdate, OnDelete]
+  # @schema
+  # -- DaemonSet update strategy. There is no `maxSurge`: a second bouncer on a node would have its tables deleted when the first one stops.
+  type: RollingUpdate
+  rollingUpdate:
+    # @schema
+    # type: [integer, string]
+    # @schema
+    # -- Nodes updated at once. A node is briefly unprotected while its bouncer restarts and pulls the decisions again.
+    maxUnavailable: 1
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Seconds a new bouncer must be Ready before the next node is updated.
+minReadySeconds: 5
+# -- Old ControllerRevisions to keep.
+revisionHistoryLimit: 3
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Termination grace period. On SIGTERM the bouncer deletes its nftables tables, which is instant.
+terminationGracePeriodSeconds: 15
+
+serviceAccount:
+  # -- Create the ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false).
+  name: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- ServiceAccount annotations.
+  annotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Pod annotations (for example `reloader.stakater.com/auto: "true"` to restart on Secret rotation).
+podAnnotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Extra pod labels.
+podLabels: {}
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Pod security context. Overrides are merged onto these defaults. Root is required: Kubernetes has no ambient capabilities, so only root holds `NET_ADMIN`.
+podSecurityContext:
+  runAsGroup: 0
+  runAsNonRoot: false
+  runAsUser: 0
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Container security context. Overrides are merged onto these defaults. `NET_ADMIN` is the only capability, needed to edit the node's nftables. On SELinux nodes that deny `netlink_netfilter_socket`, set `seLinuxOptions: {type: spc_t}`.
+securityContext:
+  allowPrivilegeEscalation: false
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  capabilities:
+    add:
+      - NET_ADMIN
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 0
+  runAsNonRoot: false
+  runAsUser: 0
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Resources. A scheduling floor, not a sizing: memory grows with the number of decisions (about 1.1 MiB per 1000, measured 90 MiB peak for 50000), so the limit holds about 150000 decisions. No CPU limit on purpose. With a memory limit, `GOMEMLIMIT` is set to 90% of it (the limit must then be an integer quantity: plain, `Ki`, `Mi`, `Gi`, `Ti`, `k`, `M`, `G` or `T`). Like the other maps, `limits` and `requests` merge with these defaults: set a key to `null` to drop it.
+resources:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  limits:
+    memory: 256Mi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  requests:
+    cpu: 10m
+    memory: 32Mi
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- DNS config (the pod uses the host network with `dnsPolicy: ClusterFirstWithHostNet`, to resolve the LAPI Service name).
+dnsConfig:
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  #   additionalProperties: true
+  # @schema
+  # -- DNS options.
+  options:
+    - name: ndots
+      value: "2"
+
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Startup probe, `/metrics`. The bouncer serves it once its nftables tables exist. The chart sets `httpGet.host: 127.0.0.1` unless `metrics.podMonitor.enabled`.
+startupProbe:
+  failureThreshold: 30
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  httpGet:
+    path: /metrics
+    port: metrics
+  periodSeconds: 2
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Readiness probe, `/metrics` (the nftables tables exist). A LAPI outage never fails it.
+readinessProbe:
+  failureThreshold: 1
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  httpGet:
+    path: /metrics
+    port: metrics
+  periodSeconds: 10
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Liveness probe, `/metrics` (the process serves HTTP). The bouncer has no other health endpoint.
+livenessProbe:
+  failureThreshold: 3
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  httpGet:
+    path: /metrics
+    port: metrics
+  periodSeconds: 10
+
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Node selector. Merged with the default `kubernetes.io/os: linux`: set that key to `null` to drop it.
+nodeSelector:
+  kubernetes.io/os: linux
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Tolerations. None by default: tainted nodes (control plane) are skipped. Uncomment `operator: Exists` to run on every node.
+tolerations: []
+# - operator: Exists
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Affinity.
+affinity: {}
+# -- Priority class name. `system-node-critical` is recommended for a node-level security agent.
+priorityClassName: ""
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+#       not:
+#         enum: [API_URL, API_KEY, HOST_IP, GOMEMLIMIT]
+#   additionalProperties: true
+# @schema
+# -- Extra environment variables (list of `EnvVar`), for example to reference in `config` as `${VAR}`. `API_URL`, `API_KEY`, `HOST_IP` and `GOMEMLIMIT` are chart-owned and rejected.
+extraEnv: []
+# @schema
+# type: array
+# items:
+#   type: string
+#   minLength: 1
+# @schema
+# -- Extra bouncer command-line arguments, placed after `-c <config>` (for example `-v` for verbose logs). Settings belong in `config`. `-t` and `-T` make the bouncer exit after testing / printing the config.
+extraArgs: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volumes (for example a CA bundle for an `https://` LAPI).
+extraVolumes: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volume mounts for the bouncer container.
+extraVolumeMounts: []

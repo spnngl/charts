@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: cs-firewall-bouncer
+description: CrowdSec firewall bouncer (nftables mode) running as a hardened DaemonSet that bans CrowdSec decisions in every node's netfilter
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/cs-firewall-bouncer
+appVersion: "0.0.38"
+kubeVersion: ">=1.33.0-0"
+home: https://docs.crowdsec.net/u/bouncers/firewall/
+icon: https://avatars.githubusercontent.com/u/63284097?s=200
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/crowdsecurity/cs-firewall-bouncer
+  - https://github.com/spnngl/images/tree/main/images/cs-firewall-bouncer
+keywords:
+  - crowdsec
+  - bouncer
+  - firewall
+  - nftables
+  - security
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: MIT
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # cs-firewall-bouncer.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: cs-firewall-bouncer
+      image: ghcr.io/spnngl/images/cs-firewall-bouncer:0.0.38@sha256:77b75bd70eed82b89b1dd19e93c45f43a527da196f044e5dbd3fa3d485d516a6
+  artifacthub.io/links: |-
+    - name: Upstream project
+      url: https://docs.crowdsec.net/u/bouncers/firewall/
+    - name: Upstream repository
+      url: https://github.com/crowdsecurity/cs-firewall-bouncer
+    - name: Image build
+      url: https://github.com/spnngl/images/tree/main/images/cs-firewall-bouncer
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/cs-firewall-bouncer
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

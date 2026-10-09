@@ -17,6 +17,7 @@ Two kinds of charts live here:
 | Chart | Upstream | Contents |
 |-------|----------|----------|
 | [`cloudflared`](./charts/cloudflared) | [cloudflare/cloudflared](https://github.com/cloudflare/cloudflared) | Cloudflare Tunnel connector Deployment (HPA, VPA, ServiceMonitor/PodMonitor) |
+| [`cs-firewall-bouncer`](./charts/cs-firewall-bouncer) | [crowdsecurity/cs-firewall-bouncer](https://github.com/crowdsecurity/cs-firewall-bouncer) | CrowdSec firewall bouncer DaemonSet (nftables, PodMonitor/PrometheusRule) |
 | [`external-dns-crds`](./charts/external-dns-crds) | [kubernetes-sigs/external-dns](https://github.com/kubernetes-sigs/external-dns) | DNSEndpoint, DNSRecord |
 | [`external-secrets-crds`](./charts/external-secrets-crds) | [external-secrets/external-secrets](https://github.com/external-secrets/external-secrets) | stores, (Cluster)ExternalSecret, (Cluster)PushSecret, generators |
 | [`gateway-api-crds`](./charts/gateway-api-crds) | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | standard channel |

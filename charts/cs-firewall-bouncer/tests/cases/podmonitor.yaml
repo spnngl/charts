@@ -1,0 +1,7 @@
+values:
+  metrics:
+    podMonitor:
+      enabled: true
+      interval: 30s
+      labels:
+        release: kube-prometheus-stack

@@ -1,0 +1,4 @@
+values:
+  resources:
+    limits:
+      memory: "300000000"

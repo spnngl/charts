@@ -1,0 +1,6 @@
+values:
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 0
+expect:
+  error: maxUnavailable

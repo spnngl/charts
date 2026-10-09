@@ -1,0 +1,24 @@
+{{- if .Values.metrics.podMonitor.enabled }}
+{{- $m := .Values.metrics.podMonitor }}
+{{- $endpoint := dict "path" "/metrics" "port" "metrics" }}
+{{- with $m.interval }}{{ $_ := set $endpoint "interval" . }}{{ end }}
+{{- with $m.scrapeTimeout }}{{ $_ := set $endpoint "scrapeTimeout" . }}{{ end }}
+{{- with $m.relabelings }}{{ $_ := set $endpoint "relabelings" . }}{{ end }}
+{{- with $m.metricRelabelings }}{{ $_ := set $endpoint "metricRelabelings" . }}{{ end }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  labels:
+    {{- toYaml (merge (include "cs-firewall-bouncer.labels" . | fromYaml) (deepCopy $m.labels)) | nindent 4 }}
+  name: {{ include "cs-firewall-bouncer.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  podMetricsEndpoints:
+    {{- toYaml (list $endpoint) | nindent 4 }}
+  selector:
+    matchLabels:
+      {{- include "cs-firewall-bouncer.selectorLabels" . | nindent 6 }}
+{{- end }}

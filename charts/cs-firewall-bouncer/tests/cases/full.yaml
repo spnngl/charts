@@ -1,0 +1,21 @@
+values:
+  fullnameOverride: csfb
+  metrics:
+    port: 9100
+    podMonitor:
+      enabled: true
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 25%
+  tolerations:
+    - operator: Exists
+  priorityClassName: system-node-critical
+  podAnnotations:
+    example.com/note: hello
+  podLabels:
+    example.com/team: edge
+  imagePullSecrets:
+    - name: regcred
+  serviceAccount:
+    annotations:
+      example.com/note: hello

@@ -1,0 +1,27 @@
+{{ include "cs-firewall-bouncer.fullname" . }} runs one CrowdSec firewall bouncer (nftables) on every matching node.
+
+The chart never creates the API key Secret. It must exist in namespace {{ .Release.Namespace }}:
+
+  kubectl -n {{ .Release.Namespace }} create secret generic {{ include "cs-firewall-bouncer.secretName" . }} \
+    --from-literal={{ .Values.lapi.existingSecret.key }}=<API key registered on the LAPI>
+
+The bouncer reads the key at startup only: roll the pods after rotating it.
+
+  kubectl -n {{ .Release.Namespace }} rollout restart daemonset/{{ include "cs-firewall-bouncer.fullname" . }}
+
+The pods need a namespace that allows privileged pods (host network, NET_ADMIN):
+
+  kubectl label namespace {{ .Release.Namespace }} pod-security.kubernetes.io/enforce=privileged
+
+Check the bouncers, one `<name>@<node IP>` entry per node on the LAPI:
+
+  kubectl -n {{ .Release.Namespace }} get pods -l {{ include "cs-firewall-bouncer.selectorLabels" . | replace ": " "=" | replace "\n" "," }}
+  cscli bouncers list
+
+A banned node, pod or SNAT address drops cluster traffic: allowlist them on
+the LAPI (cscli allowlists).
+{{- if .Values.metrics.podMonitor.enabled }}
+
+metrics.podMonitor.enabled: the metrics listen on the node IP, port {{ .Values.metrics.port }}.
+Firewall that port if the nodes are reachable from untrusted networks.
+{{- end }}
