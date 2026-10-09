@@ -85,6 +85,19 @@
                 }
             ]
         },
+        {
+            "description": "cs-firewall-bouncer: automerge every update type (the image is built from the upstream release and rebuilt weekly under the same tag, so also digests) as soon as CI is green. CI never starts the bouncer (no LAPI, no node selected). bumpVersions raises the chart `version` so ct check-version-increment passes.",
+            "matchDepNames": ["ghcr.io/spnngl/images/cs-firewall-bouncer"],
+            "matchUpdateTypes": ["minor", "patch", "digest"],
+            "automerge": true,
+            "bumpVersions": [
+                {
+                    "filePatterns": ["charts/cs-firewall-bouncer/Chart.yaml"],
+                    "bumpType": "patch",
+                    "matchStrings": ["\\nversion:\\s*(?<version>[^\\s]+)"]
+                }
+            ]
+        },
         // Renovate updates itself A LOT, keep some stability by updating once a
         // week.
         {
