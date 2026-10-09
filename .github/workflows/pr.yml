@@ -53,7 +53,7 @@ jobs:
       - uses: ./.github/actions/setup-tools
         with:
           tools: nushell helm kubeconform kube-linter helm-docs helm-schema
-      - uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f # v2.8.0
+      - uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510 # v2.9.0
         with:
           version: v${{ env.chart_testing_version }}
 
@@ -135,7 +135,7 @@ jobs:
       - uses: ./.github/actions/setup-tools
         with:
           tools: ${{ matrix.helm == '4' && 'helm4' || 'helm' }}
-      - uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f # v2.8.0
+      - uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510 # v2.9.0
         with:
           version: v${{ env.chart_testing_version }}
 
