@@ -24,7 +24,7 @@ jobs:
     name: Validate Renovate config
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/renovatebot/renovate:44.145.2@sha256:e13ef2a24b977943300695c1c63b3ba08b772b85c11c60af114f8aa1a463dcd8
+      image: ghcr.io/renovatebot/renovate:44.151.0@sha256:8a79148ec24cc05809782e20e720dafe9dde0c24a00f26e76d14dec2cbd74a53
       options: --user 0
     steps:
       - name: Harden Runner
