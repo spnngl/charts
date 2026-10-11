@@ -1,0 +1,11 @@
+{{- include "nftables-exporter.validate" . }}
+apiVersion: v1
+data:
+  config.yaml: |
+    {{- include "nftables-exporter.config" . | nindent 4 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "nftables-exporter.labels" . | nindent 4 }}
+  name: {{ include "nftables-exporter.fullname" . }}
+  namespace: {{ .Release.Namespace }}

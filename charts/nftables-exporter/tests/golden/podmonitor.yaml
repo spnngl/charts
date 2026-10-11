@@ -1,0 +1,169 @@
+---
+# Source: nftables-exporter/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: nftables-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: nftables-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: nftables-exporter-0.0.0
+  name: nftables-exporter
+  namespace: nftables-exporter
+---
+# Source: nftables-exporter/templates/configmap.yaml
+apiVersion: v1
+data:
+  config.yaml: |
+    nftables_exporter:
+      bind_to: 0.0.0.0:9630
+      log_level: warn
+      nft_location: /usr/sbin/nft
+      url_path: /metrics
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: nftables-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: nftables-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: nftables-exporter-0.0.0
+  name: nftables-exporter
+  namespace: nftables-exporter
+---
+# Source: nftables-exporter/templates/daemonset.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/dnsconfig-options: "dnsPolicy Default: the exporter resolves no name."
+    ignore-check.kube-linter.io/host-network: "The exporter reads the node's nftables ruleset, which belongs to the host network namespace."
+    ignore-check.kube-linter.io/no-liveness-probe: "The exporter exits when it cannot listen, and a TCP or /metrics check cannot tell a hung process: a liveness probe would catch nothing."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read; a nodeAffinity would be replaced by a user affinity override."
+    ignore-check.kube-linter.io/non-isolated-pod: "A host-network pod is not subject to NetworkPolicy."
+    ignore-check.kube-linter.io/run-as-non-root: "Kubernetes has no ambient capabilities: only root keeps NET_ADMIN across the exec of nft, needed to read the node's ruleset."
+  labels:
+    app.kubernetes.io/instance: nftables-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: nftables-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: nftables-exporter-0.0.0
+  name: nftables-exporter
+  namespace: nftables-exporter
+spec:
+  minReadySeconds: 5
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: nftables-exporter
+      app.kubernetes.io/name: nftables-exporter
+  template:
+    metadata:
+      annotations:
+        checksum/config: 2eb54386924f06c2048f4774fc2bbe39f505c2b997e8f9f13a70a481a3d3b161
+      labels:
+        app.kubernetes.io/instance: nftables-exporter
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: nftables-exporter
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: nftables-exporter-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - --config
+            - /etc/nftables-exporter/config.yaml
+          image: "ghcr.io/spnngl/images/nftables-exporter:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          name: nftables-exporter
+          ports:
+            - containerPort: 9630
+              name: metrics
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 1
+            periodSeconds: 2
+            tcpSocket:
+              port: metrics
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+              - NET_ADMIN
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 0
+            runAsNonRoot: false
+            runAsUser: 0
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/nftables-exporter
+              name: config
+              readOnly: true
+      dnsPolicy: Default
+      enableServiceLinks: false
+      hostNetwork: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        runAsGroup: 0
+        runAsNonRoot: false
+        runAsUser: 0
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: nftables-exporter
+      terminationGracePeriodSeconds: 5
+      volumes:
+        - configMap:
+            name: nftables-exporter
+          name: config
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+---
+# Source: nftables-exporter/templates/podmonitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  labels:
+    app.kubernetes.io/instance: nftables-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: nftables-exporter
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: nftables-exporter-0.0.0
+    release: kube-prometheus-stack
+  name: nftables-exporter
+  namespace: nftables-exporter
+spec:
+  namespaceSelector:
+    matchNames:
+      - nftables-exporter
+  podMetricsEndpoints:
+    - interval: 30s
+      metricRelabelings:
+      - action: drop
+        regex: nftables_rule_.*
+        sourceLabels:
+        - __name__
+      path: /metrics
+      port: metrics
+      scrapeTimeout: 10s
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: nftables-exporter
+      app.kubernetes.io/name: nftables-exporter

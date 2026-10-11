@@ -1,0 +1,14 @@
+values:
+  config:
+    nftables_exporter:
+      fake_nft_json: /fake/ruleset.json
+    future_section:
+      key: value
+  extraVolumes:
+    - configMap:
+        name: fake-ruleset
+      name: fake
+  extraVolumeMounts:
+    - mountPath: /fake
+      name: fake
+      readOnly: true

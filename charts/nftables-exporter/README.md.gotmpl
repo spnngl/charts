@@ -1,0 +1,153 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.badgesSection" . }}
+
+{{ template "chart.description" . }}
+
+Runs the [metal-stack nftables exporter](https://github.com/metal-stack/nftables-exporter)
+as a DaemonSet. On every scrape it reads the node's nftables ruleset
+(`nft -j -t list ruleset`, set elements left out) and exports:
+
+- `nftables_up`: 1 when `nft` succeeded, 0 otherwise (the HTTP answer is 200
+  either way);
+- `nftables_counter_bytes` / `nftables_counter_packets`: named counters;
+- `nftables_table_chains`, `nftables_chain_rules`: ruleset size;
+- `nftables_rule_bytes` / `nftables_rule_packets`: one series per rule with a
+  `counter` statement, labelled with its chain, handle, comment, addresses and
+  ports.
+
+Every table of the node is read, whoever owns it (kube-proxy in `nftables`
+mode, iptables-nft, firewalls, CNI plugins).
+
+## Install
+
+The pods read the node's netfilter: they run as root in the host network
+namespace with `NET_ADMIN`. The namespace must allow that (Pod Security
+Standard `privileged`):
+
+```sh
+kubectl create namespace nftables-exporter
+kubectl label namespace nftables-exporter pod-security.kubernetes.io/enforce=privileged
+helm install nftables-exporter oci://ghcr.io/spnngl/charts/nftables-exporter --version <version> -n nftables-exporter \
+  --set metrics.podMonitor.enabled=true
+```
+
+Exporter options go in `config`, rendered as its config file (maps merge with
+the defaults, lists replace, unknown keys are ignored by the exporter).
+`nftables_exporter.bind_to` is chart-owned: set `metrics.port` and
+`metrics.bindAddress` instead.
+
+## Image
+
+The default image is `appVersion` pinned by the digest recorded in the
+`artifacthub.io/images` annotation of `Chart.yaml` (Renovate updates both
+together). Setting `image.tag` drops that digest; add `image.digest` to pin
+the tag again (`image.digest` without `image.tag` is an error).
+
+The image is built in [spnngl/images](https://github.com/spnngl/images) with
+[Dalec](https://github.com/project-dalec/dalec): Debian trixie without shell
+or package manager, the exporter compiled from the upstream release commit,
+Debian's `nft` at `/usr/sbin/nft`. It is rebuilt weekly: the tag is the
+exporter version, the digest moves. The exporter is GPL-3.0-only: its license
+ships in the image (`/usr/share/doc/nftables-exporter/`), the source is the
+upstream tag of the image version. The image is signed with a key, not
+keyless like the charts, and carries a SLSA provenance and an SBOM:
+
+```sh
+cosign verify --insecure-ignore-tlog=true --new-bundle-format=false \
+  --key https://raw.githubusercontent.com/spnngl/images/main/images/fedora/sysroot/common/usr/share/pki/containers/spnngl-images.pub \
+  ghcr.io/spnngl/images/nftables-exporter@<digest>
+docker buildx imagetools inspect ghcr.io/spnngl/images/nftables-exporter@<digest> --format '{{ "{{" }} json .Provenance {{ "}}" }}'
+```
+
+The signature is not uploaded to the Rekor transparency log
+(`--insecure-ignore-tlog`) and uses the legacy signature format
+(`--new-bundle-format=false`).
+
+## Availability and scheduling
+
+- One pod per node, `RollingUpdate` with `maxUnavailable: 1` and `maxSurge: 0`
+  (not configurable: two pods cannot share the node port),
+  `minReadySeconds: 5`. A node's metrics are missing for a few seconds during
+  an update. `updateStrategy.type: OnDelete` gives full control.
+- Control-plane and other tainted nodes are skipped. Set `tolerations`
+  (`- operator: Exists`) to export them too.
+- The readiness probe is a TCP check of the metrics port: `/metrics` runs
+  `nft` and answers 200 even when it fails. There is no liveness probe: the
+  exporter exits when it cannot listen, and no check can tell a hung process.
+- No PodDisruptionBudget, HorizontalPodAutoscaler or NetworkPolicy: the pods
+  are one per node and use the host network (NetworkPolicy does not apply).
+
+## Resources
+
+Defaults: requests `10m` CPU / `32Mi` memory, a `512Mi` memory limit and no
+CPU limit. Every scrape runs `nft` once, inside the pod's cgroup, and parses
+its JSON output: memory and CPU grow with the ruleset size and the scrape
+rate. The size that matters is `nft list ruleset | wc -l` on a node, not the
+number of services:
+
+| kube-proxy mode, 3000 services with one endpoint each | Ruleset | Exporter memory |
+|---|---:|---|
+| `nftables` | 4900 lines (0.5 MB JSON) | 16 MiB |
+| `iptables` | 33000 lines (6.7 MB JSON) | killed at 256Mi, fine at 512Mi |
+
+Measured on kind (exporter 0.4.5, nft 1.1.3), one scraper. With rules that
+have a counter and a comment, `128Mi` held about 7000 rules with one scraper
+and 3000 with two.
+
+Every scrape runs its own `nft` (about 80 MiB for 10000 rules) and the
+exporter does not serialise them: an HA Prometheus pair doubles the peak. A
+scrape takes 0.13 s for 1000 rules, 0.35 s for 10000. Size the limit to your
+largest node: a pod killed by the OOM killer restarts and is killed again at
+the next scrape.
+
+No `GOMEMLIMIT` is set: the `nft` child process is outside the Go runtime's
+accounting, and a Go memory limit did not move the breaking point (same with
+90% of the limit, 50% and none).
+
+`nftables_rule_*` has one series per counted rule, with its comment and
+addresses as labels: on nodes with large or churning rulesets, drop it with
+`metrics.podMonitor.metricRelabelings`.
+
+## Security
+
+Root is required: Kubernetes has no ambient capabilities, so only root keeps
+`NET_ADMIN` in the `nft` child process (as UID 65532 with `NET_ADMIN`,
+`nftables_up` stays 0). Defaults: all capabilities dropped but `NET_ADMIN`,
+no privilege escalation, read-only root filesystem, `RuntimeDefault` seccomp,
+no ServiceAccount token, no Service environment variables. The pod uses the
+host network, so it never runs in a user namespace (`hostUsers` is not
+offered). SELinux policies that deny the container
+`netlink_netfilter_socket` need `securityContext.seLinuxOptions.type: spc_t`.
+
+The exporter only reads the ruleset (`nft list`), logs JSON to stdout and
+writes nothing to disk.
+
+## Network
+
+- The metrics listen on port `metrics.port` (a port of every node), at
+  `127.0.0.1` by default. With `metrics.podMonitor.enabled` they listen on
+  every node interface (`0.0.0.0`) and Prometheus scrapes the node IP: open
+  the port from Prometheus to the nodes (cloud firewalls, security groups),
+  and firewall it from untrusted networks, the metrics have no
+  authentication. `metrics.bindAddress: 0.0.0.0` does the same without the
+  Prometheus Operator. IPv6-only nodes are not supported.
+- `metrics.prometheusRule` adds the alert `NftablesExporterReadFailed`
+  (warning): `nftables_up == 0` for 5 minutes, the exporter cannot read its
+  node's ruleset. It needs the PodMonitor (the rule selects the `job` label
+  it sets; do not rewrite `job` in `relabelings`).
+- The exporter resolves no name: `dnsPolicy: Default`.
+
+## Compatibility
+
+The values schema is strict: unknown keys fail the install. A breaking change
+to values bumps the chart MAJOR version; deprecations are announced one MINOR
+version ahead. Requires Kubernetes 1.33 or later.
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}

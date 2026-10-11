@@ -1,0 +1,20 @@
+{{ include "nftables-exporter.fullname" . }} exports the nftables ruleset of every matching node to Prometheus.
+
+The pods need a namespace that allows privileged pods (host network, root, NET_ADMIN):
+
+  kubectl label namespace {{ .Release.Namespace }} pod-security.kubernetes.io/enforce=privileged
+
+Check the exporters:
+
+  kubectl -n {{ .Release.Namespace }} get pods -l {{ include "nftables-exporter.selectorLabels" . | replace ": " "=" | replace "\n" "," }}
+{{- $addr := include "nftables-exporter.bindAddress" . }}
+{{- if hasPrefix "127." $addr }}
+
+The metrics listen on {{ $addr }}:{{ .Values.metrics.port }} of each node only (no PodMonitor): scrape
+them from the node, or enable metrics.podMonitor.
+{{- else }}
+
+The metrics listen on {{ $addr }}:{{ .Values.metrics.port }} of each node, without authentication.
+Prometheus must reach that port on the nodes (cloud firewalls, security groups);
+firewall it from untrusted networks.
+{{- end }}

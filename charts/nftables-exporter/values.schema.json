@@ -1,0 +1,591 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "prometheusRule": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "prometheusRule"
+            ]
+          }
+        },
+        "required": [
+          "metrics"
+        ]
+      },
+      "required": [],
+      "then": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "podMonitor": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "podMonitor"
+            ]
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "podMonitor": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "podMonitor"
+            ]
+          }
+        },
+        "required": [
+          "metrics"
+        ]
+      },
+      "required": [],
+      "then": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "bindAddress": {
+                "not": {
+                  "const": "127.0.0.1",
+                  "required": []
+                },
+                "required": []
+              }
+            },
+            "required": []
+          }
+        },
+        "required": []
+      }
+    }
+  ],
+  "properties": {
+    "affinity": {
+      "additionalProperties": true,
+      "description": "- operator: Exists\nAffinity.",
+      "required": [],
+      "type": "object"
+    },
+    "config": {
+      "additionalProperties": true,
+      "description": "Free-form exporter configuration, rendered as its YAML config file (maps merge with these defaults, lists replace). Unknown keys are ignored by the exporter. `nftables_exporter.bind_to` is chart-owned (see `metrics`) and rejected.",
+      "properties": {
+        "nftables_exporter": {
+          "additionalProperties": true,
+          "properties": {
+            "log_level": {
+              "description": "Log level (JSON logs on stdout).",
+              "enum": [
+                "debug",
+                "info",
+                "warn",
+                "error"
+              ],
+              "type": "string"
+            },
+            "nft_location": {
+              "description": "Path of `nft` in the image. The exporter runs `nft -j -t list ruleset` on every scrape.",
+              "pattern": "^/",
+              "type": "string"
+            },
+            "url_path": {
+              "description": "HTTP path of the metrics (every other path answers 404).",
+              "pattern": "^/",
+              "type": "string"
+            }
+          },
+          "propertyNames": {
+            "not": {
+              "const": "bind_to",
+              "required": []
+            },
+            "required": []
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "extraArgs": {
+      "description": "Extra exporter command-line arguments, placed after `--config \u003cfile\u003e`. The exporter has no other option than `--version` (prints and exits): settings belong in `config`.",
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "extraEnv": {
+      "description": "Extra environment variables (list of `EnvVar`). The exporter reads none: only the Go runtime ones apply (`GOMEMLIMIT`, `GODEBUG`, ...).",
+      "items": {
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumeMounts": {
+      "description": "Extra volume mounts for the exporter container.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumes": {
+      "description": "Extra volumes (for example a ruleset JSON for `config.nftables_exporter.fake_nft_json`).",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "fullnameOverride": {
+      "description": "Override the full resource name (default `\u003crelease\u003e-\u003cchart\u003e`).",
+      "type": "string"
+    },
+    "global": {
+      "description": "Global values are values that can be accessed from any chart or subchart by exactly the same name.",
+      "required": [],
+      "type": "object"
+    },
+    "image": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "description": "Image digest, only valid together with `image.tag`.",
+          "pattern": "^(sha256:[a-f0-9]{64})?$",
+          "type": "string"
+        },
+        "pullPolicy": {
+          "description": "Image pull policy.",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ],
+          "type": "string"
+        },
+        "repository": {
+          "description": "Image repository.",
+          "type": "string"
+        },
+        "tag": {
+          "description": "Image tag. Empty: `appVersion` pinned by the digest recorded in `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "imagePullSecrets": {
+      "description": "Image pull secrets (list of `{name: \u003csecret\u003e}`).",
+      "items": {
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "metrics": {
+      "additionalProperties": false,
+      "properties": {
+        "bindAddress": {
+          "description": "Metrics listen address. Empty: `127.0.0.1`, or `0.0.0.0` (every node interface, Prometheus scrapes the node IP) with `podMonitor.enabled`. Set `0.0.0.0` to scrape without the Prometheus Operator. IPv6-only nodes are not supported. The metrics have no authentication: firewall the port from untrusted networks.",
+          "enum": [
+            "",
+            "127.0.0.1",
+            "0.0.0.0"
+          ],
+          "type": "string"
+        },
+        "podMonitor": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Create a Prometheus Operator PodMonitor. The metrics then listen on every node interface: Prometheus must reach the port on the nodes (cloud firewalls, security groups), firewall it from untrusted networks.",
+              "type": "boolean"
+            },
+            "interval": {
+              "description": "Scrape interval (empty: Prometheus default). Every scrape runs `nft` once.",
+              "type": "string"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels (for example `release: kube-prometheus-stack`).",
+              "required": [],
+              "type": "object"
+            },
+            "metricRelabelings": {
+              "description": "Metric relabelings, for example to drop `nftables_rule_*`: one series per counted rule, with its comment and addresses as labels.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "relabelings": {
+              "description": "Relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "scrapeTimeout": {
+              "description": "Scrape timeout (empty: Prometheus default).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "port": {
+          "description": "Metrics listen port. It is a port of every node (host network): the pod does not schedule on a node where it is taken.",
+          "maximum": 65535,
+          "minimum": 1024,
+          "type": "integer"
+        },
+        "prometheusRule": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Create a Prometheus Operator PrometheusRule (alert `NftablesExporterReadFailed`: `nftables_up == 0` for 5 minutes). Needs `podMonitor`: the rule selects the `job` label it sets.",
+              "type": "boolean"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels (for example `release: kube-prometheus-stack`).",
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "minReadySeconds": {
+      "description": "Seconds a new exporter must be Ready before the next node is updated.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "nameOverride": {
+      "description": "yaml-language-server: $schema=values.schema.json\nOverride the chart name used in resource names and labels.",
+      "type": "string"
+    },
+    "nodeSelector": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Node selector. Merged with the default `kubernetes.io/os: linux`: set that key to `null` to drop it.",
+      "properties": {
+        "kubernetes.io/os": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "podAnnotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Pod annotations.",
+      "required": [],
+      "type": "object"
+    },
+    "podLabels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Extra pod labels.",
+      "required": [],
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "additionalProperties": true,
+      "description": "Pod security context. Overrides are merged onto these defaults. Root is required: Kubernetes has no ambient capabilities, so only root keeps `NET_ADMIN` in the `nft` child process.",
+      "properties": {
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "priorityClassName": {
+      "description": "Priority class name.",
+      "type": "string"
+    },
+    "readinessProbe": {
+      "additionalProperties": true,
+      "description": "Readiness probe: the metrics port accepts connections. TCP on purpose: `/metrics` runs `nft` and answers 200 even when it fails (see `nftables_up`). The chart sets `tcpSocket.host` to `metrics.bindAddress` unless it is `0.0.0.0`. No liveness probe: the exporter exits when it cannot listen, and no check can tell a hung process.",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        },
+        "tcpSocket": {
+          "additionalProperties": true,
+          "properties": {
+            "port": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "resources": {
+      "additionalProperties": true,
+      "description": "Resources. Memory grows with the ruleset size: every scrape runs `nft -j` in the pod's cgroup and parses its JSON output. Concurrent scrapes (an HA Prometheus pair) each run their own `nft`. Measured with one scraper: 512Mi holds 33000 ruleset lines (kube-proxy iptables mode, 3000 services with one endpoint each), 256Mi does not; kube-proxy nftables mode needs far less (16 MiB for 3000 services). Size it to `nft list ruleset | wc -l` on your largest node. No CPU limit on purpose. Like the other maps, `limits` and `requests` merge with these defaults: set a key to `null` to drop it.",
+      "properties": {
+        "limits": {
+          "additionalProperties": true,
+          "properties": {
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "requests": {
+          "additionalProperties": true,
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "revisionHistoryLimit": {
+      "description": "Old ControllerRevisions to keep.",
+      "type": "integer"
+    },
+    "securityContext": {
+      "additionalProperties": true,
+      "description": "Container security context. Overrides are merged onto these defaults. `NET_ADMIN` is the only capability, needed to read the node's nftables ruleset. On SELinux nodes that deny `netlink_netfilter_socket`, set `seLinuxOptions: {type: spc_t}`.",
+      "properties": {
+        "allowPrivilegeEscalation": {
+          "type": "boolean"
+        },
+        "capabilities": {
+          "additionalProperties": true,
+          "properties": {
+            "add": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ],
+                "required": []
+              },
+              "type": "array"
+            },
+            "drop": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ],
+                "required": []
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "privileged": {
+          "type": "boolean"
+        },
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "serviceAccount": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "ServiceAccount annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "create": {
+          "description": "Create the ServiceAccount.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "ServiceAccount name. Empty: `\u003cfullname\u003e` (or `default` when `create` is false).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "terminationGracePeriodSeconds": {
+      "description": "Termination grace period. The exporter does not handle SIGTERM: it exits at once.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "tolerations": {
+      "description": "Tolerations. None by default: tainted nodes (control plane) are skipped. Uncomment `operator: Exists` to run on every node.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "updateStrategy": {
+      "additionalProperties": false,
+      "properties": {
+        "rollingUpdate": {
+          "additionalProperties": false,
+          "properties": {
+            "maxUnavailable": {
+              "description": "Nodes updated at once (their metrics are missing for a few seconds).",
+              "required": [],
+              "type": [
+                "integer",
+                "string"
+              ]
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "type": {
+          "description": "DaemonSet update strategy. There is no `maxSurge`: two exporters cannot share the node port.",
+          "enum": [
+            "RollingUpdate",
+            "OnDelete"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    }
+  },
+  "required": [],
+  "title": "nftables-exporter values",
+  "type": "object"
+}

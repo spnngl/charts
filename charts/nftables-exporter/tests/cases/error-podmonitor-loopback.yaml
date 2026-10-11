@@ -1,0 +1,7 @@
+values:
+  metrics:
+    bindAddress: 127.0.0.1
+    podMonitor:
+      enabled: true
+expect:
+  error: bindAddress

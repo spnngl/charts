@@ -1,0 +1,12 @@
+values:
+  metrics:
+    podMonitor:
+      enabled: true
+      interval: 30s
+      scrapeTimeout: 10s
+      labels:
+        release: kube-prometheus-stack
+      metricRelabelings:
+        - action: drop
+          regex: nftables_rule_.*
+          sourceLabels: [__name__]

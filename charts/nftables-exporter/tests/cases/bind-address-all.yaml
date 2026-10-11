@@ -1,0 +1,4 @@
+values:
+  metrics:
+    bindAddress: 0.0.0.0
+    port: 9100

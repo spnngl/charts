@@ -1,0 +1,6 @@
+values:
+  config:
+    nftables_exporter:
+      log_level: trace
+expect:
+  error: log_level

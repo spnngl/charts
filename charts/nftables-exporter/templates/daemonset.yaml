@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/dnsconfig-options: "dnsPolicy Default: the exporter resolves no name."
+    ignore-check.kube-linter.io/host-network: "The exporter reads the node's nftables ruleset, which belongs to the host network namespace."
+    ignore-check.kube-linter.io/no-liveness-probe: "The exporter exits when it cannot listen, and a TCP or /metrics check cannot tell a hung process: a liveness probe would catch nothing."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read; a nodeAffinity would be replaced by a user affinity override."
+    {{- if ne .Values.updateStrategy.type "RollingUpdate" }}
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "updateStrategy.type is a user choice."
+    {{- end }}
+    ignore-check.kube-linter.io/non-isolated-pod: "A host-network pod is not subject to NetworkPolicy."
+    ignore-check.kube-linter.io/run-as-non-root: "Kubernetes has no ambient capabilities: only root keeps NET_ADMIN across the exec of nft, needed to read the node's ruleset."
+  labels:
+    {{- include "nftables-exporter.labels" . | nindent 4 }}
+  name: {{ include "nftables-exporter.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  minReadySeconds: {{ .Values.minReadySeconds }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "nftables-exporter.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- toYaml (merge (dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum)) (deepCopy .Values.podAnnotations)) | nindent 8 }}
+      labels:
+        {{- toYaml (merge (include "nftables-exporter.labels" . | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - --config
+            - /etc/nftables-exporter/config.yaml
+            {{- with .Values.extraArgs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.extraEnv }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: {{ include "nftables-exporter.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          name: nftables-exporter
+          ports:
+            - containerPort: {{ .Values.metrics.port }}
+              name: metrics
+              protocol: TCP
+          readinessProbe:
+            {{- include "nftables-exporter.probe" (dict "probe" .Values.readinessProbe "root" .) | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/nftables-exporter
+              name: config
+              readOnly: true
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      dnsPolicy: Default
+      enableServiceLinks: false
+      hostNetwork: true
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "nftables-exporter.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - configMap:
+            name: {{ include "nftables-exporter.fullname" . }}
+          name: config
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+  updateStrategy:
+    {{- if eq .Values.updateStrategy.type "RollingUpdate" }}
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: {{ .Values.updateStrategy.rollingUpdate.maxUnavailable }}
+    type: RollingUpdate
+    {{- else }}
+    type: {{ .Values.updateStrategy.type }}
+    {{- end }}

@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: GODEBUG
+      value: madvdontneed=1
+  extraArgs:
+    - --version
