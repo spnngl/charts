@@ -104,7 +104,7 @@ the workload `metadata.annotations` (not the pod template):
 
 - **`bumpVersions` reported as invalid** -> `npx renovate-config-validator`
   resolves an old Renovate -> validate with the image pinned in
-  `.github/workflows/renovate.yml` (SKILL step 9), without a file argument
+  `spnngl/.github` (SKILL step 9), without a file argument
   (a file argument is validated as global config).
 
 ## Upstream and cluster

@@ -16,24 +16,14 @@ on:
       - renovate.json5
       - .github/workflows/renovate.yml
 
-permissions:
-  contents: read
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
-    name: Validate Renovate config
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/renovatebot/renovate:44.151.1@sha256:f19b0925b1d6f0750da6f521c1c7886ad058b03341f9e757f6f7e3f96b7864c8
-      options: --user 0
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
-        with:
-          egress-policy: block
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # No file argument on purpose: with one, the validator checks the file as a
-      # *global* config; without, it discovers renovate.json5 as a repository
-      # config.
-      - name: renovate-config-validator --strict
-        run: renovate-config-validator --strict
+    permissions:
+      contents: read
+    uses: spnngl/.github/.github/workflows/renovate.yml@main
