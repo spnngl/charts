@@ -1,0 +1,6 @@
+values:
+  config:
+    nftables_exporter:
+      bind_to: 0.0.0.0:9630
+expect:
+  error: bind_to

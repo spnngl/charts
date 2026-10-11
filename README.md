@@ -18,6 +18,7 @@ Two kinds of charts live here:
 |-------|----------|----------|
 | [`cloudflared`](./charts/cloudflared) | [cloudflare/cloudflared](https://github.com/cloudflare/cloudflared) | Cloudflare Tunnel connector Deployment (HPA, VPA, ServiceMonitor/PodMonitor) |
 | [`cs-firewall-bouncer`](./charts/cs-firewall-bouncer) | [crowdsecurity/cs-firewall-bouncer](https://github.com/crowdsecurity/cs-firewall-bouncer) | CrowdSec firewall bouncer DaemonSet (nftables, PodMonitor/PrometheusRule) |
+| [`nftables-exporter`](./charts/nftables-exporter) | [metal-stack/nftables-exporter](https://github.com/metal-stack/nftables-exporter) | nftables ruleset exporter DaemonSet (counters, chains, rules; PodMonitor/PrometheusRule) |
 | [`agentgateway-crds`](./charts/agentgateway-crds) | [agentgateway/agentgateway](https://github.com/agentgateway/agentgateway) | backends, models, parameters, policies |
 | [`argo-cd-crds`](./charts/argo-cd-crds) | [argoproj/argo-cd](https://github.com/argoproj/argo-cd) | Application, ApplicationSet, AppProject |
 | [`cert-manager-crds`](./charts/cert-manager-crds) | [cert-manager/cert-manager](https://github.com/cert-manager/cert-manager) | certificates, (Cluster)Issuer, ACME orders and challenges |

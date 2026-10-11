@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: nftables-exporter
+description: Prometheus exporter for the nftables ruleset of every node (counters, chains, rules), running as a hardened DaemonSet
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/nftables-exporter
+appVersion: "0.4.5"
+kubeVersion: ">=1.33.0-0"
+home: https://github.com/metal-stack/nftables-exporter
+icon: https://avatars.githubusercontent.com/u/58738008?s=200
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/metal-stack/nftables-exporter
+  - https://github.com/spnngl/images/tree/main/images/nftables-exporter
+keywords:
+  - nftables
+  - prometheus
+  - exporter
+  - firewall
+  - metrics
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: GPL-3.0-only
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # nftables-exporter.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: nftables-exporter
+      image: ghcr.io/spnngl/images/nftables-exporter:0.4.5@sha256:041c2f10d854ec5a331dedb9cfe95b0800e9383e9ef1cb1ff8421dbb299daf0c
+  artifacthub.io/links: |-
+    - name: Upstream repository
+      url: https://github.com/metal-stack/nftables-exporter
+    - name: Image build
+      url: https://github.com/spnngl/images/tree/main/images/nftables-exporter
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/nftables-exporter
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

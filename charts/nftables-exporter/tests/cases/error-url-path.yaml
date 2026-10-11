@@ -1,0 +1,6 @@
+values:
+  config:
+    nftables_exporter:
+      url_path: metrics
+expect:
+  error: url_path

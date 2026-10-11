@@ -1,0 +1,6 @@
+values:
+  metrics:
+    prometheusRule:
+      enabled: true
+expect:
+  error: podMonitor

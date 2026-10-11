@@ -1,0 +1,8 @@
+values:
+  config:
+    nftables_exporter:
+      log_level: debug
+      url_path: /nft
+  metrics:
+    podMonitor:
+      enabled: true

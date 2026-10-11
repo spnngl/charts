@@ -1,0 +1,5 @@
+values:
+  metrics:
+    bindAddress: "::"
+expect:
+  error: bindAddress

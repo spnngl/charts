@@ -1,0 +1,25 @@
+{{- if .Values.metrics.prometheusRule.enabled }}
+{{- $m := .Values.metrics.prometheusRule }}
+{{- $fullname := include "nftables-exporter.fullname" . }}
+{{- /* job label set by the Prometheus Operator for a PodMonitor: <namespace>/<name>. */}}
+{{- $sel := printf "job=%q, namespace=%q" (printf "%s/%s" .Release.Namespace $fullname) .Release.Namespace }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    {{- toYaml (merge (include "nftables-exporter.labels" . | fromYaml) (deepCopy $m.labels)) | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: {{ $fullname }}
+      rules:
+        - alert: NftablesExporterReadFailed
+          annotations:
+            description: {{ printf "%s cannot read the nftables ruleset of its node for 5 minutes: the nftables metrics are missing (check the pod logs: nft path, NET_ADMIN, root)." "{{ $labels.namespace }}/{{ $labels.pod }}" | quote }}
+            summary: nftables exporter cannot read the node ruleset.
+          expr: {{ printf "nftables_up{%s} == 0" $sel | quote }}
+          for: 5m
+          labels:
+            severity: warning
+{{- end }}
