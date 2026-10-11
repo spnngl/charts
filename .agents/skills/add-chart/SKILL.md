@@ -37,7 +37,7 @@ behaviour), and commit as `feat(<name>): …` / `fix(<name>): …`.
 3. **Ask, then stop.** Concise list of open questions: workload kind,
    Secret handling, replicas, resources, opt-in objects (HPA, VPA, PDB,
    NetworkPolicy, ServiceMonitor/PodMonitor, PrometheusRule), `hostUsers`,
-   Renovate automerge and release age, extra values. Repo rule: ask before
+   Renovate overrides (only if the default rule doesn't fit), extra values. Repo rule: ask before
    adding a chart value, tool or workflow. Update the plan; implement only
    when told.
 4. **Scaffold** from the reference chart: `Chart.yaml`, `.helmignore`,
@@ -66,13 +66,15 @@ behaviour), and commit as `feat(<name>): …` / `fix(<name>): …`.
    opt-outs, availability, autoscaling, resources, network, compatibility,
    values table), `helm-docs --chart-search-root charts/<name>`, row in root
    `README.md` "Charts" table (hand-written section, alphabetical).
-9. **Renovate** (`renovate.json5`): the shared custom manager already reads
-   `charts/*/Chart.yaml`. Add a `packageRules` entry: `matchDepNames`,
-   `matchUpdateTypes`, automerge, `minimumReleaseAge` (as answered in step
-   3), `bumpVersions` patch on `charts/<name>/Chart.yaml` (else `ct` rejects
-   the unbumped `version`), and a `description` with the why. Override
-   `versioning` if upstream tags are not `X.Y.Z`. Validate with the Renovate
-   image pinned in the shared workflow
+9. **Renovate** (`renovate.json5`): the shared custom manager reads
+   `charts/*/Chart.yaml` and the default chart-image rule applies to every
+   chart: automerge minor/patch/digest, `minimumReleaseAge` 2 days,
+   `bumpVersions` patch (else `ct` rejects the unbumped `version`). Nothing
+   to add for a new chart. Add a `packageRules` entry (`matchDepNames`,
+   `description` with the why) only to deviate: majors automerged, other
+   `versioning` if upstream tags are not `X.Y.Z`. If you touch
+   `renovate.json5`, validate with the Renovate image pinned in the shared
+   workflow
    https://github.com/spnngl/.github/blob/main/.github/workflows/renovate.yml:
    ```
    docker run --rm -v "$PWD:/usr/src/app:ro" -w /usr/src/app ghcr.io/renovatebot/renovate:<tag> renovate-config-validator --strict
@@ -105,7 +107,8 @@ behaviour), and commit as `feat(<name>): …` / `fix(<name>): …`.
     the containers. Report what stays untested.
 12. **Commit** (read the git-commit skill first), one concern each, each
     passing CI: tooling (if any), CI (if any), `feat(<name>): add chart`
-    (chart + root README row), `chore(renovate): track <name> image`. Leave
+    (chart + root README row), `chore(renovate): ...` (only with an
+    override). Leave
     pushing to the user. On CI failure:
     `gh run view <run-id> --repo spnngl/charts --log-failed`, fix forward
     with a new commit.
