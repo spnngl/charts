@@ -1,16 +1,10 @@
 {
     "$schema": "https://docs.renovatebot.com/renovate-schema.json",
     "description": "Keeps OUR tooling current: pinned tool versions, GitHub Actions SHAs, kind node images. CRD sync is handled by .github/workflows/sync.yml, not Renovate.",
-    "extends": [
-        "config:best-practices",
-        ":semanticCommits",
-        "helpers:pinGitHubActionDigests"
-    ],
+    "extends": ["github>spnngl/.github:renovate.default.json5"],
     "baseBranchPatterns": ["main"],
-    "timezone": "Europe/Paris",
     "schedule": ["at any time"],
     "automergeSchedule": ["at any time"],
-    "labels": ["dependencies"],
     "enabledManagers": ["github-actions", "custom.regex"],
     "customManagers": [
         {
@@ -46,8 +40,8 @@
     ],
     "packageRules": [
         {
-            "description": "Tool and Action updates: automerge minor/patch once CI is green.",
-            "matchManagers": ["github-actions", "custom.regex"],
+            "description": "Tool and image updates: automerge minor/patch once CI is green. GitHub Actions: see the shared preset.",
+            "matchManagers": ["custom.regex"],
             "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
             "automerge": true
         },
@@ -97,14 +91,6 @@
                     "matchStrings": ["\\nversion:\\s*(?<version>[^\\s]+)"]
                 }
             ]
-        },
-        // Renovate updates itself A LOT, keep some stability by updating once a
-        // week.
-        {
-            "description": "Renovate image (validator workflow): weekly. Automerge of minor/patch/digest comes from the first rule.",
-            "matchDepNames": ["ghcr.io/renovatebot/renovate"],
-            "schedule": ["before 5am on Monday"],
-            "automergeSchedule": ["before 5am on Monday"]
         }
     ]
 }
