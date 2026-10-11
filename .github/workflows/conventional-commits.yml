@@ -10,22 +10,17 @@ on:
       - reopened
       - edited
 
-permissions:
-  contents: read
-  pull-requests: read
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
-    name: Conventional Commits
-    runs-on: ubuntu-latest
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
-        with:
-          egress-policy: block
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: webiny/action-conventional-commits@7f91b1595ca1951cdb671ddc9f07a49081ec5b69 # v1.4.2
-        with:
-          GITHUB_TOKEN: ${{ github.token }}
-          # Same list as the commit conventions in AGENTS.md / CONTRIBUTING.md.
-          allowed-commit-types: "feat,fix,docs,style,refactor,perf,test,build,ci,chore,revert"
+    permissions:
+      contents: read
+      pull-requests: read
+    # The default commit types are the commit conventions in AGENTS.md /
+    # CONTRIBUTING.md.
+    uses: spnngl/.github/.github/workflows/conventional-commits.yml@main

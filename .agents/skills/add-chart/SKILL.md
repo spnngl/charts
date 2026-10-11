@@ -72,7 +72,8 @@ behaviour), and commit as `feat(<name>): …` / `fix(<name>): …`.
    3), `bumpVersions` patch on `charts/<name>/Chart.yaml` (else `ct` rejects
    the unbumped `version`), and a `description` with the why. Override
    `versioning` if upstream tags are not `X.Y.Z`. Validate with the Renovate
-   image pinned in `.github/workflows/renovate.yml`:
+   image pinned in the shared workflow
+   https://github.com/spnngl/.github/blob/main/.github/workflows/renovate.yml:
    ```
    docker run --rm -v "$PWD:/usr/src/app:ro" -w /usr/src/app ghcr.io/renovatebot/renovate:<tag> renovate-config-validator --strict
    ```
