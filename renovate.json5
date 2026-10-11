@@ -66,31 +66,24 @@
             "automerge": true
         },
         {
-            "description": "cloudflared: calver releases, so every update type is automerged. CI never starts the binary (replicaCount 0): wait 2 days for upstream regressions or re-tags to surface. bumpVersions raises the chart `version` so ct check-version-increment passes.",
-            "matchDepNames": ["docker.io/cloudflare/cloudflared"],
-            "matchUpdateTypes": ["major", "minor", "patch", "digest"],
-            "automerge": true,
+            "description": "Chart images: 2-day release age (skipped where the registry has no timestamp: ghcr.io, quay.io), chart `version` patch bump for ct.",
+            "matchManagers": ["custom.regex"],
+            "matchFileNames": ["charts/*/Chart.yaml"],
             "minimumReleaseAge": "2 days",
+            "minimumReleaseAgeBehaviour": "timestamp-optional",
             "bumpVersions": [
                 {
-                    "filePatterns": ["charts/cloudflared/Chart.yaml"],
+                    "filePatterns": ["{{packageFileDir}}/Chart.yaml"],
                     "bumpType": "patch",
                     "matchStrings": ["\\nversion:\\s*(?<version>[^\\s]+)"]
                 }
             ]
         },
         {
-            "description": "cs-firewall-bouncer: automerge every update type (the image is built from the upstream release and rebuilt weekly under the same tag, so also digests) as soon as CI is green. CI never starts the bouncer (no LAPI, no node selected). bumpVersions raises the chart `version` so ct check-version-increment passes.",
-            "matchDepNames": ["ghcr.io/spnngl/images/cs-firewall-bouncer"],
-            "matchUpdateTypes": ["minor", "patch", "digest"],
-            "automerge": true,
-            "bumpVersions": [
-                {
-                    "filePatterns": ["charts/cs-firewall-bouncer/Chart.yaml"],
-                    "bumpType": "patch",
-                    "matchStrings": ["\\nversion:\\s*(?<version>[^\\s]+)"]
-                }
-            ]
+            "description": "cloudflared: calver (major = year), automerge majors too.",
+            "matchDepNames": ["docker.io/cloudflare/cloudflared"],
+            "matchUpdateTypes": ["major"],
+            "automerge": true
         }
     ]
 }

@@ -132,8 +132,10 @@ CRDs live in `templates/`, not `crds/`, so `helm upgrade` updates them.
   `<image>:<tag>@sha256:<digest>`; templates read the image from it, so the
   chart pins one digest in one place. `appVersion` = the image tag.
 - Updates: a Renovate custom manager bumps `appVersion` and the annotation in
-  one PR; a per-chart package rule decides automerge and release age, and
-  `bumpVersions` raises the chart `version` PATCH.
+  one PR; one package rule for all charts automerges minor/patch/digest
+  after a 2-day release age (none on ghcr.io/quay.io: no release
+  timestamp) and `bumpVersions` raises the chart `version` PATCH. Per-chart
+  rules only for exceptions (cloudflared: calver majors).
 - `values.schema.json` is generated from `values.yaml` annotations by
   helm-schema; `README.md` by helm-docs from `README.md.gotmpl`. CI fails on
   drift of either.
