@@ -139,9 +139,10 @@ CRDs live in `templates/`, not `crds/`, so `helm upgrade` updates them.
   drift of either.
 - Tests: `tooling/charttest` renders each `tests/cases/<case>.yaml`, compares
   it with `tests/golden/<case>.yaml` (or with the expected error), then runs
-  kubeconform and kube-linter on it. `pr.yml` also runs kubeconform and
-  kube-linter on the default values, and `ct install` with
-  `ci/*-values.yaml`.
+  kubeconform and kube-linter on it. Renders pin `version`, `appVersion` and
+  the image digest, so Renovate updates leave goldens unchanged. `pr.yml`
+  also runs kubeconform and kube-linter on the default values, and
+  `ct install` with `ci/*-values.yaml`.
 - Reference implementations: `charts/cloudflared/` (Deployment),
   `charts/cs-firewall-bouncer/` (DaemonSet, host network).
 

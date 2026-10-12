@@ -10,8 +10,8 @@ metadata:
     app.kubernetes.io/instance: cs-firewall-bouncer
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cs-firewall-bouncer
-    app.kubernetes.io/version: "0.0.38"
-    helm.sh/chart: cs-firewall-bouncer-0.1.0
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cs-firewall-bouncer-0.0.0
   name: csfb
   namespace: cs-firewall-bouncer
 ---
@@ -29,8 +29,8 @@ metadata:
     app.kubernetes.io/instance: cs-firewall-bouncer
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cs-firewall-bouncer
-    app.kubernetes.io/version: "0.0.38"
-    helm.sh/chart: cs-firewall-bouncer-0.1.0
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cs-firewall-bouncer-0.0.0
   name: csfb
   namespace: cs-firewall-bouncer
 ---
@@ -49,8 +49,8 @@ metadata:
     app.kubernetes.io/instance: cs-firewall-bouncer
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cs-firewall-bouncer
-    app.kubernetes.io/version: "0.0.38"
-    helm.sh/chart: cs-firewall-bouncer-0.1.0
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cs-firewall-bouncer-0.0.0
   name: csfb
   namespace: cs-firewall-bouncer
 spec:
@@ -63,15 +63,15 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: c2d55da97dd07036451104f1290157350be8be5f814d46066760f96e1f768be8
+        checksum/config: 7184bcde1473934bdf69edb58031b5eecb1cba3ca1470e571dbf1ea9cef4012a
         example.com/note: hello
       labels:
         app.kubernetes.io/instance: cs-firewall-bouncer
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: cs-firewall-bouncer
-        app.kubernetes.io/version: 0.0.38
+        app.kubernetes.io/version: 0.0.0
         example.com/team: edge
-        helm.sh/chart: cs-firewall-bouncer-0.1.0
+        helm.sh/chart: cs-firewall-bouncer-0.0.0
     spec:
       automountServiceAccountToken: false
       containers:
@@ -92,7 +92,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
-          image: "ghcr.io/spnngl/images/cs-firewall-bouncer:0.0.38@sha256:77b75bd70eed82b89b1dd19e93c45f43a527da196f044e5dbd3fa3d485d516a6"
+          image: "ghcr.io/spnngl/images/cs-firewall-bouncer:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 3
@@ -184,8 +184,8 @@ metadata:
     app.kubernetes.io/instance: cs-firewall-bouncer
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cs-firewall-bouncer
-    app.kubernetes.io/version: 0.0.38
-    helm.sh/chart: cs-firewall-bouncer-0.1.0
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: cs-firewall-bouncer-0.0.0
   name: csfb
   namespace: cs-firewall-bouncer
 spec:

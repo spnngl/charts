@@ -73,6 +73,8 @@ the workload `metadata.annotations` (not the pod template):
   passes values to Helm as JSON.
 - Blank lines are dropped from renders (Helm 3.22 vs 3.20/4 differ there).
 - `--update` rewrites goldens: review `git diff`.
+- Goldens show version and appVersion `0.0.0` and an all-zero digest: the
+  runner pins them, so bumps never touch goldens.
 - kubeconform fetches CRD schemas; `CHARTTEST_OFFLINE=1` skips it.
 
 ## CI (ct, kind, Helm)
