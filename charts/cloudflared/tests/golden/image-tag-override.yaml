@@ -7,8 +7,8 @@ metadata:
     app.kubernetes.io/instance: cloudflared
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudflared
-    app.kubernetes.io/version: "2026.10.0"
-    helm.sh/chart: cloudflared-0.2.0
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cloudflared-0.0.0
   name: cloudflared
   namespace: cloudflared
 spec:
@@ -32,8 +32,8 @@ metadata:
     app.kubernetes.io/instance: cloudflared
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudflared
-    app.kubernetes.io/version: "2026.10.0"
-    helm.sh/chart: cloudflared-0.2.0
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cloudflared-0.0.0
   name: cloudflared
   namespace: cloudflared
 ---
@@ -50,8 +50,8 @@ metadata:
     app.kubernetes.io/instance: cloudflared
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudflared
-    app.kubernetes.io/version: "2026.10.0"
-    helm.sh/chart: cloudflared-0.2.0
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cloudflared-0.0.0
   name: cloudflared
   namespace: cloudflared
 ---
@@ -66,8 +66,8 @@ metadata:
     app.kubernetes.io/instance: cloudflared
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cloudflared
-    app.kubernetes.io/version: "2026.10.0"
-    helm.sh/chart: cloudflared-0.2.0
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cloudflared-0.0.0
   name: cloudflared
   namespace: cloudflared
 spec:
@@ -86,13 +86,13 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: f2f01f5b4da6a27802525d21c0da80f8d955e9cf901edd8bb815522ddd5a286f
+        checksum/config: a3eb91b10689573bfd77deff12a5c20b6c16de15d4415252f7b336d5c6b1cc7a
       labels:
         app.kubernetes.io/instance: cloudflared
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: cloudflared
-        app.kubernetes.io/version: 2026.10.0
-        helm.sh/chart: cloudflared-0.2.0
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: cloudflared-0.0.0
     spec:
       affinity:
         podAntiAffinity:

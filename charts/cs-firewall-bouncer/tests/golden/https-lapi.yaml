@@ -8,8 +8,8 @@ metadata:
     app.kubernetes.io/instance: cs-firewall-bouncer
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cs-firewall-bouncer
-    app.kubernetes.io/version: "0.0.38"
-    helm.sh/chart: cs-firewall-bouncer-0.1.0
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cs-firewall-bouncer-0.0.0
   name: cs-firewall-bouncer
   namespace: cs-firewall-bouncer
 ---
@@ -28,8 +28,8 @@ metadata:
     app.kubernetes.io/instance: cs-firewall-bouncer
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cs-firewall-bouncer
-    app.kubernetes.io/version: "0.0.38"
-    helm.sh/chart: cs-firewall-bouncer-0.1.0
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cs-firewall-bouncer-0.0.0
   name: cs-firewall-bouncer
   namespace: cs-firewall-bouncer
 ---
@@ -48,8 +48,8 @@ metadata:
     app.kubernetes.io/instance: cs-firewall-bouncer
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cs-firewall-bouncer
-    app.kubernetes.io/version: "0.0.38"
-    helm.sh/chart: cs-firewall-bouncer-0.1.0
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cs-firewall-bouncer-0.0.0
   name: cs-firewall-bouncer
   namespace: cs-firewall-bouncer
 spec:
@@ -62,13 +62,13 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 155eb9c23d2e3fe8c272a29d6bb4548327377ce00013ba916e36e3acfbd651fe
+        checksum/config: 174bd55f035911b6b427eabe67f7105149b1eca91427ec3b6ed60116972a403c
       labels:
         app.kubernetes.io/instance: cs-firewall-bouncer
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: cs-firewall-bouncer
-        app.kubernetes.io/version: 0.0.38
-        helm.sh/chart: cs-firewall-bouncer-0.1.0
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: cs-firewall-bouncer-0.0.0
     spec:
       automountServiceAccountToken: false
       containers:
@@ -85,7 +85,7 @@ spec:
               value: "https://crowdsec.example.com:8080"
             - name: GOMEMLIMIT
               value: "241591910B"
-          image: "ghcr.io/spnngl/images/cs-firewall-bouncer:0.0.38@sha256:77b75bd70eed82b89b1dd19e93c45f43a527da196f044e5dbd3fa3d485d516a6"
+          image: "ghcr.io/spnngl/images/cs-firewall-bouncer:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 3

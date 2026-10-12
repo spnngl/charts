@@ -11,12 +11,33 @@
 #   nu tooling/charttest/mod.nu run --all --update   # rewrite golden files
 #
 # CHARTTEST_OFFLINE=1 skips kubeconform (it fetches schemas).
+#
+# Charts render with version, appVersion and image digests pinned (see
+# `pin-chart`), so goldens do not change when Renovate or a release bumps them.
 
 use ../crdgen/config.nu [REPO_ROOT]
 use ../crdgen/exec.nu [run-checked]
 
 # Schemas for the CRDs the charts render (ServiceMonitor, PodMonitor, VPA).
 const CRD_CATALOG = 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+
+# Version, appVersion and image digest every chart renders with.
+const PINNED_VERSION = "0.0.0"
+const PINNED_DIGEST = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+
+# Copy `chart_dir` into `tmp_dir` with version, appVersion and every image
+# digest of Chart.yaml pinned; returns the copy (same basename: same release name).
+def pin-chart [chart_dir: path, tmp_dir: path]: nothing -> path {
+  let copy = ($tmp_dir | path join ($chart_dir | path basename))
+  cp -r $chart_dir $copy
+  let chart_file = ($copy | path join "Chart.yaml")
+  open --raw $chart_file
+  | str replace -r '(?m)^version:.*$' $"version: ($PINNED_VERSION)"
+  | str replace -r '(?m)^appVersion:.*$' $"appVersion: \"($PINNED_VERSION)\""
+  | str replace -a -r 'sha256:[0-9a-f]{64}' $PINNED_DIGEST
+  | save -f $chart_file
+  $copy
+}
 
 # Run `helm template` for `chart_dir` with `values`; never throws.
 def render [chart_dir: path, values: record]: nothing -> record<exit_code: int, stdout: string, stderr: string> {
@@ -58,21 +79,25 @@ def check-render [rendered: record, golden: path, update: bool]: nothing -> noth
 
 # Run every case of one chart; returns one result per case.
 def run-chart [chart_dir: path, update: bool]: nothing -> list<record<name: string, ok: bool, error: string>> {
-  glob ($chart_dir | path join "tests" "cases" "*.yaml") | sort | each {|file|
-    let name = ($file | path parse | get stem)
-    let case = (open $file)
-    let result = (try {
-      let rendered = (render $chart_dir $case.values)
-      match ($case.expect?.error?) {
-        null => { check-render $rendered ($chart_dir | path join "tests" "golden" $"($name).yaml") $update }
-        $expected => { check-error $rendered $expected }
-      }
-      {ok: true, error: ""}
-    } catch {|e| {ok: false, error: $e.msg} })
-    print $"(if $result.ok { 'PASS' } else { 'FAIL' })  ($chart_dir | path basename)/($name)"
-    if not $result.ok { print $"      ($result.error | str replace -a "\n" "\n      ")" }
-    {name: $name, ...$result}
-  }
+  let tmp = (mktemp -d --tmpdir)
+  try {
+    let pinned = (pin-chart $chart_dir $tmp)
+    glob ($chart_dir | path join "tests" "cases" "*.yaml") | sort | each {|file|
+      let name = ($file | path parse | get stem)
+      let case = (open $file)
+      let result = (try {
+        let rendered = (render $pinned $case.values)
+        match ($case.expect?.error?) {
+          null => { check-render $rendered ($chart_dir | path join "tests" "golden" $"($name).yaml") $update }
+          $expected => { check-error $rendered $expected }
+        }
+        {ok: true, error: ""}
+      } catch {|e| {ok: false, error: $e.msg} })
+      print $"(if $result.ok { 'PASS' } else { 'FAIL' })  ($chart_dir | path basename)/($name)"
+      if not $result.ok { print $"      ($result.error | str replace -a "\n" "\n      ")" }
+      {name: $name, ...$result}
+    } | collect # finish every render before the finally removes the copy
+  } finally { rm -rf $tmp }
 }
 
 # Render-test the cases of a hand-written chart.
