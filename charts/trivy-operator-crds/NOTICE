@@ -1,0 +1,13 @@
+trivy-operator
+Copyright 2019-2022 Aqua Security Software Ltd.
+
+This product includes software developed by Aqua Security (https://aquasec.com).
+
+----
+
+The CustomResourceDefinition manifests under templates/ were copied from
+  https://github.com/aquasecurity/trivy-operator
+at tag v0.35.0 (commit 5171971e35c7b1d8a0e47a94a2326da4d97ff417), path(s): deploy/helm/crds
+and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
+added; server-side metadata and upstream Helm release metadata were removed.
+Upstream license: Apache-2.0 (see LICENSE in this directory).
