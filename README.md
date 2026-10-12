@@ -26,6 +26,7 @@ Two kinds of charts live here:
 | [`cilium-crds`](./charts/cilium-crds) | [cilium/cilium](https://github.com/cilium/cilium) | cilium.io v2 + v2alpha1 |
 | [`cluster-api-crds`](./charts/cluster-api-crds) | [kubernetes-sigs/cluster-api](https://github.com/kubernetes-sigs/cluster-api) | core CRDs (clusters, machines, ClusterClass, IPAM, runtime) |
 | [`external-dns-crds`](./charts/external-dns-crds) | [kubernetes-sigs/external-dns](https://github.com/kubernetes-sigs/external-dns) | DNSEndpoint, DNSRecord |
+| [`external-snapshotter-crds`](./charts/external-snapshotter-crds) | [kubernetes-csi/external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter) | VolumeSnapshot, VolumeGroupSnapshot (+ classes and contents) |
 | [`external-secrets-crds`](./charts/external-secrets-crds) | [external-secrets/external-secrets](https://github.com/external-secrets/external-secrets) | stores, (Cluster)ExternalSecret, (Cluster)PushSecret, generators |
 | [`gateway-api-crds`](./charts/gateway-api-crds) | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | standard channel |
 | [`gateway-api-exp-crds`](./charts/gateway-api-exp-crds) | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | experimental channel (mutually exclusive with the standard chart) |
