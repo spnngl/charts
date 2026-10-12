@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=./schema.json
+name: external-snapshotter-crds
+description: CustomResourceDefinitions for the Kubernetes CSI external-snapshotter (VolumeSnapshot and VolumeGroupSnapshot APIs)
+upstream:
+  repo: https://github.com/kubernetes-csi/external-snapshotter
+  homepage: https://kubernetes-csi.github.io/docs/snapshot-controller.html
+  license: Apache-2.0
+version:
+  # Repo also carries `client/v*` tags (Go client module) and pre-releases;
+  # this pattern excludes them.
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v8.6.0
+sources:
+  # controller-gen output for both API groups; the kustomization.yaml next to
+  # them only lists these files, without patches.
+  - kind: git-path
+    path: client/config/crd
+transform:
+  include: []
+  exclude: []
+  patches: []
