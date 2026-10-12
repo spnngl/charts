@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=./schema.json
+name: kubemod-crds
+description: CustomResourceDefinitions for KubeMod (ModRule)
+upstream:
+  repo: https://github.com/kubemod/kubemod
+  homepage: https://github.com/kubemod/kubemod
+  icon: https://raw.githubusercontent.com/kubemod/kubemod/master/misc/logo.svg
+  license: BSD-3-Clause
+version:
+  # Repo also carries `-rc-*` pre-release tags; this pattern excludes them.
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v0.21.0
+sources:
+  # controller-gen output. The sibling kustomization only has commented-out
+  # webhook/cainjection patches, so the bases are what ships.
+  - kind: git-path
+    path: config/crd/bases
+transform:
+  include: []
+  exclude: []
+  patches: []
