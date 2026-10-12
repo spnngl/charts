@@ -1,7 +1,5 @@
 # cs-firewall-bouncer
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.0.38](https://img.shields.io/badge/AppVersion-0.0.38-informational?style=flat-square)
-
 CrowdSec firewall bouncer (nftables mode) running as a hardened DaemonSet that bans CrowdSec decisions in every node's netfilter
 
 Runs the [CrowdSec firewall bouncer](https://github.com/crowdsecurity/cs-firewall-bouncer)
