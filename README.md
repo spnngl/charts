@@ -28,6 +28,7 @@ Two kinds of charts live here:
 | [`external-dns-crds`](./charts/external-dns-crds) | [kubernetes-sigs/external-dns](https://github.com/kubernetes-sigs/external-dns) | DNSEndpoint, DNSRecord |
 | [`external-snapshotter-crds`](./charts/external-snapshotter-crds) | [kubernetes-csi/external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter) | VolumeSnapshot, VolumeGroupSnapshot (+ classes and contents) |
 | [`external-secrets-crds`](./charts/external-secrets-crds) | [external-secrets/external-secrets](https://github.com/external-secrets/external-secrets) | stores, (Cluster)ExternalSecret, (Cluster)PushSecret, generators |
+| [`flux-crds`](./charts/flux-crds) | [fluxcd/flux2](https://github.com/fluxcd/flux2) | all controllers: sources, Kustomization, HelmRelease, notifications, image automation, ArtifactGenerator |
 | [`gateway-api-crds`](./charts/gateway-api-crds) | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | standard channel |
 | [`gateway-api-exp-crds`](./charts/gateway-api-exp-crds) | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | experimental channel (mutually exclusive with the standard chart) |
 | [`kubemod-crds`](./charts/kubemod-crds) | [kubemod/kubemod](https://github.com/kubemod/kubemod) | ModRule |
@@ -83,6 +84,10 @@ or the chart's Artifact Hub page.
   (descriptions, titles, examples): with it, the release exceeds Helm's default release
   storage (one Secret, 1 MiB). Validation is unchanged; `kubectl explain`
   shows field types only.
+- `flux-crds` is for Flux installs that leave CRDs alone. `flux install`,
+  `flux bootstrap` and the Flux Operator apply their own CRDs: do not combine
+  them with this chart. Its CRDs carry `app.kubernetes.io/part-of: flux`, which
+  `flux check` needs, so `flux uninstall` deletes them too.
 
 ## Verifying what you install
 
