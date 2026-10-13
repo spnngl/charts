@@ -1,0 +1,6 @@
+The CustomResourceDefinition manifests under templates/ were copied from
+  https://github.com/fluxcd/flux2
+at tag v2.9.6 (commit b9c17924adb533d3617ec7de97a7b0f4acc07b39), path(s): manifests/crds
+and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
+added; server-side metadata and upstream Helm release metadata were removed.
+Upstream license: Apache-2.0 (see LICENSE in this directory).

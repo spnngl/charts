@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=./schema.json
+name: flux-crds
+description: CustomResourceDefinitions for Flux (sources, kustomizations, Helm releases, notifications, image automation, artifact generators)
+upstream:
+  repo: https://github.com/fluxcd/flux2
+  homepage: https://fluxcd.io
+  icon: https://raw.githubusercontent.com/fluxcd/website/main/static/img/flux-icon.svg
+  license: Apache-2.0
+version:
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v2.9.6
+sources:
+  # flux2 holds no CRDs in-tree: this kustomization pulls the
+  # `<controller>.crds.yaml` release asset of every controller (source,
+  # kustomize, helm, notification, image-reflector, image-automation,
+  # source-watcher) at the versions bundled with this Flux release.
+  - kind: kustomize
+    path: manifests/crds
+transform:
+  include: []
+  exclude: []
+  patches:
+    - op: add
+      path: /metadata/labels/app.kubernetes.io~1part-of
+      value: flux
+      reason: >-
+        Flux's installer sets this label and the flux CLI selects CRDs by it
+        (`flux check`, `flux uninstall`); the upstream CRD files lack it.
