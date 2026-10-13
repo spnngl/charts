@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for the Kubernetes CSI external-snapshotter
   (VolumeSnapshot and VolumeGroupSnapshot APIs)
 type: application
-version: 8.6.0
-appVersion: 8.6.0
+version: 8.7.0
+appVersion: 8.7.0
 kubeVersion: ">=1.25.0-0"
 home: https://kubernetes-csi.github.io/docs/snapshot-controller.html
 sources:
@@ -71,13 +71,13 @@ annotations:
       url: https://github.com/kubernetes-csi/external-snapshotter
     - name: Upstream CRD source (client/config/crd)
       url: >-
-        https://github.com/kubernetes-csi/external-snapshotter/tree/v8.6.0/client/config/crd
+        https://github.com/kubernetes-csi/external-snapshotter/tree/v8.7.0/client/config/crd
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/external-snapshotter-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/kubernetes-csi/external-snapshotter
-  charts.spnngl.io/upstream-tag: v8.6.0
-  charts.spnngl.io/upstream-commit: 78e32cd84e0abec2621924a30e38c755f93e180a
+  charts.spnngl.io/upstream-tag: v8.7.0
+  charts.spnngl.io/upstream-commit: 9cc6050ab00a0c56d84ba0279e518a00367363e7
   artifacthub.io/changes: |
-    - Initial release, CRDs from upstream v8.6.0
+    - Upstream CRDs updated from v8.6.0 to v8.7.0
