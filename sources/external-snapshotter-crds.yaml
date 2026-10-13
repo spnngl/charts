@@ -10,7 +10,7 @@ version:
   # this pattern excludes them.
   tagPattern: '^v(\d+\.\d+\.\d+)$'
   allow: all
-  current: v8.6.0
+  current: v8.7.0
 sources:
   # controller-gen output for both API groups; the kustomization.yaml next to
   # them only lists these files, without patches.

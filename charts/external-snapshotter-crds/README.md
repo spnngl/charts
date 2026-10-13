@@ -5,7 +5,7 @@
 CustomResourceDefinitions for the Kubernetes CSI external-snapshotter (VolumeSnapshot and VolumeGroupSnapshot APIs).
 
 CRDs are copied verbatim from [kubernetes-csi/external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)
-at tag [`v8.6.0`](https://github.com/kubernetes-csi/external-snapshotter/tree/v8.6.0) (commit `78e32cd84e0abec2621924a30e38c755f93e180a`),
+at tag [`v8.7.0`](https://github.com/kubernetes-csi/external-snapshotter/tree/v8.7.0) (commit `9cc6050ab00a0c56d84ba0279e518a00367363e7`),
 path(s) `client/config/crd`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
