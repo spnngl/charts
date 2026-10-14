@@ -3,7 +3,7 @@ apiVersion: v2
 name: cs-firewall-bouncer
 description: CrowdSec firewall bouncer (nftables mode) running as a hardened DaemonSet that bans CrowdSec decisions in every node's netfilter
 type: application
-version: 0.1.7
+version: 0.1.8
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/cs-firewall-bouncer
 appVersion: "0.0.38"
 kubeVersion: ">=1.33.0-0"
@@ -28,7 +28,7 @@ annotations:
   # cs-firewall-bouncer.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: cs-firewall-bouncer
-      image: ghcr.io/spnngl/images/cs-firewall-bouncer:0.0.38@sha256:0dcdb620f06a5c5aafb394e3abebe9aa871a0d1b76f72a81702cc31e55a66a5b
+      image: ghcr.io/spnngl/images/cs-firewall-bouncer:0.0.38@sha256:cdbc4138ef0d20561faf821385e98ec68b2a4b28f82297bc6bb32ca78de09052
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://docs.crowdsec.net/u/bouncers/firewall/
