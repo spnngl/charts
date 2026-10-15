@@ -9,7 +9,7 @@ upstream:
 version:
   tagPattern: '^v(\d+\.\d+\.\d+)$'
   allow: all
-  current: v1.20.2
+  current: v1.20.3
 sources:
   # Generated CRDs embedded in the Cilium operator binary; v2/ and v2alpha1/.
   - kind: git-path
