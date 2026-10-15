@@ -8,7 +8,7 @@ nushell = "0.116.1"
 helm = "3.22.0"
 # Helm 4 (server-side apply by default): pr.yml install tests only.
 # renovate: datasource=github-releases depName=helm/helm
-helm4 = "4.3.0"
+helm4 = "4.3.1"
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize extractVersion=^kustomize/v(?<version>.*)$
 kustomize = "5.8.3"
 # renovate: datasource=github-releases depName=yannh/kubeconform
