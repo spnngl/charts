@@ -5,7 +5,7 @@
 CustomResourceDefinitions for External Secrets Operator (stores, external/push secrets, generators).
 
 CRDs are copied verbatim from [external-secrets/external-secrets](https://github.com/external-secrets/external-secrets)
-at tag [`v2.12.0`](https://github.com/external-secrets/external-secrets/tree/v2.12.0) (commit `9d17906e8e4c5532ffe513f72273df03b7b07bc6`),
+at tag [`v2.13.0`](https://github.com/external-secrets/external-secrets/tree/v2.13.0) (commit `a82d14894fbca270a5e87610fa1efd907dbae341`),
 path(s) `config/crds/bases`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
