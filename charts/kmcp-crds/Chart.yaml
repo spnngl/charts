@@ -4,8 +4,8 @@ apiVersion: v2
 name: kmcp-crds
 description: CustomResourceDefinitions for kmcp (MCPServer, used by kagent)
 type: application
-version: 0.3.0
-appVersion: 0.3.0
+version: 0.4.0
+appVersion: 0.4.0
 kubeVersion: ">=1.25.0-0"
 home: https://kagent.dev/docs/kmcp
 icon: https://avatars.githubusercontent.com/u/195942545?s=200&v=4
@@ -32,13 +32,13 @@ annotations:
     - name: Upstream repository
       url: https://github.com/kagent-dev/kmcp
     - name: Upstream CRD source (config/crd/bases)
-      url: https://github.com/kagent-dev/kmcp/tree/v0.3.0/config/crd/bases
+      url: https://github.com/kagent-dev/kmcp/tree/v0.4.0/config/crd/bases
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/kmcp-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/kagent-dev/kmcp
-  charts.spnngl.io/upstream-tag: v0.3.0
-  charts.spnngl.io/upstream-commit: 1cec6470560fa8ccc43de3d95c7567993ae13e95
+  charts.spnngl.io/upstream-tag: v0.4.0
+  charts.spnngl.io/upstream-commit: 8f26f0474e1e36699673246512b7040bd8b63775
   artifacthub.io/changes: |
-    - Initial release, CRDs from upstream v0.3.0
+    - Upstream CRDs updated from v0.3.0 to v0.4.0

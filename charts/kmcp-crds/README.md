@@ -5,7 +5,7 @@
 CustomResourceDefinitions for kmcp (MCPServer, used by kagent).
 
 CRDs are copied verbatim from [kagent-dev/kmcp](https://github.com/kagent-dev/kmcp)
-at tag [`v0.3.0`](https://github.com/kagent-dev/kmcp/tree/v0.3.0) (commit `1cec6470560fa8ccc43de3d95c7567993ae13e95`),
+at tag [`v0.4.0`](https://github.com/kagent-dev/kmcp/tree/v0.4.0) (commit `8f26f0474e1e36699673246512b7040bd8b63775`),
 path(s) `config/crd/bases`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
