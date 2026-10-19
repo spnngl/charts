@@ -18,6 +18,7 @@ modifications made, and attribution in its README.
 - flux-crds: CRDs from https://github.com/fluxcd/flux2 (Apache-2.0)
 - gateway-api-crds: CRDs from https://github.com/kubernetes-sigs/gateway-api (Apache-2.0)
 - gateway-api-exp-crds: CRDs from https://github.com/kubernetes-sigs/gateway-api (Apache-2.0)
+- kagent-crds: CRDs from https://github.com/kagent-dev/kagent (Apache-2.0)
 - kubemod-crds: CRDs from https://github.com/kubemod/kubemod (BSD-3-Clause)
 - kyverno-crds: CRDs from https://github.com/kyverno/kyverno (Apache-2.0)
 - orc-crds: CRDs from https://github.com/k-orc/openstack-resource-controller (Apache-2.0)
