@@ -12,7 +12,7 @@ version:
   allow: all
   # First release pinned to the kmcp version kagent v0.10.3 requires
   # (go.mod); later versions come from sync.
-  current: v0.3.0
+  current: v0.4.0
 sources:
   # controller-gen output; upstream's helm/kmcp-crds chart copies it.
   - kind: git-path
