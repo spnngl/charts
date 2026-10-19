@@ -1,0 +1,6 @@
+The CustomResourceDefinition manifests under templates/ were copied from
+  https://github.com/agent-substrate/substrate
+at tag v0.5.0 (commit e8d40c33f96f4b7a4984bfea7334a36ab5b45b7b), path(s): manifests/ate-install/generated
+and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
+added; server-side metadata and upstream Helm release metadata were removed.
+Upstream license: Apache-2.0 (see LICENSE in this directory).

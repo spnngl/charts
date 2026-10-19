@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=./schema.json
+name: agent-substrate-crds
+description: CustomResourceDefinitions for Agent Substrate (sandbox configs, worker pools, CSI driver configs)
+upstream:
+  repo: https://github.com/agent-substrate/substrate
+  homepage: https://github.com/agent-substrate/substrate
+  icon: https://raw.githubusercontent.com/agent-substrate/substrate/refs/heads/main/logo/ate-logo.svg
+  license: Apache-2.0
+version:
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v0.5.0
+sources:
+  # controller-gen output (role.yaml next to it is dropped).
+  - kind: git-path
+    path: manifests/ate-install/generated
+transform:
+  include: []
+  exclude: []
+  patches: []
