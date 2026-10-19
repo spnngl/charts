@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=./schema.json
+name: kmcp-crds
+description: CustomResourceDefinitions for kmcp (MCPServer, used by kagent)
+upstream:
+  repo: https://github.com/kagent-dev/kmcp
+  homepage: https://kagent.dev/docs/kmcp
+  # kagent-dev GitHub org avatar: the repo ships no logo.
+  icon: https://avatars.githubusercontent.com/u/195942545?s=200&v=4
+  license: Apache-2.0
+version:
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  # First release pinned to the kmcp version kagent v0.10.3 requires
+  # (go.mod); later versions come from sync.
+  current: v0.3.0
+sources:
+  # controller-gen output; upstream's helm/kmcp-crds chart copies it.
+  - kind: git-path
+    path: config/crd/bases
+transform:
+  include: []
+  exclude: []
+  patches: []
