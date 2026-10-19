@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=./schema.json
+name: kagent-crds
+description: CustomResourceDefinitions for kagent (agents, model configs, memories, tool and MCP servers)
+upstream:
+  repo: https://github.com/kagent-dev/kagent
+  homepage: https://kagent.dev
+  # kagent-dev GitHub org avatar: the repo only ships wide wordmark SVGs.
+  icon: https://avatars.githubusercontent.com/u/195942545?s=200&v=4
+  license: Apache-2.0
+version:
+  # Pre-releases (-alpha, -beta, -rc) are excluded by the pattern.
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v0.10.3
+sources:
+  # controller-gen output; upstream's helm/kagent-crds chart copies these files.
+  - kind: git-path
+    path: go/api/config/crd/bases
+transform:
+  include: []
+  exclude: []
+  patches: []
