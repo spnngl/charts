@@ -1,0 +1,6 @@
+The CustomResourceDefinition manifests under templates/ were copied from
+  https://github.com/kagent-dev/kmcp
+at tag v0.3.0 (commit 1cec6470560fa8ccc43de3d95c7567993ae13e95), path(s): config/crd/bases
+and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
+added; server-side metadata and upstream Helm release metadata were removed.
+Upstream license: Apache-2.0 (see LICENSE in this directory).

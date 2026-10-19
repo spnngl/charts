@@ -32,6 +32,7 @@ Two kinds of charts live here:
 | [`gateway-api-crds`](./charts/gateway-api-crds) | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | standard channel |
 | [`gateway-api-exp-crds`](./charts/gateway-api-exp-crds) | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | experimental channel (mutually exclusive with the standard chart) |
 | [`kagent-crds`](./charts/kagent-crds) | [kagent-dev/kagent](https://github.com/kagent-dev/kagent) | agents, model configs, memories, tool and MCP servers |
+| [`kmcp-crds`](./charts/kmcp-crds) | [kagent-dev/kmcp](https://github.com/kagent-dev/kmcp) | MCPServer (used by kagent) |
 | [`kubemod-crds`](./charts/kubemod-crds) | [kubemod/kubemod](https://github.com/kubemod/kubemod) | ModRule |
 | [`kyverno-crds`](./charts/kyverno-crds) | [kyverno/kyverno](https://github.com/kyverno/kyverno) | kyverno.io and CEL (policies.kyverno.io) policies, exceptions, policy reports (schema docs stripped, see below) |
 | [`orc-crds`](./charts/orc-crds) | [k-orc/openstack-resource-controller](https://github.com/k-orc/openstack-resource-controller) | OpenStack resources |
