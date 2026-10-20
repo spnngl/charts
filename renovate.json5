@@ -84,6 +84,12 @@
             "matchDepNames": ["docker.io/cloudflare/cloudflared"],
             "matchUpdateTypes": ["major"],
             "automerge": true
+        },
+        {
+            "description": "ghcr-exporter: tags carry a `v` prefix, which the chart manager's `^X.Y.Z$` versioning rejects. Weekly (the `schedule:weekly` cron: presets cannot be extended in packageRules): upstream ships several dependency-bump patches a month and each automerge publishes a chart patch, so the open PR rolls forward to the latest tag and at most one chart release is cut per week.",
+            "matchDepNames": ["ghcr.io/d0ugal/ghcr-exporter"],
+            "versioning": "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+            "schedule": ["* 0-3 * * 1"]
         }
     ]
 }
