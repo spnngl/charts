@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: GHCR_EXPORTER_PACKAGES_0_OWNER
+      value: x
+expect:
+  error: extraEnv

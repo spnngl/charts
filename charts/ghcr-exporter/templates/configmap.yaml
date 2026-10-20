@@ -1,0 +1,11 @@
+{{- include "ghcr-exporter.validate" . }}
+apiVersion: v1
+data:
+  config.yaml: |
+    {{- toYaml (dict "packages" .Values.packages) | nindent 4 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "ghcr-exporter.labels" . | nindent 4 }}
+  name: {{ include "ghcr-exporter.fullname" . }}
+  namespace: {{ .Release.Namespace }}

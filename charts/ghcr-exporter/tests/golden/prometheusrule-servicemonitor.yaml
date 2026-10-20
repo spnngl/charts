@@ -1,0 +1,353 @@
+---
+# Source: ghcr-exporter/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: ghcr-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ghcr-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: ghcr-exporter-0.0.0
+  name: ghcr-exporter
+  namespace: ghcr-exporter
+spec:
+  ingress:
+    - ports:
+      - port: 8080
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: ghcr-exporter
+      app.kubernetes.io/name: ghcr-exporter
+  policyTypes:
+    - Ingress
+---
+# Source: ghcr-exporter/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: ghcr-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ghcr-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: ghcr-exporter-0.0.0
+  name: ghcr-exporter
+  namespace: ghcr-exporter
+---
+# Source: ghcr-exporter/templates/configmap.yaml
+apiVersion: v1
+data:
+  config.yaml: |
+    packages: []
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: ghcr-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ghcr-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: ghcr-exporter-0.0.0
+  name: ghcr-exporter
+  namespace: ghcr-exporter
+---
+# Source: ghcr-exporter/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: ghcr-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ghcr-exporter
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: ghcr-exporter-0.0.0
+  name: ghcr-exporter
+  namespace: ghcr-exporter
+spec:
+  ports:
+    - name: http-metrics
+      port: 8080
+      protocol: TCP
+      targetPort: http-metrics
+  selector:
+    app.kubernetes.io/instance: ghcr-exporter
+    app.kubernetes.io/name: ghcr-exporter
+  type: ClusterIP
+---
+# Source: ghcr-exporter/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/env-value-from: "The token Secret is created by this chart (github.token) or by the user (github.existingSecret), so it is not always in the release."
+    ignore-check.kube-linter.io/minimum-three-replicas: "A single exporter on purpose: each replica polls GitHub with the same token and exports duplicate series."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/read-secret-from-env-var: "Upstream reads the token from the config file or the environment only, with no token-file option."
+  labels:
+    app.kubernetes.io/instance: ghcr-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ghcr-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: ghcr-exporter-0.0.0
+  name: ghcr-exporter
+  namespace: ghcr-exporter
+spec:
+  minReadySeconds: 10
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: ghcr-exporter
+      app.kubernetes.io/name: ghcr-exporter
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/config: 1dd6694fabdd0d5e62816e39c30256f069489ec8b47c8514b5c94184b0991cbb
+      labels:
+        app.kubernetes.io/instance: ghcr-exporter
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: ghcr-exporter
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: ghcr-exporter-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - -config
+            - /etc/ghcr-exporter/config.yaml
+          command:
+            - /app/ghcr-exporter
+          env:
+            - name: GHCR_EXPORTER_GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: token
+                  name: ghcr-exporter
+            - name: GHCR_EXPORTER_LOG_FORMAT
+              value: "json"
+            - name: GHCR_EXPORTER_LOG_LEVEL
+              value: "info"
+            - name: GHCR_EXPORTER_METRICS_COLLECTION_DEFAULT_INTERVAL
+              value: "60s"
+            - name: GHCR_EXPORTER_SERVER_HOST
+              value: 0.0.0.0
+            - name: GHCR_EXPORTER_SERVER_PORT
+              value: "8080"
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+          image: "ghcr.io/d0ugal/ghcr-exporter:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http-metrics
+            periodSeconds: 30
+          name: ghcr-exporter
+          ports:
+            - containerPort: 8080
+              name: http-metrics
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 1
+            httpGet:
+              path: /health
+              port: http-metrics
+            periodSeconds: 30
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 1001
+            runAsNonRoot: true
+            runAsUser: 1001
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /health
+              port: http-metrics
+            periodSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/ghcr-exporter
+              name: config
+              readOnly: true
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 1001
+        runAsGroup: 1001
+        runAsNonRoot: true
+        runAsUser: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: ghcr-exporter
+      terminationGracePeriodSeconds: 35
+      volumes:
+        - configMap:
+            name: ghcr-exporter
+          name: config
+---
+# Source: ghcr-exporter/templates/prometheusrule.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app.kubernetes.io/instance: ghcr-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ghcr-exporter
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: ghcr-exporter-0.0.0
+  name: ghcr-exporter
+  namespace: ghcr-exporter
+spec:
+  groups:
+    - name: ghcr-exporter
+      rules:
+        - alert: GhcrExporterDown
+          annotations:
+            description: "No ghcr-exporter target of ghcr-exporter/ghcr-exporter has been up for 10 minutes (pod not running or not scraped; also fires when replicaCount is 0)."
+            summary: ghcr-exporter is down.
+          expr: "absent(up{job=\"ghcr-exporter\", namespace=\"ghcr-exporter\"} == 1)"
+          for: 10m
+          labels:
+            severity: critical
+        - alert: GhcrExporterCollectionFailing
+          annotations:
+            description: "Collections of {{ $labels.repo }} keep failing on {{ $labels.namespace }}/{{ $labels.pod }} for 30 minutes: check the logs (invalid or expired token, missing read:packages scope, GitHub rate limit)."
+            summary: ghcr-exporter cannot collect GHCR data.
+          expr: "increase(ghcr_collection_failed_total{job=\"ghcr-exporter\", namespace=\"ghcr-exporter\"}[30m]) > 0"
+          for: 30m
+          labels:
+            severity: warning
+        - alert: GhcrExporterCollectionStale
+          annotations:
+            description: "No successful collection of {{ $labels.repo }} for more than 3 intervals on {{ $labels.namespace }}/{{ $labels.pod }}."
+            summary: ghcr-exporter metrics are stale.
+          expr: "time() - ghcr_collection_timestamp{job=\"ghcr-exporter\", namespace=\"ghcr-exporter\"} > 3 * ghcr_collection_interval_seconds{job=\"ghcr-exporter\", namespace=\"ghcr-exporter\"}"
+          for: 15m
+          labels:
+            severity: warning
+---
+# Source: ghcr-exporter/templates/servicemonitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app.kubernetes.io/instance: ghcr-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ghcr-exporter
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: ghcr-exporter-0.0.0
+  name: ghcr-exporter
+  namespace: ghcr-exporter
+spec:
+  endpoints:
+    - path: /metrics
+      port: http-metrics
+  namespaceSelector:
+    matchNames:
+      - ghcr-exporter
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: ghcr-exporter
+      app.kubernetes.io/name: ghcr-exporter
+---
+# Source: ghcr-exporter/templates/tests/test-health.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    ignore-check.kube-linter.io/no-liveness-probe: "One-shot hook pod that exits within seconds."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-readiness-probe: "One-shot hook pod that exits within seconds."
+    ignore-check.kube-linter.io/non-isolated-pod: "Short-lived test pod that only dials the Service."
+    ignore-check.kube-linter.io/restart-policy: "Never makes a failing helm test fail fast instead of retrying until the timeout."
+  labels:
+    app.kubernetes.io/component: test
+    app.kubernetes.io/instance: ghcr-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ghcr-exporter-test
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: ghcr-exporter-0.0.0
+  name: ghcr-exporter-test-health
+  namespace: ghcr-exporter
+spec:
+  automountServiceAccountToken: false
+  containers:
+    - args:
+        - -q
+        - -O
+        - /dev/null
+        - "http://ghcr-exporter:8080/health"
+      command:
+        - wget
+      image: "ghcr.io/d0ugal/ghcr-exporter:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      imagePullPolicy: IfNotPresent
+      name: health
+      resources:
+        limits:
+          memory: 128Mi
+        requests:
+          cpu: 10m
+          memory: 32Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        privileged: false
+        readOnlyRootFilesystem: true
+        runAsGroup: 1001
+        runAsNonRoot: true
+        runAsUser: 1001
+        seccompProfile:
+          type: RuntimeDefault
+  dnsConfig:
+    options:
+    - name: ndots
+      value: "2"
+  enableServiceLinks: false
+  hostUsers: false
+  nodeSelector:
+    kubernetes.io/os: linux
+  restartPolicy: Never
+  securityContext:
+    fsGroup: 1001
+    runAsGroup: 1001
+    runAsNonRoot: true
+    runAsUser: 1001
+    seccompProfile:
+      type: RuntimeDefault

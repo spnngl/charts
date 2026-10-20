@@ -1,0 +1,30 @@
+{{ include "ghcr-exporter.fullname" . }} runs {{ .Values.replicaCount }} ghcr-exporter pod(s), exporting GHCR metrics for {{ len .Values.packages }} package entr{{ ternary "y" "ies" (eq (len .Values.packages) 1) }}.
+{{- if not .Values.packages }}
+
+No `packages` are configured: the exporter runs and exports nothing. Set `packages`
+(a list of {owner, repo}).
+{{- end }}
+{{- if not .Values.github.token }}
+
+The GitHub token is read from the Secret `{{ include "ghcr-exporter.secretName" . }}`, key `{{ .Values.github.existingSecret.key }}`, which this release does not create. Without it the pod stays in
+CreateContainerConfigError (`secret "{{ include "ghcr-exporter.secretName" . }}" not found`). Create it
+(a classic personal access token with `read:packages`), or install with `--set github.token=<token>`:
+
+  kubectl -n {{ .Release.Namespace }} create secret generic {{ include "ghcr-exporter.secretName" . }} \
+    --from-literal={{ .Values.github.existingSecret.key }}=<token>
+{{- end }}
+
+The token is read at startup only: roll the pod after rotating it.
+
+  kubectl -n {{ .Release.Namespace }} rollout restart deployment/{{ include "ghcr-exporter.fullname" . }}
+
+Check the exporter:
+
+  kubectl -n {{ .Release.Namespace }} get pods -l {{ include "ghcr-exporter.selectorLabels" . | replace ": " "=" | replace "\n" "," }}
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: pods run in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) cannot start them; set
+hostUsers=true to use host users.
+{{- end }}

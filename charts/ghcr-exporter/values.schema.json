@@ -1,0 +1,878 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "not": {
+        "properties": {
+          "github": {
+            "properties": {
+              "existingSecret": {
+                "properties": {
+                  "name": {
+                    "minLength": 1,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              },
+              "token": {
+                "minLength": 1,
+                "required": []
+              }
+            },
+            "required": [
+              "token",
+              "existingSecret"
+            ]
+          }
+        },
+        "required": [
+          "github"
+        ]
+      },
+      "required": []
+    },
+    {
+      "not": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "podMonitor": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              },
+              "serviceMonitor": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "serviceMonitor",
+              "podMonitor"
+            ]
+          }
+        },
+        "required": [
+          "metrics"
+        ]
+      },
+      "required": []
+    },
+    {
+      "if": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "prometheusRule": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "prometheusRule"
+            ]
+          }
+        },
+        "required": [
+          "metrics"
+        ]
+      },
+      "required": [],
+      "then": {
+        "properties": {
+          "metrics": {
+            "anyOf": [
+              {
+                "properties": {
+                  "serviceMonitor": {
+                    "properties": {
+                      "enabled": {
+                        "const": true,
+                        "required": []
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  }
+                },
+                "required": [
+                  "serviceMonitor"
+                ]
+              },
+              {
+                "properties": {
+                  "podMonitor": {
+                    "properties": {
+                      "enabled": {
+                        "const": true,
+                        "required": []
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  }
+                },
+                "required": [
+                  "podMonitor"
+                ]
+              }
+            ],
+            "required": []
+          }
+        },
+        "required": []
+      }
+    }
+  ],
+  "properties": {
+    "affinity": {
+      "additionalProperties": true,
+      "description": "Affinity.",
+      "required": [],
+      "type": "object"
+    },
+    "collectionIntervalSeconds": {
+      "description": "Seconds between collections. Each package costs 2-4 GitHub API calls per collection (more with owner-wide discovery, `repo` empty): at 60s that is 120-240 requests per hour, and a token allows 5000. Raise the interval when you watch more than 20-40 packages. The package pages on github.com, scraped for download counts, are unauthenticated and may answer HTTP 429.",
+      "maximum": 86400,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "dnsConfig": {
+      "additionalProperties": true,
+      "description": "DNS config.",
+      "properties": {
+        "options": {
+          "description": "DNS options (fewer search-list lookups for `api.github.com`).",
+          "items": {
+            "additionalProperties": true,
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "extraEnv": {
+      "description": "Extra environment variables (`EnvVar` list), for settings the config file ignores upstream: tracing (`TRACING_*`) and profiling (`PROFILING_*`). Names the chart owns, and `GHCR_EXPORTER_PACKAGES_*` (use `packages`), are rejected. Rendered after `GOMEMLIMIT`.",
+      "items": {
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "not": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "GHCR_EXPORTER_GITHUB_TOKEN",
+                    "GHCR_EXPORTER_SERVER_HOST",
+                    "GHCR_EXPORTER_SERVER_PORT",
+                    "GHCR_EXPORTER_LOG_LEVEL",
+                    "GHCR_EXPORTER_LOG_FORMAT",
+                    "GHCR_EXPORTER_METRICS_COLLECTION_DEFAULT_INTERVAL",
+                    "GOMEMLIMIT"
+                  ],
+                  "required": []
+                },
+                {
+                  "pattern": "^GHCR_EXPORTER_PACKAGES_",
+                  "required": []
+                }
+              ],
+              "required": []
+            },
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumeMounts": {
+      "description": "Extra volume mounts for the exporter container.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumes": {
+      "description": "Extra volumes.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "fullnameOverride": {
+      "description": "Override the full resource name (default `\u003crelease\u003e-\u003cchart\u003e`).",
+      "type": "string"
+    },
+    "github": {
+      "additionalProperties": false,
+      "properties": {
+        "existingSecret": {
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "description": "Key of the token in the Secret.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "name": {
+              "description": "Name of an existing Secret holding the token. Empty: `\u003cfullname\u003e`, the Secret created from `token`. Exclusive with `token`.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "token": {
+          "description": "GitHub token (classic personal access token with `read:packages`). Set: the chart creates the Secret `\u003cfullname\u003e` (key `token`) and restarts the pod when it changes, but the token then lives in the Helm release and in your values files. Empty: the token is read from `existingSecret`. Exclusive with `existingSecret.name`.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "global": {
+      "description": "Global values are values that can be accessed from any chart or subchart by exactly the same name.",
+      "required": [],
+      "type": "object"
+    },
+    "hostUsers": {
+      "description": "Run the pod in a user namespace (`false`: uid 1001 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+); pods fail to start otherwise. `true` uses host users.",
+      "type": "boolean"
+    },
+    "image": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "description": "Image digest, only valid together with `image.tag`.",
+          "pattern": "^(sha256:[a-f0-9]{64})?$",
+          "type": "string"
+        },
+        "pullPolicy": {
+          "description": "Image pull policy.",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ],
+          "type": "string"
+        },
+        "repository": {
+          "description": "Image repository.",
+          "type": "string"
+        },
+        "tag": {
+          "description": "Image tag. Empty: `appVersion` pinned by the digest recorded in `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "imagePullSecrets": {
+      "description": "Image pull secrets (list of `{name: \u003csecret\u003e}`).",
+      "items": {
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "livenessProbe": {
+      "additionalProperties": true,
+      "description": "Liveness probe, `/health`. It answers 200 once the HTTP server listens, whatever GitHub does: a GitHub outage never restarts the pod.",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "httpGet": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "port": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "logFormat": {
+      "description": "Log format.",
+      "enum": [
+        "json",
+        "text"
+      ],
+      "type": "string"
+    },
+    "logLevel": {
+      "description": "Log level. The exporter logs every HTTP request at `info`, probes included.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "error"
+      ],
+      "type": "string"
+    },
+    "metrics": {
+      "additionalProperties": false,
+      "properties": {
+        "podMonitor": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Create a Prometheus Operator PodMonitor (no Service needed). Exclusive with `serviceMonitor`.",
+              "type": "boolean"
+            },
+            "interval": {
+              "description": "Scrape interval (empty: Prometheus default).",
+              "type": "string"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels.",
+              "required": [],
+              "type": "object"
+            },
+            "metricRelabelings": {
+              "description": "Metric relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "relabelings": {
+              "description": "Relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "scrapeTimeout": {
+              "description": "Scrape timeout (empty: Prometheus default).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "prometheusRule": {
+          "additionalProperties": false,
+          "properties": {
+            "disabled": {
+              "description": "Alerts to leave out (at most two: disable `prometheusRule` instead). `GhcrExporterDown` also fires when no target exists (pod Pending) and with `replicaCount: 0`.",
+              "items": {
+                "enum": [
+                  "GhcrExporterDown",
+                  "GhcrExporterCollectionFailing",
+                  "GhcrExporterCollectionStale"
+                ],
+                "type": "string"
+              },
+              "maxItems": 2,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "enabled": {
+              "description": "Create a Prometheus Operator PrometheusRule (alerts `GhcrExporterDown`, `GhcrExporterCollectionFailing`, `GhcrExporterCollectionStale`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.",
+              "type": "boolean"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels (for example `release: kube-prometheus-stack`).",
+              "required": [],
+              "type": "object"
+            },
+            "staleIntervals": {
+              "description": "`GhcrExporterCollectionStale` threshold: collection intervals without a successful collection.",
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "serviceMonitor": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Create a Prometheus Operator ServiceMonitor. Exclusive with `podMonitor`.",
+              "type": "boolean"
+            },
+            "interval": {
+              "description": "Scrape interval (empty: Prometheus default).",
+              "type": "string"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels (for example `release: kube-prometheus-stack`).",
+              "required": [],
+              "type": "object"
+            },
+            "metricRelabelings": {
+              "description": "Metric relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "relabelings": {
+              "description": "Relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "scrapeTimeout": {
+              "description": "Scrape timeout (empty: Prometheus default).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "minReadySeconds": {
+      "description": "Seconds a new pod must be Ready before the old one is retired.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "nameOverride": {
+      "description": "yaml-language-server: $schema=values.schema.json\nOverride the chart name used in resource names and labels.",
+      "type": "string"
+    },
+    "networkPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "egress": {
+          "additionalProperties": false,
+          "properties": {
+            "dns": {
+              "additionalProperties": false,
+              "properties": {
+                "to": {
+                  "description": "DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Restrict egress (DNS, GitHub, `extraEgress`).",
+              "type": "boolean"
+            },
+            "extraEgress": {
+              "description": "Extra `NetworkPolicyEgressRule`s (for example a tracing endpoint).",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "github": {
+              "additionalProperties": false,
+              "properties": {
+                "to": {
+                  "description": "GitHub peers (port 443): `api.github.com` for the API and `github.com` for download counts. See the README to narrow the default to GitHub's published ranges.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "enabled": {
+          "description": "Create a NetworkPolicy (ingress: port 8080 only).",
+          "type": "boolean"
+        },
+        "metrics": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to reach port 8080. Empty: any source. The port also serves the `/` dashboard (configuration, token redacted): restrict it to your Prometheus.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "nodeSelector": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Node selector. Merged with (and cannot drop) the default `kubernetes.io/os: linux`.",
+      "properties": {
+        "kubernetes.io/os": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "packages": {
+      "description": "Packages to watch, rendered into the exporter config file. `owner` is a user or organization; an empty `repo` watches every container package of the owner. Empty list: the exporter runs and exports nothing.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "owner": {
+            "pattern": "^[A-Za-z0-9-]+$",
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "owner"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "podAnnotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Pod annotations (for example `reloader.stakater.com/auto: \"true\"` to restart on Secret rotation).",
+      "required": [],
+      "type": "object"
+    },
+    "podLabels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Extra pod labels.",
+      "required": [],
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "additionalProperties": true,
+      "description": "Pod security context. Overrides are merged onto these defaults.",
+      "properties": {
+        "fsGroup": {
+          "type": "integer"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "priorityClassName": {
+      "description": "Priority class name.",
+      "type": "string"
+    },
+    "readinessProbe": {
+      "additionalProperties": true,
+      "description": "Readiness probe, `/health`. The exporter logs every request at `info`: a long period keeps the logs quiet.",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "httpGet": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "port": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "replicaCount": {
+      "description": "Number of exporters. More than one would poll GitHub several times with the same token and export duplicate series, so `1` is the maximum. `0` stops the exporter.",
+      "maximum": 1,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "resources": {
+      "additionalProperties": true,
+      "description": "Resources. Estimates, not measurements under real collection: tune them for your package count. No CPU limit on purpose. With a memory limit, `GOMEMLIMIT` follows it.",
+      "properties": {
+        "limits": {
+          "additionalProperties": true,
+          "properties": {
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "requests": {
+          "additionalProperties": true,
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "revisionHistoryLimit": {
+      "description": "Old ReplicaSets to keep.",
+      "type": "integer"
+    },
+    "securityContext": {
+      "additionalProperties": true,
+      "description": "Container security context. Overrides are merged onto these defaults.",
+      "properties": {
+        "allowPrivilegeEscalation": {
+          "type": "boolean"
+        },
+        "capabilities": {
+          "additionalProperties": true,
+          "properties": {
+            "drop": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ],
+                "required": []
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "privileged": {
+          "type": "boolean"
+        },
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "service": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Service annotations. The ClusterIP Service on port 8080 is always created.",
+          "required": [],
+          "type": "object"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Extra Service labels.",
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "serviceAccount": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "ServiceAccount annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "create": {
+          "description": "Create the ServiceAccount.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "ServiceAccount name. Empty: `\u003cfullname\u003e` (or `default` when `create` is false).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "startupProbe": {
+      "additionalProperties": true,
+      "description": "Startup probe, `/health`. Restarts a pod that does not listen within `periodSeconds` x `failureThreshold` (60s).",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "httpGet": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "port": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "tolerations": {
+      "description": "Tolerations.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "topologySpreadConstraints": {
+      "description": "Topology spread constraints.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [],
+  "title": "ghcr-exporter values",
+  "type": "object"
+}

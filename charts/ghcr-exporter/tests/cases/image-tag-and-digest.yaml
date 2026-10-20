@@ -1,0 +1,4 @@
+values:
+  image:
+    tag: v2.13.65
+    digest: sha256:402ad8ba07518984c58d85a1563bd70049ae50d5925ec6f88365ce5e5d1f2b5f

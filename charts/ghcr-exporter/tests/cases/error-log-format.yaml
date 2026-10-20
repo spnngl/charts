@@ -1,0 +1,4 @@
+values:
+  logFormat: xml
+expect:
+  error: logFormat

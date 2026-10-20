@@ -1,0 +1,140 @@
+{{- $memLimit := dig "limits" "memory" "" .Values.resources }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/env-value-from: "The token Secret is created by this chart (github.token) or by the user (github.existingSecret), so it is not always in the release."
+    ignore-check.kube-linter.io/minimum-three-replicas: "A single exporter on purpose: each replica polls GitHub with the same token and exports duplicate series."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    {{- if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: the user isolates the pod, or chooses not to."
+    {{- end }}
+    ignore-check.kube-linter.io/read-secret-from-env-var: "Upstream reads the token from the config file or the environment only, with no token-file option."
+  labels:
+    {{- include "ghcr-exporter.labels" . | nindent 4 }}
+  name: {{ include "ghcr-exporter.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  minReadySeconds: {{ .Values.minReadySeconds }}
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "ghcr-exporter.selectorLabels" . | nindent 6 }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        {{- $checksums := dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum) }}
+        {{- if .Values.github.token }}
+        {{- $_ := set $checksums "checksum/secret" (include (print $.Template.BasePath "/secret.yaml") . | sha256sum) }}
+        {{- end }}
+        {{- toYaml (merge $checksums (deepCopy .Values.podAnnotations)) | nindent 8 }}
+      labels:
+        {{- toYaml (merge (include "ghcr-exporter.labels" . | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - -config
+            - /etc/ghcr-exporter/config.yaml
+          command:
+            - /app/ghcr-exporter
+          env:
+            - name: GHCR_EXPORTER_GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: {{ .Values.github.existingSecret.key }}
+                  name: {{ include "ghcr-exporter.secretName" . }}
+            - name: GHCR_EXPORTER_LOG_FORMAT
+              value: {{ .Values.logFormat | quote }}
+            - name: GHCR_EXPORTER_LOG_LEVEL
+              value: {{ .Values.logLevel | quote }}
+            - name: GHCR_EXPORTER_METRICS_COLLECTION_DEFAULT_INTERVAL
+              value: {{ printf "%ds" (int .Values.collectionIntervalSeconds) | quote }}
+            - name: GHCR_EXPORTER_SERVER_HOST
+              value: 0.0.0.0
+            - name: GHCR_EXPORTER_SERVER_PORT
+              value: "8080"
+            {{- if $memLimit }}
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          image: {{ include "ghcr-exporter.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          name: ghcr-exporter
+          ports:
+            - containerPort: 8080
+              name: http-metrics
+              protocol: TCP
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- if $memLimit }}
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/ghcr-exporter
+              name: config
+              readOnly: true
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      enableServiceLinks: false
+      hostUsers: {{ .Values.hostUsers }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "ghcr-exporter.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 35
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - configMap:
+            name: {{ include "ghcr-exporter.fullname" . }}
+          name: config
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}

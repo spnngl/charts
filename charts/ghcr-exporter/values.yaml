@@ -1,0 +1,534 @@
+# yaml-language-server: $schema=values.schema.json
+# @schema.root
+# title: ghcr-exporter values
+# allOf:
+#   # a chart-created Secret and an existing one are two sources for one token
+#   - not:
+#       required: [github]
+#       properties:
+#         github:
+#           required: [token, existingSecret]
+#           properties:
+#             token:
+#               minLength: 1
+#             existingSecret:
+#               required: [name]
+#               properties:
+#                 name:
+#                   minLength: 1
+#   # a ServiceMonitor and a PodMonitor would scrape the exporter twice
+#   - not:
+#       required: [metrics]
+#       properties:
+#         metrics:
+#           required: [serviceMonitor, podMonitor]
+#           properties:
+#             serviceMonitor:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+#             podMonitor:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+#   # the alert rules select the `job` label set by the ServiceMonitor or PodMonitor
+#   - if:
+#       required: [metrics]
+#       properties:
+#         metrics:
+#           required: [prometheusRule]
+#           properties:
+#             prometheusRule:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+#     then:
+#       properties:
+#         metrics:
+#           anyOf:
+#             - required: [serviceMonitor]
+#               properties:
+#                 serviceMonitor:
+#                   required: [enabled]
+#                   properties:
+#                     enabled:
+#                       const: true
+#             - required: [podMonitor]
+#               properties:
+#                 podMonitor:
+#                   required: [enabled]
+#                   properties:
+#                     enabled:
+#                       const: true
+# @schema.root
+# -- Override the chart name used in resource names and labels.
+nameOverride: ""
+# -- Override the full resource name (default `<release>-<chart>`).
+fullnameOverride: ""
+
+image:
+  # -- Image repository.
+  repository: ghcr.io/d0ugal/ghcr-exporter
+  # -- Image tag. Empty: `appVersion` pinned by the digest recorded in `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.
+  tag: ""
+  # @schema
+  # type: string
+  # pattern: "^(sha256:[a-f0-9]{64})?$"
+  # @schema
+  # -- Image digest, only valid together with `image.tag`.
+  digest: ""
+  # @schema
+  # type: string
+  # enum: [Always, IfNotPresent, Never]
+  # @schema
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+# @schema
+# -- Image pull secrets (list of `{name: <secret>}`).
+imagePullSecrets: []
+
+github:
+  # -- GitHub token (classic personal access token with `read:packages`). Set: the chart creates the Secret `<fullname>` (key `token`) and restarts the pod when it changes, but the token then lives in the Helm release and in your values files. Empty: the token is read from `existingSecret`. Exclusive with `existingSecret.name`.
+  token: ""
+  existingSecret:
+    # -- Name of an existing Secret holding the token. Empty: `<fullname>`, the Secret created from `token`. Exclusive with `token`.
+    name: ""
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the token in the Secret.
+    key: token
+
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [owner]
+#   additionalProperties: false
+#   properties:
+#     owner:
+#       type: string
+#       pattern: "^[A-Za-z0-9-]+$"
+#     repo:
+#       type: string
+# @schema
+# -- Packages to watch, rendered into the exporter config file. `owner` is a user or organization; an empty `repo` watches every container package of the owner. Empty list: the exporter runs and exports nothing.
+packages: []
+
+# @schema
+# type: integer
+# minimum: 1
+# maximum: 86400
+# @schema
+# -- Seconds between collections. Each package costs 2-4 GitHub API calls per collection (more with owner-wide discovery, `repo` empty): at 60s that is 120-240 requests per hour, and a token allows 5000. Raise the interval when you watch more than 20-40 packages. The package pages on github.com, scraped for download counts, are unauthenticated and may answer HTTP 429.
+collectionIntervalSeconds: 60
+# @schema
+# type: string
+# enum: [debug, info, warn, error]
+# @schema
+# -- Log level. The exporter logs every HTTP request at `info`, probes included.
+logLevel: info
+# @schema
+# type: string
+# enum: [json, text]
+# @schema
+# -- Log format.
+logFormat: json
+
+# @schema
+# type: integer
+# minimum: 0
+# maximum: 1
+# @schema
+# -- Number of exporters. More than one would poll GitHub several times with the same token and export duplicate series, so `1` is the maximum. `0` stops the exporter.
+replicaCount: 1
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Seconds a new pod must be Ready before the old one is retired.
+minReadySeconds: 10
+# -- Old ReplicaSets to keep.
+revisionHistoryLimit: 3
+
+serviceAccount:
+  # -- Create the ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false).
+  name: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- ServiceAccount annotations.
+  annotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Pod annotations (for example `reloader.stakater.com/auto: "true"` to restart on Secret rotation).
+podAnnotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Extra pod labels.
+podLabels: {}
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Pod security context. Overrides are merged onto these defaults.
+podSecurityContext:
+  fsGroup: 1001
+  runAsGroup: 1001
+  runAsNonRoot: true
+  runAsUser: 1001
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Container security context. Overrides are merged onto these defaults.
+securityContext:
+  allowPrivilegeEscalation: false
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 1001
+  runAsNonRoot: true
+  runAsUser: 1001
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: boolean
+# @schema
+# -- Run the pod in a user namespace (`false`: uid 1001 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+); pods fail to start otherwise. `true` uses host users.
+hostUsers: false
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Resources. Estimates, not measurements under real collection: tune them for your package count. No CPU limit on purpose. With a memory limit, `GOMEMLIMIT` follows it.
+resources:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  limits:
+    memory: 128Mi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  requests:
+    cpu: 10m
+    memory: 32Mi
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- DNS config.
+dnsConfig:
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  #   additionalProperties: true
+  # @schema
+  # -- DNS options (fewer search-list lookups for `api.github.com`).
+  options:
+    - name: ndots
+      value: "2"
+
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Startup probe, `/health`. Restarts a pod that does not listen within `periodSeconds` x `failureThreshold` (60s).
+startupProbe:
+  failureThreshold: 30
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  httpGet:
+    path: /health
+    port: http-metrics
+  periodSeconds: 2
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Readiness probe, `/health`. The exporter logs every request at `info`: a long period keeps the logs quiet.
+readinessProbe:
+  failureThreshold: 1
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  httpGet:
+    path: /health
+    port: http-metrics
+  periodSeconds: 30
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Liveness probe, `/health`. It answers 200 once the HTTP server listens, whatever GitHub does: a GitHub outage never restarts the pod.
+livenessProbe:
+  failureThreshold: 3
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  httpGet:
+    path: /health
+    port: http-metrics
+  periodSeconds: 30
+
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Node selector. Merged with (and cannot drop) the default `kubernetes.io/os: linux`.
+nodeSelector:
+  kubernetes.io/os: linux
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Tolerations.
+tolerations: []
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Affinity.
+affinity: {}
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Topology spread constraints.
+topologySpreadConstraints: []
+# -- Priority class name.
+priorityClassName: ""
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volumes.
+extraVolumes: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volume mounts for the exporter container.
+extraVolumeMounts: []
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+#       minLength: 1
+#       not:
+#         anyOf:
+#           - enum:
+#               - GHCR_EXPORTER_GITHUB_TOKEN
+#               - GHCR_EXPORTER_SERVER_HOST
+#               - GHCR_EXPORTER_SERVER_PORT
+#               - GHCR_EXPORTER_LOG_LEVEL
+#               - GHCR_EXPORTER_LOG_FORMAT
+#               - GHCR_EXPORTER_METRICS_COLLECTION_DEFAULT_INTERVAL
+#               - GOMEMLIMIT
+#           - pattern: "^GHCR_EXPORTER_PACKAGES_"
+# @schema
+# -- Extra environment variables (`EnvVar` list), for settings the config file ignores upstream: tracing (`TRACING_*`) and profiling (`PROFILING_*`). Names the chart owns, and `GHCR_EXPORTER_PACKAGES_*` (use `packages`), are rejected. Rendered after `GOMEMLIMIT`.
+extraEnv: []
+
+service:
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Service annotations. The ClusterIP Service on port 8080 is always created.
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra Service labels.
+  labels: {}
+
+metrics:
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor. Exclusive with `podMonitor`.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels (for example `release: kube-prometheus-stack`).
+    labels: {}
+    # -- Scrape interval (empty: Prometheus default).
+    interval: ""
+    # -- Scrape timeout (empty: Prometheus default).
+    scrapeTimeout: ""
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Relabelings.
+    relabelings: []
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Metric relabelings.
+    metricRelabelings: []
+  podMonitor:
+    # -- Create a Prometheus Operator PodMonitor (no Service needed). Exclusive with `serviceMonitor`.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels.
+    labels: {}
+    # -- Scrape interval (empty: Prometheus default).
+    interval: ""
+    # -- Scrape timeout (empty: Prometheus default).
+    scrapeTimeout: ""
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Relabelings.
+    relabelings: []
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Metric relabelings.
+    metricRelabelings: []
+  prometheusRule:
+    # -- Create a Prometheus Operator PrometheusRule (alerts `GhcrExporterDown`, `GhcrExporterCollectionFailing`, `GhcrExporterCollectionStale`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels (for example `release: kube-prometheus-stack`).
+    labels: {}
+    # @schema
+    # type: array
+    # uniqueItems: true
+    # maxItems: 2
+    # items:
+    #   type: string
+    #   enum: [GhcrExporterDown, GhcrExporterCollectionFailing, GhcrExporterCollectionStale]
+    # @schema
+    # -- Alerts to leave out (at most two: disable `prometheusRule` instead). `GhcrExporterDown` also fires when no target exists (pod Pending) and with `replicaCount: 0`.
+    disabled: []
+    # @schema
+    # type: number
+    # minimum: 1
+    # @schema
+    # -- `GhcrExporterCollectionStale` threshold: collection intervals without a successful collection.
+    staleIntervals: 3
+
+networkPolicy:
+  # -- Create a NetworkPolicy (ingress: port 8080 only).
+  enabled: true
+  metrics:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach port 8080. Empty: any source. The port also serves the `/` dashboard (configuration, token redacted): restrict it to your Prometheus.
+    from: []
+  egress:
+    # -- Restrict egress (DNS, GitHub, `extraEgress`).
+    enabled: false
+    dns:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels.
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    github:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- GitHub peers (port 443): `api.github.com` for the API and `github.com` for download counts. See the README to narrow the default to GitHub's published ranges.
+      to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+        - ipBlock:
+            cidr: ::/0
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Extra `NetworkPolicyEgressRule`s (for example a tracing endpoint).
+    extraEgress: []

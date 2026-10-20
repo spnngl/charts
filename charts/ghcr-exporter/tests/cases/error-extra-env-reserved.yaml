@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: GHCR_EXPORTER_GITHUB_TOKEN
+      value: x
+expect:
+  error: extraEnv

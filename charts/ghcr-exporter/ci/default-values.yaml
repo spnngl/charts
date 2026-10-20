@@ -1,0 +1,8 @@
+# ct install: no GitHub token exists in CI, so no pod may start. Chart wiring
+# (ConfigMap, Service, NetworkPolicy) is still created and validated by the
+# API server.
+replicaCount: 0
+hostUsers: true
+packages:
+  - owner: spnngl
+    repo: charts
