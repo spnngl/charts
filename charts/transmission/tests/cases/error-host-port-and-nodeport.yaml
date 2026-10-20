@@ -1,0 +1,9 @@
+values:
+  peer:
+    port: 30413
+    hostPort: true
+    service:
+      enabled: true
+      type: NodePort
+expect:
+  error: the same port twice

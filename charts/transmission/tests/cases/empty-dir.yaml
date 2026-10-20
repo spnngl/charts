@@ -1,0 +1,8 @@
+values:
+  persistence:
+    config:
+      type: emptyDir
+    downloads:
+      type: emptyDir
+      emptyDir:
+        sizeLimit: 5Gi

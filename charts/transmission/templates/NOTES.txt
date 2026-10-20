@@ -1,0 +1,47 @@
+{{ include "transmission.fullname" . }} runs one Transmission daemon (StatefulSet, downtime on every upgrade).
+{{- if .Values.auth.enabled }}
+
+The chart never creates the login Secret. It must exist in namespace {{ .Release.Namespace }}:
+
+  kubectl -n {{ .Release.Namespace }} create secret generic {{ include "transmission.secretName" . }} \
+    --from-literal={{ .Values.auth.existingSecret.usernameKey }}=<user> --from-literal={{ .Values.auth.existingSecret.passwordKey }}=<password>
+
+The login is read at startup only: roll the pod after changing it.
+
+  kubectl -n {{ .Release.Namespace }} rollout restart statefulset/{{ include "transmission.fullname" . }}
+{{- else }}
+
+auth.enabled is false: the web UI and RPC need no login. Restrict access with the
+NetworkPolicy, and set config.rpc_host_whitelist for host names that reach it
+through an Ingress or HTTPRoute.
+{{- end }}
+
+Web UI:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+  https://{{ . }}/transmission/web/
+{{- end }}
+{{- end }}
+{{- if .Values.httpRoute.enabled }}
+{{- range .Values.httpRoute.hostnames }}
+  https://{{ . }}/transmission/web/
+{{- end }}
+{{- end }}
+  kubectl -n {{ .Release.Namespace }} port-forward service/{{ include "transmission.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+  then open http://127.0.0.1:{{ .Values.service.port }}/transmission/web/
+
+Check that the daemon answers its RPC:
+
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+{{- if not (or .Values.peer.hostPort (include "transmission.peerService" .)) }}
+
+No inbound peer path is configured: other peers cannot dial this pod, so it only
+reaches connectable peers. See the README ("Peers") for peer.hostPort, a peer Service
+or Gateway TCPRoute/UDPRoute on port {{ .Values.peer.port }}.
+{{- end }}
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: the pod runs in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) or volumes without idmapped
+mounts (NFS/SMB) cannot start it; set hostUsers=true to use host users.
+{{- end }}

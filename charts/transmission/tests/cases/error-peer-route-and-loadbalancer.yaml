@@ -1,0 +1,12 @@
+values:
+  peer:
+    tcpRoute:
+      enabled: true
+      parentRefs:
+      - name: gateway
+        namespace: gateway-system
+    service:
+      enabled: true
+      type: LoadBalancer
+expect:
+  error: exposed twice

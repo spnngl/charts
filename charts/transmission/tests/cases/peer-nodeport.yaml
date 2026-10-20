@@ -1,0 +1,7 @@
+values:
+  peer:
+    port: 30413
+    service:
+      enabled: true
+      type: NodePort
+      externalTrafficPolicy: Local

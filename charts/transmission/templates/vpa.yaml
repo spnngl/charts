@@ -1,0 +1,27 @@
+{{- if .Values.verticalPodAutoscaler.enabled }}
+{{- $v := .Values.verticalPodAutoscaler }}
+{{- $policy := dict "controlledResources" $v.controlledResources "controlledValues" $v.controlledValues }}
+{{- with $v.minAllowed }}{{ $_ := set $policy "minAllowed" . }}{{ end }}
+{{- with $v.maxAllowed }}{{ $_ := set $policy "maxAllowed" . }}{{ end }}
+{{- $policies := list (merge (dict "containerName" "transmission") $policy) }}
+{{- if .Values.metrics.enabled }}
+{{- $policies = append $policies (merge (dict "containerName" "exporter") $policy) }}
+{{- end }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    {{- include "transmission.labels" . | nindent 4 }}
+  name: {{ include "transmission.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  resourcePolicy:
+    containerPolicies:
+      {{- toYaml $policies | nindent 6 }}
+  targetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: {{ include "transmission.fullname" . }}
+  updatePolicy:
+    updateMode: {{ $v.updateMode | quote }}
+{{- end }}

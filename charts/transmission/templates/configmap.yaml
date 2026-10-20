@@ -1,0 +1,11 @@
+{{- include "transmission.validate" . }}
+apiVersion: v1
+data:
+  settings.json: |
+    {{- include "transmission.settings" . | nindent 4 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "transmission.labels" . | nindent 4 }}
+  name: {{ include "transmission.fullname" . }}
+  namespace: {{ .Release.Namespace }}

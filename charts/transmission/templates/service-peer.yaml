@@ -1,0 +1,44 @@
+{{- if include "transmission.peerService" . }}
+{{- $s := .Values.peer.service }}
+{{- $nodePort := eq $s.type "NodePort" }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- $annotations := deepCopy $s.annotations }}
+  {{- if ne $s.type "ClusterIP" }}
+  {{- $annotations = merge $annotations (dict "ignore-check.kube-linter.io/exposed-services" "peer.service.type is the user's choice: inbound peers need a reachable address.") }}
+  {{- end }}
+  {{- with $annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "transmission.labels" . | nindent 4 }}
+  name: {{ include "transmission.fullname" . }}-peer
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- with $s.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ . }}
+  {{- end }}
+  {{- with $s.loadBalancerClass }}
+  loadBalancerClass: {{ . }}
+  {{- end }}
+  ports:
+    - name: peer-tcp
+      {{- if $nodePort }}
+      nodePort: {{ .Values.peer.port }}
+      {{- end }}
+      port: {{ .Values.peer.port }}
+      protocol: TCP
+      targetPort: peer-tcp
+    - name: peer-udp
+      {{- if $nodePort }}
+      nodePort: {{ .Values.peer.port }}
+      {{- end }}
+      port: {{ .Values.peer.port }}
+      protocol: UDP
+      targetPort: peer-udp
+  selector:
+    {{- include "transmission.selectorLabels" . | nindent 4 }}
+  type: {{ $s.type }}
+{{- end }}

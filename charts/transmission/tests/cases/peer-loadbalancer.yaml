@@ -1,0 +1,9 @@
+values:
+  peer:
+    service:
+      enabled: true
+      type: LoadBalancer
+      annotations:
+        metallb.io/address-pool: peers
+      externalTrafficPolicy: Local
+      loadBalancerClass: metallb

@@ -1,0 +1,7 @@
+values:
+  persistence:
+    watch:
+      enabled: true
+      type: existingClaim
+      existingClaim:
+        name: watch

@@ -1,0 +1,371 @@
+---
+# Source: transmission/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: transmission
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: transmission
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: transmission-0.0.0
+  name: transmission
+  namespace: transmission
+spec:
+  egress:
+    - ports:
+        - port: 53
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+            - 10.0.0.0/8
+            - 100.64.0.0/10
+            - 127.0.0.0/8
+            - 169.254.0.0/16
+            - 172.16.0.0/12
+            - 192.168.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+            - fc00::/7
+            - fe80::/10
+    - ports:
+      - port: 3260
+        protocol: TCP
+      to:
+      - ipBlock:
+          cidr: 192.168.1.10/32
+  ingress:
+    - ports:
+      - port: 9091
+        protocol: TCP
+    - ports:
+      - port: 51413
+        protocol: TCP
+      - port: 51413
+        protocol: UDP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: transmission
+      app.kubernetes.io/name: transmission
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Source: transmission/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: transmission
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: transmission
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: transmission-0.0.0
+  name: transmission
+  namespace: transmission
+---
+# Source: transmission/templates/configmap.yaml
+apiVersion: v1
+data:
+  settings.json: |
+    {
+      "download_dir": "/downloads/complete",
+      "incomplete_dir": "/downloads/incomplete",
+      "incomplete_dir_enabled": true,
+      "lpd_enabled": false,
+      "peer_port": 51413,
+      "peer_port_random_on_start": false,
+      "port_forwarding_enabled": false,
+      "rpc_authentication_required": true,
+      "rpc_enabled": true,
+      "rpc_port": 9091,
+      "rpc_url": "/transmission/",
+      "rpc_whitelist_enabled": false,
+      "umask": "002",
+      "watch_dir_enabled": false
+    }
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: transmission
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: transmission
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: transmission-0.0.0
+  name: transmission
+  namespace: transmission
+---
+# Source: transmission/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: transmission
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: transmission
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: transmission-0.0.0
+  name: transmission
+  namespace: transmission
+spec:
+  ports:
+    - name: http
+      port: 9091
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: transmission
+    app.kubernetes.io/name: transmission
+  type: ClusterIP
+---
+# Source: transmission/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/env-value-from: "The login Secret is created by the user, outside the chart."
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: the daemon is the single writer of /config and of one peer identity."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/read-secret-from-env-var: "transmission-daemon has no option to read the password from a file: the login comes from a Secret through env vars and arguments."
+  labels:
+    app.kubernetes.io/instance: transmission
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: transmission
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: transmission-0.0.0
+  name: transmission
+  namespace: transmission
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: transmission
+      app.kubernetes.io/name: transmission
+  template:
+    metadata:
+      annotations:
+        checksum/config: af4fa339086931acfb63f424a1f5ad6ec497e390f6c4257e5d8dc4080e449cc9
+      labels:
+        app.kubernetes.io/instance: transmission
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: transmission
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: transmission-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - --auth
+            - --username
+            - $(TRANSMISSION_RPC_USERNAME)
+            - --password
+            - $(TRANSMISSION_RPC_PASSWORD)
+          env:
+            - name: TRANSMISSION_RPC_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: username
+                  name: transmission
+            - name: TRANSMISSION_RPC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: transmission
+          image: "ghcr.io/spnngl/images/transmission:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            tcpSocket:
+              port: http
+          name: transmission
+          ports:
+            - containerPort: 9091
+              name: http
+              protocol: TCP
+            - containerPort: 51413
+              name: peer-tcp
+              protocol: TCP
+            - containerPort: 51413
+              name: peer-udp
+              protocol: UDP
+          readinessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            tcpSocket:
+              port: http
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 60
+            periodSeconds: 5
+            tcpSocket:
+              port: http
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /config
+              name: config
+            - mountPath: /downloads
+              name: downloads
+            - mountPath: /config/settings.json
+              name: settings
+              readOnly: true
+              subPath: settings.json
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: transmission
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - configMap:
+            name: transmission
+          name: settings
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+    - metadata:
+        name: config
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+    - metadata:
+        name: downloads
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+---
+# Source: transmission/templates/tests/test-rpc.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    ignore-check.kube-linter.io/env-value-from: "The login Secret is created by the user, outside the chart."
+    ignore-check.kube-linter.io/no-liveness-probe: "One-shot hook pod that exits within seconds."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-readiness-probe: "One-shot hook pod that exits within seconds."
+    ignore-check.kube-linter.io/non-isolated-pod: "Short-lived test pod that only dials the RPC Service."
+    ignore-check.kube-linter.io/read-secret-from-env-var: "transmission-remote takes the login as an argument, there is no file option."
+    ignore-check.kube-linter.io/restart-policy: "Never makes a failing helm test fail fast instead of retrying until the timeout."
+  labels:
+    app.kubernetes.io/component: test
+    app.kubernetes.io/instance: transmission
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: transmission-test
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: transmission-0.0.0
+  name: transmission-test-rpc
+  namespace: transmission
+spec:
+  automountServiceAccountToken: false
+  containers:
+    - args:
+        - "transmission.transmission.svc:9091"
+        - --auth
+        - $(TRANSMISSION_RPC_USERNAME):$(TRANSMISSION_RPC_PASSWORD)
+        - --session-info
+      command:
+        - /usr/bin/transmission-remote
+      env:
+        - name: TRANSMISSION_RPC_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: username
+              name: transmission
+        - name: TRANSMISSION_RPC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: transmission
+      image: "ghcr.io/spnngl/images/transmission:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      imagePullPolicy: IfNotPresent
+      name: rpc
+      resources:
+        limits:
+          memory: 512Mi
+        requests:
+          cpu: 50m
+          memory: 64Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        privileged: false
+        readOnlyRootFilesystem: true
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+  dnsConfig:
+    options:
+    - name: ndots
+      value: "2"
+  enableServiceLinks: false
+  hostUsers: false
+  nodeSelector:
+    kubernetes.io/os: linux
+  restartPolicy: Never
+  securityContext:
+    fsGroup: 65532
+    fsGroupChangePolicy: OnRootMismatch
+    runAsGroup: 65532
+    runAsNonRoot: true
+    runAsUser: 65532
+    seccompProfile:
+      type: RuntimeDefault

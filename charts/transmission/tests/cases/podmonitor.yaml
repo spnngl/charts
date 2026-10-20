@@ -1,0 +1,17 @@
+values:
+  metrics:
+    enabled: true
+    podMonitor:
+      enabled: true
+      labels:
+        release: prom
+      interval: 30s
+      scrapeTimeout: 10s
+      relabelings:
+      - targetLabel: cluster
+        replacement: home
+      metricRelabelings:
+      - action: drop
+        sourceLabels:
+        - __name__
+        regex: transmission_torrent_.*

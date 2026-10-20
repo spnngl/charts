@@ -1,0 +1,5 @@
+values:
+  config:
+    watch_dir: /somewhere
+expect:
+  error: watch_dir

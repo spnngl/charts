@@ -1,0 +1,38 @@
+{{- if .Values.metrics.prometheusRule.enabled }}
+{{- $m := .Values.metrics.prometheusRule }}
+{{- $fullname := include "transmission.fullname" . }}
+{{- /* job label set by the Prometheus Operator: Service name (ServiceMonitor) or <namespace>/<name> (PodMonitor). */}}
+{{- $job := ternary (printf "%s-metrics" $fullname) (printf "%s/%s" .Release.Namespace $fullname) .Values.metrics.serviceMonitor.enabled }}
+{{- $sel := printf "job=%q, namespace=%q" $job .Release.Namespace }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    {{- toYaml (merge (include "transmission.labels" . | fromYaml) (deepCopy $m.labels)) | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: {{ $fullname }}
+      rules:
+        {{- if not (has "TransmissionDown" $m.disabled) }}
+        - alert: TransmissionDown
+          annotations:
+            description: {{ printf "The exporter of %s/%s has not answered a scrape for 5 minutes: the exporter is down, or Transmission does not answer its RPC (the exporter then fails the scrape)." .Release.Namespace $fullname | quote }}
+            summary: Transmission is down.
+          expr: {{ printf "up{%s} == 0" $sel | quote }}
+          for: 5m
+          labels:
+            severity: critical
+        {{- end }}
+        {{- if not (has "TransmissionFreeSpaceLow" $m.disabled) }}
+        - alert: TransmissionFreeSpaceLow
+          annotations:
+            description: {{ printf "Less than %s bytes are free in %s of %s/%s for 15 minutes." $m.freeSpaceBytes "{{ $labels.download_dir }}" .Release.Namespace $fullname | quote }}
+            summary: Transmission is running out of disk space.
+          expr: {{ printf "transmission_free_space{%s} < %s and transmission_free_space{%s} >= 0" $sel $m.freeSpaceBytes $sel | quote }}
+          for: 15m
+          labels:
+            severity: warning
+        {{- end }}
+{{- end }}

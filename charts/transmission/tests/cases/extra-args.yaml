@@ -1,0 +1,7 @@
+values:
+  extraArgs:
+  - --portmap
+  - --log-level=debug
+  extraEnv:
+  - name: TZ
+    value: Europe/Paris

@@ -1,0 +1,13 @@
+values:
+  httpRoute:
+    enabled: true
+    annotations:
+      a: b
+    labels:
+      c: d
+    parentRefs:
+    - name: gateway
+      namespace: gateway-system
+      sectionName: https
+    hostnames:
+    - torrents.example.com

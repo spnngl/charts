@@ -1,0 +1,6 @@
+values:
+  peer:
+    port: 6881
+    hostPort: true
+  nodeSelector:
+    kubernetes.io/hostname: node-1

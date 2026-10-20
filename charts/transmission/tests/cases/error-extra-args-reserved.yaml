@@ -1,0 +1,5 @@
+values:
+  extraArgs:
+  - --port=9092
+expect:
+  error: extraArgs

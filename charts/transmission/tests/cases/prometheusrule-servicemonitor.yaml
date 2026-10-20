@@ -1,0 +1,10 @@
+values:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+      labels:
+        release: prom
+      freeSpaceBytes: "50000000000"

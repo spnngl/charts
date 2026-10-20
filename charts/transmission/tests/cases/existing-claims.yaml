@@ -1,0 +1,11 @@
+values:
+  persistence:
+    config:
+      type: existingClaim
+      existingClaim:
+        name: transmission-config
+        subPath: transmission
+    downloads:
+      type: existingClaim
+      existingClaim:
+        name: media

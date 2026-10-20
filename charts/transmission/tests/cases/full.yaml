@@ -1,0 +1,74 @@
+values:
+  nameOverride: bt
+  imagePullSecrets:
+  - name: regcred
+  serviceAccount:
+    annotations:
+      a: b
+  podAnnotations:
+    a: b
+  podLabels:
+    c: d
+  priorityClassName: low
+  tolerations:
+  - key: k
+    operator: Exists
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: disk
+            operator: In
+            values:
+            - hdd
+  service:
+    annotations:
+      a: b
+  config:
+    speed_limit_down: 5000
+    speed_limit_down_enabled: true
+    umask: "022"
+    download_queue_size: 3
+  persistence:
+    config:
+      volumeClaimTemplate:
+        storageClassName: fast
+        annotations:
+          a: b
+        labels:
+          c: d
+    downloads:
+      volumeClaimTemplate:
+        storageClassName: slow
+        accessModes:
+        - ReadWriteOnce
+        size: 2Ti
+    watch:
+      enabled: true
+      volumeClaimTemplate:
+        size: 10Mi
+  extraVolumes:
+  - name: scripts
+    emptyDir: {}
+  extraVolumeMounts:
+  - name: scripts
+    mountPath: /scripts
+  metrics:
+    enabled: true
+    service:
+      annotations:
+        a: b
+  extraArgs:
+  - --portmap
+  extraEnv:
+  - name: TZ
+    value: UTC
+  auth:
+    existingSecret:
+      name: bt-login
+      usernameKey: user
+      passwordKey: pass
+  peer:
+    service:
+      enabled: true

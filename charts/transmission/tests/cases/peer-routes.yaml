@@ -1,0 +1,18 @@
+values:
+  peer:
+    tcpRoute:
+      enabled: true
+      annotations:
+        a: b
+      labels:
+        c: d
+      parentRefs:
+      - name: gateway
+        namespace: gateway-system
+        sectionName: bt-tcp
+    udpRoute:
+      enabled: true
+      parentRefs:
+      - name: gateway
+        namespace: gateway-system
+        sectionName: bt-udp

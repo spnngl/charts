@@ -1,0 +1,7 @@
+values:
+  peer:
+    service:
+      enabled: true
+      type: NodePort
+expect:
+  error: 30000-32767

@@ -1,0 +1,20 @@
+{{- if .Values.peer.tcpRoute.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: TCPRoute
+metadata:
+  {{- with .Values.peer.tcpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- toYaml (merge (include "transmission.labels" . | fromYaml) (deepCopy .Values.peer.tcpRoute.labels)) | nindent 4 }}
+  name: {{ include "transmission.fullname" . }}-peer
+  namespace: {{ .Release.Namespace }}
+spec:
+  parentRefs:
+    {{- toYaml .Values.peer.tcpRoute.parentRefs | nindent 4 }}
+  rules:
+    - backendRefs:
+        - name: {{ include "transmission.fullname" . }}-peer
+          port: {{ .Values.peer.port }}
+{{- end }}

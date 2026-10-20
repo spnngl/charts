@@ -1,0 +1,5 @@
+values:
+  config:
+    rpc_port: 9092
+expect:
+  error: rpc_port

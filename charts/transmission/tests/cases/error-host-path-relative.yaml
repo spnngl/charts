@@ -1,0 +1,8 @@
+values:
+  persistence:
+    downloads:
+      type: hostPath
+      hostPath:
+        path: relative/dir
+expect:
+  error: persistence.downloads.hostPath.path must be an absolute path

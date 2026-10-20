@@ -1,0 +1,22 @@
+{{- if include "transmission.metricsService" . }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- with .Values.metrics.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "transmission.labels" . | nindent 4 }}
+  name: {{ include "transmission.fullname" . }}-metrics
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: metrics
+      port: {{ .Values.metrics.port }}
+      protocol: TCP
+      targetPort: metrics
+  selector:
+    {{- include "transmission.selectorLabels" . | nindent 4 }}
+  type: ClusterIP
+{{- end }}
