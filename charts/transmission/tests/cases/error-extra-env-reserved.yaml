@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+  - name: TRANSMISSION_HOME
+    value: /x
+expect:
+  error: extraEnv

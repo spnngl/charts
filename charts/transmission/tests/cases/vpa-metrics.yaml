@@ -1,0 +1,9 @@
+values:
+  metrics:
+    enabled: true
+  verticalPodAutoscaler:
+    enabled: true
+    updateMode: InPlaceOrRecreate
+    controlledResources:
+    - memory
+    controlledValues: RequestsOnly

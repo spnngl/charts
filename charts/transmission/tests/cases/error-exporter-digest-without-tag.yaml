@@ -1,0 +1,7 @@
+values:
+  metrics:
+    enabled: true
+    image:
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+expect:
+  error: metrics.image.digest requires metrics.image.tag

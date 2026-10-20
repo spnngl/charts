@@ -1,0 +1,20 @@
+# Used by `ct lint` and `ct install` (kind). No Secret exists, so no login; the
+# daemon needs no backend. The host check applies without a login, and the
+# test pod uses the Service DNS name.
+auth:
+  enabled: false
+config:
+  rpc_host_whitelist_enabled: false
+# kind inside a CI runner cannot create user namespaces.
+hostUsers: true
+metrics:
+  enabled: true
+  service:
+    enabled: true
+persistence:
+  config:
+    volumeClaimTemplate:
+      size: 100Mi
+  downloads:
+    volumeClaimTemplate:
+      size: 100Mi

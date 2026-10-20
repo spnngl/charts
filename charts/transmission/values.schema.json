@@ -1,0 +1,1421 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "affinity": {
+      "additionalProperties": true,
+      "description": "Affinity.",
+      "required": [],
+      "type": "object"
+    },
+    "auth": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Require a login for the RPC and web UI. `false` runs with `--no-auth`: then restrict access with the NetworkPolicy and set `config.rpc_host_whitelist` (host names reaching the daemon through an Ingress or HTTPRoute are refused by the host check otherwise).",
+          "type": "boolean"
+        },
+        "existingSecret": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "description": "Name of the Secret holding the login. Empty: `\u003cfullname\u003e`. The chart never creates it.",
+              "type": "string"
+            },
+            "passwordKey": {
+              "description": "Key of the password in the Secret.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "usernameKey": {
+              "description": "Key of the user name in the Secret.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "config": {
+      "additionalProperties": true,
+      "description": "Transmission settings (`settings.json`, snake_case keys), rendered into a ConfigMap and mounted read-only: web UI changes last until the pod restarts. Chart-owned keys (RPC, login, peer port, watch directory) are rejected.",
+      "properties": {
+        "download_dir": {
+          "type": "string"
+        },
+        "incomplete_dir": {
+          "type": "string"
+        },
+        "incomplete_dir_enabled": {
+          "type": "boolean"
+        },
+        "lpd_enabled": {
+          "type": "boolean"
+        },
+        "port_forwarding_enabled": {
+          "type": "boolean"
+        },
+        "rpc_whitelist_enabled": {
+          "type": "boolean"
+        },
+        "umask": {
+          "description": "Octal, as a string (an integer would be read as decimal).",
+          "type": "string"
+        }
+      },
+      "propertyNames": {
+        "not": {
+          "enum": [
+            "rpc_enabled",
+            "rpc_port",
+            "rpc_url",
+            "rpc_authentication_required",
+            "rpc_username",
+            "rpc_password",
+            "peer_port",
+            "peer_port_random_on_start",
+            "watch_dir",
+            "watch_dir_enabled"
+          ],
+          "required": []
+        },
+        "pattern": "^[a-z0-9_]+$",
+        "required": []
+      },
+      "required": [],
+      "type": "object"
+    },
+    "dnsConfig": {
+      "additionalProperties": true,
+      "description": "DNS config.",
+      "properties": {
+        "options": {
+          "description": "DNS options (fewer search-list lookups for tracker host names).",
+          "items": {
+            "additionalProperties": true,
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "extraArgs": {
+      "description": "Extra `transmission-daemon` options, after the chart's own. They override `config` (arguments win). Options for chart-owned settings and options that exit are rejected.",
+      "items": {
+        "minLength": 1,
+        "not": {
+          "pattern": "^(?:-[tTuvVdgpPcCr]|--(?:auth|no-auth|username|password|version|dump-settings|config-dir|port|peerport|watch-dir|no-watch-dir|rpc-bind-address)(?:=.*)?$)",
+          "required": []
+        },
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "extraEnv": {
+      "description": "Extra environment variables (`EnvVar` list) for the Transmission container. Chart-owned names are rejected.",
+      "items": {
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "not": {
+              "enum": [
+                "TRANSMISSION_RPC_USERNAME",
+                "TRANSMISSION_RPC_PASSWORD",
+                "TRANSMISSION_HOME",
+                "TRANSMISSION_WEB_HOME"
+              ],
+              "required": []
+            },
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumeMounts": {
+      "description": "Extra volume mounts for the Transmission container.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumes": {
+      "description": "Extra volumes (for example a script directory for `script_torrent_done_filename`: the image has no shell).",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "fullnameOverride": {
+      "description": "Override the full resource name (default `\u003crelease\u003e-\u003cchart\u003e`).",
+      "type": "string"
+    },
+    "global": {
+      "description": "Global values are values that can be accessed from any chart or subchart by exactly the same name.",
+      "required": [],
+      "type": "object"
+    },
+    "hostUsers": {
+      "description": "Run the pod in a user namespace (`false`: uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) and idmapped mounts on every volume's file system (not NFS/SMB, not `hostPath` on some file systems); pods fail to start otherwise. `true` uses host users.",
+      "type": "boolean"
+    },
+    "httpRoute": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "HTTPRoute annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "enabled": {
+          "description": "Create a Gateway API HTTPRoute for the web UI (path prefix `/transmission`).",
+          "type": "boolean"
+        },
+        "hostnames": {
+          "description": "Host names (empty: any host of the Gateway listener).",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Extra HTTPRoute labels.",
+          "required": [],
+          "type": "object"
+        },
+        "parentRefs": {
+          "description": "Gateways (`parentRefs`). Required when enabled.",
+          "items": {
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "image": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "description": "Image digest, only valid together with `image.tag`.",
+          "pattern": "^(sha256:[a-f0-9]{64})?$",
+          "type": "string"
+        },
+        "pullPolicy": {
+          "description": "Image pull policy.",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ],
+          "type": "string"
+        },
+        "repository": {
+          "description": "Image repository.",
+          "type": "string"
+        },
+        "tag": {
+          "description": "Image tag. Empty: the tag and digest recorded for `image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "imagePullSecrets": {
+      "description": "Image pull secrets (list of `{name: \u003csecret\u003e}`).",
+      "items": {
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "ingress": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Ingress annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "className": {
+          "description": "Ingress class name (empty: cluster default).",
+          "type": "string"
+        },
+        "enabled": {
+          "description": "Create an Ingress for the web UI (path `/transmission`).",
+          "type": "boolean"
+        },
+        "hosts": {
+          "description": "Host names. Required when enabled.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tls": {
+          "description": "Ingress TLS blocks (`secretName`, `hosts`).",
+          "items": {
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "livenessProbe": {
+      "additionalProperties": true,
+      "description": "Liveness probe (TCP on the RPC port).",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "metrics": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Run the Prometheus exporter as a sidecar (`/metrics` on `metrics.port`). Per-torrent series grow with the torrent count.",
+          "type": "boolean"
+        },
+        "image": {
+          "additionalProperties": false,
+          "properties": {
+            "digest": {
+              "description": "Exporter image digest, only valid together with `metrics.image.tag`.",
+              "pattern": "^(sha256:[a-f0-9]{64})?$",
+              "type": "string"
+            },
+            "pullPolicy": {
+              "description": "Exporter image pull policy.",
+              "enum": [
+                "Always",
+                "IfNotPresent",
+                "Never"
+              ],
+              "type": "string"
+            },
+            "repository": {
+              "description": "Exporter image repository.",
+              "type": "string"
+            },
+            "tag": {
+              "description": "Exporter image tag. Empty: the tag and digest recorded for `metrics.image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "podMonitor": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Create a Prometheus Operator PodMonitor (no Service needed). Exclusive with `serviceMonitor`.",
+              "type": "boolean"
+            },
+            "interval": {
+              "description": "Scrape interval (empty: Prometheus default).",
+              "type": "string"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels.",
+              "required": [],
+              "type": "object"
+            },
+            "metricRelabelings": {
+              "description": "Metric relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "relabelings": {
+              "description": "Relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "scrapeTimeout": {
+              "description": "Scrape timeout (empty: Prometheus default).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "port": {
+          "description": "Exporter listen port.",
+          "maximum": 65535,
+          "minimum": 1024,
+          "type": "integer"
+        },
+        "prometheusRule": {
+          "additionalProperties": false,
+          "properties": {
+            "disabled": {
+              "description": "Alerts to leave out (at most one: disable `prometheusRule` instead).",
+              "items": {
+                "enum": [
+                  "TransmissionDown",
+                  "TransmissionFreeSpaceLow"
+                ],
+                "type": "string"
+              },
+              "maxItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "enabled": {
+              "description": "Create a Prometheus Operator PrometheusRule (alerts `TransmissionDown`, `TransmissionFreeSpaceLow`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.",
+              "type": "boolean"
+            },
+            "freeSpaceBytes": {
+              "description": "`TransmissionFreeSpaceLow` threshold in bytes (a string: Helm would render a large number in scientific notation).",
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels (for example `release: kube-prometheus-stack`).",
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "resources": {
+          "additionalProperties": true,
+          "description": "Exporter resources. With a memory limit, `GOMEMLIMIT` follows it.",
+          "properties": {
+            "limits": {
+              "additionalProperties": true,
+              "properties": {
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "requests": {
+              "additionalProperties": true,
+              "properties": {
+                "cpu": {
+                  "type": "string"
+                },
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "securityContext": {
+          "additionalProperties": true,
+          "description": "Exporter container security context. Overrides are merged onto these defaults.",
+          "properties": {
+            "allowPrivilegeEscalation": {
+              "type": "boolean"
+            },
+            "capabilities": {
+              "additionalProperties": true,
+              "properties": {
+                "drop": {
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      }
+                    ],
+                    "required": []
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "privileged": {
+              "type": "boolean"
+            },
+            "readOnlyRootFilesystem": {
+              "type": "boolean"
+            },
+            "runAsGroup": {
+              "type": "integer"
+            },
+            "runAsNonRoot": {
+              "type": "boolean"
+            },
+            "runAsUser": {
+              "type": "integer"
+            },
+            "seccompProfile": {
+              "additionalProperties": true,
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "service": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Service annotations.",
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Render the metrics Service (also rendered when `serviceMonitor.enabled`).",
+              "type": "boolean"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "serviceMonitor": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Create a Prometheus Operator ServiceMonitor. Exclusive with `podMonitor`.",
+              "type": "boolean"
+            },
+            "interval": {
+              "description": "Scrape interval (empty: Prometheus default).",
+              "type": "string"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels (for example `release: kube-prometheus-stack`).",
+              "required": [],
+              "type": "object"
+            },
+            "metricRelabelings": {
+              "description": "Metric relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "relabelings": {
+              "description": "Relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "scrapeTimeout": {
+              "description": "Scrape timeout (empty: Prometheus default).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "nameOverride": {
+      "description": "yaml-language-server: $schema=values.schema.json\nOverride the chart name used in resource names and labels.",
+      "type": "string"
+    },
+    "networkPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "egress": {
+          "additionalProperties": false,
+          "properties": {
+            "dns": {
+              "additionalProperties": false,
+              "properties": {
+                "to": {
+                  "description": "DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Restrict egress (DNS, internet peers and trackers, `extraEgress`).",
+              "type": "boolean"
+            },
+            "extraEgress": {
+              "description": "Extra `NetworkPolicyEgressRule`s.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "peers": {
+              "additionalProperties": false,
+              "properties": {
+                "to": {
+                  "description": "Peers and trackers (any port). Default: the internet, not the private, CGNAT and link-local ranges, so a compromised P2P process cannot move sideways. Remove an `except` entry to reach a peer there.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "enabled": {
+          "description": "Create a NetworkPolicy (ingress: RPC port, peer port, and the metrics port when `metrics.enabled`).",
+          "type": "boolean"
+        },
+        "metrics": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to reach the metrics port. Empty: any source.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "rpc": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to reach the RPC and web UI port. Empty: any source (the `helm test` pod needs it too).",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "nodeSelector": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Node selector. With `peer.hostPort` or a `hostPath`, pin the pod to the node.",
+      "properties": {
+        "kubernetes.io/os": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "peer": {
+      "additionalProperties": false,
+      "properties": {
+        "hostPort": {
+          "description": "Publish the peer port on the node (`hostPort`, TCP and UDP): inbound peers reach the pod through the node IP. Needs a `privileged` namespace (Pod Security `baseline` rejects it) and a CNI with `portmap`.",
+          "type": "boolean"
+        },
+        "port": {
+          "description": "Peer port (`peer_port`), TCP and UDP (µTP, DHT and UDP trackers share it). Transmission announces it to trackers, so every hop in front of the pod (hostPort, NodePort, Gateway listener, router forward) must use this same number.",
+          "maximum": 65535,
+          "minimum": 1024,
+          "type": "integer"
+        },
+        "service": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Peer Service annotations.",
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Render a peer Service (`\u003cfullname\u003e-peer`). Also rendered when a peer route is enabled. A ClusterIP one gives inbound peers nothing: use `LoadBalancer` or `NodePort` for that.",
+              "type": "boolean"
+            },
+            "externalTrafficPolicy": {
+              "description": "`externalTrafficPolicy` (`LoadBalancer` / `NodePort`). `Local` keeps the peer source address. Empty: Kubernetes default.",
+              "enum": [
+                "",
+                "Cluster",
+                "Local"
+              ],
+              "type": "string"
+            },
+            "loadBalancerClass": {
+              "description": "`loadBalancerClass` (`LoadBalancer`). Empty: cloud provider default.",
+              "type": "string"
+            },
+            "type": {
+              "description": "Peer Service type. `NodePort` uses `peer.port` as the node port (30000-32767).",
+              "enum": [
+                "ClusterIP",
+                "LoadBalancer",
+                "NodePort"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "tcpRoute": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "TCPRoute annotations.",
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Create a Gateway API TCPRoute (`gateway.networking.k8s.io/v1`) to the peer Service. Needs a Gateway with a TCP listener on `peer.port`.",
+              "type": "boolean"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra TCPRoute labels.",
+              "required": [],
+              "type": "object"
+            },
+            "parentRefs": {
+              "description": "Gateways (`parentRefs`, set `sectionName` to the TCP listener). Required when enabled.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "udpRoute": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "UDPRoute annotations.",
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Create a Gateway API UDPRoute (`gateway.networking.k8s.io/v1`) to the peer Service. Needs a Gateway with a UDP listener on `peer.port`.",
+              "type": "boolean"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra UDPRoute labels.",
+              "required": [],
+              "type": "object"
+            },
+            "parentRefs": {
+              "description": "Gateways (`parentRefs`, set `sectionName` to the UDP listener). Required when enabled.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "persistence": {
+      "additionalProperties": false,
+      "properties": {
+        "config": {
+          "additionalProperties": false,
+          "properties": {
+            "emptyDir": {
+              "additionalProperties": false,
+              "properties": {
+                "sizeLimit": {
+                  "description": "Size limit (`type: emptyDir`, state is lost with the pod). Empty: none.",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "existingClaim": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "description": "Name of an existing PVC (`type: existingClaim`).",
+                  "type": "string"
+                },
+                "subPath": {
+                  "description": "Sub-path inside the claim.",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "hostPath": {
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "description": "Absolute node path (`type: hostPath`), owned by uid/gid 65532. Pin the pod to the node.",
+                  "type": "string"
+                },
+                "type": {
+                  "description": "`hostPath` type. `DirectoryOrCreate` makes a root-owned directory the daemon cannot write.",
+                  "enum": [
+                    "Directory",
+                    "DirectoryOrCreate"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "type": {
+              "description": "Where `/config` (torrents, resume data, stats) lives. `volumeClaimTemplate` creates a PVC per pod and keeps it on uninstall; the other types use the matching sub-section.",
+              "enum": [
+                "volumeClaimTemplate",
+                "existingClaim",
+                "hostPath",
+                "emptyDir"
+              ],
+              "type": "string"
+            },
+            "volumeClaimTemplate": {
+              "additionalProperties": false,
+              "properties": {
+                "accessModes": {
+                  "description": "Access modes.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "annotations": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "PVC annotations.",
+                  "required": [],
+                  "type": "object"
+                },
+                "labels": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "PVC labels.",
+                  "required": [],
+                  "type": "object"
+                },
+                "size": {
+                  "description": "Requested size. The template is immutable once installed: resize the PVC, see the README.",
+                  "type": "string"
+                },
+                "storageClassName": {
+                  "description": "StorageClass (empty: cluster default).",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "downloads": {
+          "additionalProperties": false,
+          "properties": {
+            "emptyDir": {
+              "additionalProperties": false,
+              "properties": {
+                "sizeLimit": {
+                  "description": "Size limit (`type: emptyDir`). Empty: none.",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "existingClaim": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "description": "Name of an existing PVC (`type: existingClaim`).",
+                  "type": "string"
+                },
+                "subPath": {
+                  "description": "Sub-path inside the claim.",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "hostPath": {
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "description": "Absolute node path (`type: hostPath`), owned by uid/gid 65532. Pin the pod to the node.",
+                  "type": "string"
+                },
+                "type": {
+                  "description": "`hostPath` type.",
+                  "enum": [
+                    "Directory",
+                    "DirectoryOrCreate"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "type": {
+              "description": "Where `/downloads` lives. See `persistence.config.type`.",
+              "enum": [
+                "volumeClaimTemplate",
+                "existingClaim",
+                "hostPath",
+                "emptyDir"
+              ],
+              "type": "string"
+            },
+            "volumeClaimTemplate": {
+              "additionalProperties": false,
+              "properties": {
+                "accessModes": {
+                  "description": "Access modes.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "annotations": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "PVC annotations.",
+                  "required": [],
+                  "type": "object"
+                },
+                "labels": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "PVC labels.",
+                  "required": [],
+                  "type": "object"
+                },
+                "size": {
+                  "description": "Requested size.",
+                  "type": "string"
+                },
+                "storageClassName": {
+                  "description": "StorageClass (empty: cluster default).",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "watch": {
+          "additionalProperties": false,
+          "properties": {
+            "emptyDir": {
+              "additionalProperties": false,
+              "properties": {
+                "sizeLimit": {
+                  "description": "Size limit (`type: emptyDir`). Empty: none.",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Mount `/watch` and turn on `watch_dir`: `.torrent` files dropped there are added and renamed `.added`.",
+              "type": "boolean"
+            },
+            "existingClaim": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "description": "Name of an existing PVC (`type: existingClaim`).",
+                  "type": "string"
+                },
+                "subPath": {
+                  "description": "Sub-path inside the claim.",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "hostPath": {
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "description": "Absolute node path (`type: hostPath`), owned by uid/gid 65532. Pin the pod to the node.",
+                  "type": "string"
+                },
+                "type": {
+                  "description": "`hostPath` type.",
+                  "enum": [
+                    "Directory",
+                    "DirectoryOrCreate"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "type": {
+              "description": "Where `/watch` lives. See `persistence.config.type`.",
+              "enum": [
+                "volumeClaimTemplate",
+                "existingClaim",
+                "hostPath",
+                "emptyDir"
+              ],
+              "type": "string"
+            },
+            "volumeClaimTemplate": {
+              "additionalProperties": false,
+              "properties": {
+                "accessModes": {
+                  "description": "Access modes.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "annotations": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "PVC annotations.",
+                  "required": [],
+                  "type": "object"
+                },
+                "labels": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "PVC labels.",
+                  "required": [],
+                  "type": "object"
+                },
+                "size": {
+                  "description": "Requested size.",
+                  "type": "string"
+                },
+                "storageClassName": {
+                  "description": "StorageClass (empty: cluster default).",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "podAnnotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Pod annotations.",
+      "required": [],
+      "type": "object"
+    },
+    "podLabels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Extra pod labels.",
+      "required": [],
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "additionalProperties": true,
+      "description": "Pod security context. Overrides are merged onto these defaults. `fsGroup` does not apply to NFS/SMB volumes or `hostPath`.",
+      "properties": {
+        "fsGroup": {
+          "type": "integer"
+        },
+        "fsGroupChangePolicy": {
+          "type": "string"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "priorityClassName": {
+      "description": "Priority class name.",
+      "type": "string"
+    },
+    "readinessProbe": {
+      "additionalProperties": true,
+      "description": "Readiness probe (TCP on the RPC port).",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "resources": {
+      "additionalProperties": true,
+      "description": "Resources of the Transmission container. A scheduling floor, not a sizing: memory grows with the torrent count and the cache (measure, then tune; VPA in `Off` mode gives recommendations). No CPU limit on purpose.",
+      "properties": {
+        "limits": {
+          "additionalProperties": true,
+          "properties": {
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "requests": {
+          "additionalProperties": true,
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "revisionHistoryLimit": {
+      "description": "Old ControllerRevisions to keep.",
+      "type": "integer"
+    },
+    "securityContext": {
+      "additionalProperties": true,
+      "description": "Container security context of the Transmission container. Overrides are merged onto these defaults.",
+      "properties": {
+        "allowPrivilegeEscalation": {
+          "type": "boolean"
+        },
+        "capabilities": {
+          "additionalProperties": true,
+          "properties": {
+            "drop": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ],
+                "required": []
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "privileged": {
+          "type": "boolean"
+        },
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "service": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Service annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "port": {
+          "description": "RPC and web UI Service port (the container listens on 9091).",
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "type": {
+          "description": "RPC and web UI Service type.",
+          "enum": [
+            "ClusterIP",
+            "LoadBalancer",
+            "NodePort"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "serviceAccount": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "ServiceAccount annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "create": {
+          "description": "Create the ServiceAccount.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "ServiceAccount name. Empty: `\u003cfullname\u003e` (or `default` when `create` is false).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "startupProbe": {
+      "additionalProperties": true,
+      "description": "Startup probe (TCP on the RPC port; an HTTP probe would get 401 with a login, and failed logins trip the anti brute force lock). Generous: many torrents take a while to load.",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "tolerations": {
+      "description": "Tolerations.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "verticalPodAutoscaler": {
+      "additionalProperties": false,
+      "properties": {
+        "controlledResources": {
+          "description": "Resources VPA controls.",
+          "items": {
+            "enum": [
+              "cpu",
+              "memory"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "controlledValues": {
+          "description": "Whether VPA also scales limits.",
+          "enum": [
+            "RequestsAndLimits",
+            "RequestsOnly"
+          ],
+          "type": "string"
+        },
+        "enabled": {
+          "description": "Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).",
+          "type": "boolean"
+        },
+        "maxAllowed": {
+          "additionalProperties": true,
+          "description": "Upper bound of recommendations.",
+          "required": [],
+          "type": "object"
+        },
+        "minAllowed": {
+          "additionalProperties": true,
+          "description": "Lower bound of recommendations (for example `{cpu: 25m, memory: 64Mi}`).",
+          "required": [],
+          "type": "object"
+        },
+        "updateMode": {
+          "description": "VPA update mode.",
+          "enum": [
+            "Off",
+            "Initial",
+            "Recreate",
+            "InPlaceOrRecreate"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    }
+  },
+  "required": [],
+  "title": "transmission values",
+  "type": "object"
+}

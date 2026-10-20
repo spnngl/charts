@@ -1,0 +1,11 @@
+values:
+  ingress:
+    enabled: true
+    hosts:
+    - torrents.example.com
+    - bt.example.com
+    tls:
+    - secretName: torrents-tls
+      hosts:
+      - torrents.example.com
+      - bt.example.com

@@ -1,0 +1,7 @@
+values:
+  resources:
+    limits: null
+  metrics:
+    enabled: true
+    resources:
+      limits: null

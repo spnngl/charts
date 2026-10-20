@@ -1,0 +1,9 @@
+values:
+  metrics:
+    enabled: true
+    podMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+      disabled:
+      - TransmissionFreeSpaceLow

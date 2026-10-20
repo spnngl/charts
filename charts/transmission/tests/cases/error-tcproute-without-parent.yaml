@@ -1,0 +1,6 @@
+values:
+  peer:
+    tcpRoute:
+      enabled: true
+expect:
+  error: peer.tcpRoute.parentRefs is required

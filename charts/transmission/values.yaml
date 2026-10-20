@@ -1,0 +1,865 @@
+# yaml-language-server: $schema=values.schema.json
+# @schema.root
+# title: transmission values
+# @schema.root
+# -- Override the chart name used in resource names and labels.
+nameOverride: ""
+# -- Override the full resource name (default `<release>-<chart>`).
+fullnameOverride: ""
+
+image:
+  # -- Image repository.
+  repository: ghcr.io/spnngl/images/transmission
+  # -- Image tag. Empty: the tag and digest recorded for `image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.
+  tag: ""
+  # @schema
+  # type: string
+  # pattern: "^(sha256:[a-f0-9]{64})?$"
+  # @schema
+  # -- Image digest, only valid together with `image.tag`.
+  digest: ""
+  # @schema
+  # type: string
+  # enum: [Always, IfNotPresent, Never]
+  # @schema
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+# @schema
+# -- Image pull secrets (list of `{name: <secret>}`).
+imagePullSecrets: []
+
+auth:
+  # -- Require a login for the RPC and web UI. `false` runs with `--no-auth`: then restrict access with the NetworkPolicy and set `config.rpc_host_whitelist` (host names reaching the daemon through an Ingress or HTTPRoute are refused by the host check otherwise).
+  enabled: true
+  existingSecret:
+    # -- Name of the Secret holding the login. Empty: `<fullname>`. The chart never creates it.
+    name: ""
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the user name in the Secret.
+    usernameKey: username
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the password in the Secret.
+    passwordKey: password
+
+# @schema
+# type: object
+# additionalProperties: true
+# propertyNames:
+#   pattern: "^[a-z0-9_]+$"
+#   not:
+#     enum: [rpc_enabled, rpc_port, rpc_url, rpc_authentication_required, rpc_username, rpc_password, peer_port, peer_port_random_on_start, watch_dir, watch_dir_enabled]
+# @schema
+# -- Transmission settings (`settings.json`, snake_case keys), rendered into a ConfigMap and mounted read-only: web UI changes last until the pod restarts. Chart-owned keys (RPC, login, peer port, watch directory) are rejected.
+config:
+  download_dir: /downloads/complete
+  incomplete_dir: /downloads/incomplete
+  incomplete_dir_enabled: true
+  lpd_enabled: false
+  port_forwarding_enabled: false
+  rpc_whitelist_enabled: false
+  # Octal, as a string (an integer would be read as decimal).
+  umask: "002"
+
+peer:
+  # @schema
+  # type: integer
+  # minimum: 1024
+  # maximum: 65535
+  # @schema
+  # -- Peer port (`peer_port`), TCP and UDP (µTP, DHT and UDP trackers share it). Transmission announces it to trackers, so every hop in front of the pod (hostPort, NodePort, Gateway listener, router forward) must use this same number.
+  port: 51413
+  # -- Publish the peer port on the node (`hostPort`, TCP and UDP): inbound peers reach the pod through the node IP. Needs a `privileged` namespace (Pod Security `baseline` rejects it) and a CNI with `portmap`.
+  hostPort: false
+  service:
+    # -- Render a peer Service (`<fullname>-peer`). Also rendered when a peer route is enabled. A ClusterIP one gives inbound peers nothing: use `LoadBalancer` or `NodePort` for that.
+    enabled: false
+    # @schema
+    # type: string
+    # enum: [ClusterIP, LoadBalancer, NodePort]
+    # @schema
+    # -- Peer Service type. `NodePort` uses `peer.port` as the node port (30000-32767).
+    type: ClusterIP
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Peer Service annotations.
+    annotations: {}
+    # @schema
+    # type: string
+    # enum: ["", Cluster, Local]
+    # @schema
+    # -- `externalTrafficPolicy` (`LoadBalancer` / `NodePort`). `Local` keeps the peer source address. Empty: Kubernetes default.
+    externalTrafficPolicy: ""
+    # -- `loadBalancerClass` (`LoadBalancer`). Empty: cloud provider default.
+    loadBalancerClass: ""
+  tcpRoute:
+    # -- Create a Gateway API TCPRoute (`gateway.networking.k8s.io/v1`) to the peer Service. Needs a Gateway with a TCP listener on `peer.port`.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- TCPRoute annotations.
+    annotations: {}
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra TCPRoute labels.
+    labels: {}
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Gateways (`parentRefs`, set `sectionName` to the TCP listener). Required when enabled.
+    parentRefs: []
+  udpRoute:
+    # -- Create a Gateway API UDPRoute (`gateway.networking.k8s.io/v1`) to the peer Service. Needs a Gateway with a UDP listener on `peer.port`.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- UDPRoute annotations.
+    annotations: {}
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra UDPRoute labels.
+    labels: {}
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Gateways (`parentRefs`, set `sectionName` to the UDP listener). Required when enabled.
+    parentRefs: []
+
+service:
+  # @schema
+  # type: string
+  # enum: [ClusterIP, LoadBalancer, NodePort]
+  # @schema
+  # -- RPC and web UI Service type.
+  type: ClusterIP
+  # @schema
+  # type: integer
+  # minimum: 1
+  # maximum: 65535
+  # @schema
+  # -- RPC and web UI Service port (the container listens on 9091).
+  port: 9091
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Service annotations.
+  annotations: {}
+
+ingress:
+  # -- Create an Ingress for the web UI (path `/transmission`).
+  enabled: false
+  # -- Ingress class name (empty: cluster default).
+  className: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Ingress annotations.
+  annotations: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   minLength: 1
+  # @schema
+  # -- Host names. Required when enabled.
+  hosts: []
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Ingress TLS blocks (`secretName`, `hosts`).
+  tls: []
+
+httpRoute:
+  # -- Create a Gateway API HTTPRoute for the web UI (path prefix `/transmission`).
+  enabled: false
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- HTTPRoute annotations.
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra HTTPRoute labels.
+  labels: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Gateways (`parentRefs`). Required when enabled.
+  parentRefs: []
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   minLength: 1
+  # @schema
+  # -- Host names (empty: any host of the Gateway listener).
+  hostnames: []
+
+persistence:
+  config:
+    # @schema
+    # type: string
+    # enum: [volumeClaimTemplate, existingClaim, hostPath, emptyDir]
+    # @schema
+    # -- Where `/config` (torrents, resume data, stats) lives. `volumeClaimTemplate` creates a PVC per pod and keeps it on uninstall; the other types use the matching sub-section.
+    type: volumeClaimTemplate
+    volumeClaimTemplate:
+      # -- StorageClass (empty: cluster default).
+      storageClassName: ""
+      # @schema
+      # type: array
+      # items:
+      #   type: string
+      # @schema
+      # -- Access modes.
+      accessModes:
+        - ReadWriteOnce
+      # -- Requested size. The template is immutable once installed: resize the PVC, see the README.
+      size: 1Gi
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- PVC annotations.
+      annotations: {}
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- PVC labels.
+      labels: {}
+    existingClaim:
+      # -- Name of an existing PVC (`type: existingClaim`).
+      name: ""
+      # -- Sub-path inside the claim.
+      subPath: ""
+    hostPath:
+      # -- Absolute node path (`type: hostPath`), owned by uid/gid 65532. Pin the pod to the node.
+      path: ""
+      # @schema
+      # type: string
+      # enum: [Directory, DirectoryOrCreate]
+      # @schema
+      # -- `hostPath` type. `DirectoryOrCreate` makes a root-owned directory the daemon cannot write.
+      type: Directory
+    emptyDir:
+      # -- Size limit (`type: emptyDir`, state is lost with the pod). Empty: none.
+      sizeLimit: ""
+  downloads:
+    # @schema
+    # type: string
+    # enum: [volumeClaimTemplate, existingClaim, hostPath, emptyDir]
+    # @schema
+    # -- Where `/downloads` lives. See `persistence.config.type`.
+    type: volumeClaimTemplate
+    volumeClaimTemplate:
+      # -- StorageClass (empty: cluster default).
+      storageClassName: ""
+      # @schema
+      # type: array
+      # items:
+      #   type: string
+      # @schema
+      # -- Access modes.
+      accessModes:
+        - ReadWriteOnce
+      # -- Requested size.
+      size: 10Gi
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- PVC annotations.
+      annotations: {}
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- PVC labels.
+      labels: {}
+    existingClaim:
+      # -- Name of an existing PVC (`type: existingClaim`).
+      name: ""
+      # -- Sub-path inside the claim.
+      subPath: ""
+    hostPath:
+      # -- Absolute node path (`type: hostPath`), owned by uid/gid 65532. Pin the pod to the node.
+      path: ""
+      # @schema
+      # type: string
+      # enum: [Directory, DirectoryOrCreate]
+      # @schema
+      # -- `hostPath` type.
+      type: Directory
+    emptyDir:
+      # -- Size limit (`type: emptyDir`). Empty: none.
+      sizeLimit: ""
+  watch:
+    # -- Mount `/watch` and turn on `watch_dir`: `.torrent` files dropped there are added and renamed `.added`.
+    enabled: false
+    # @schema
+    # type: string
+    # enum: [volumeClaimTemplate, existingClaim, hostPath, emptyDir]
+    # @schema
+    # -- Where `/watch` lives. See `persistence.config.type`.
+    type: volumeClaimTemplate
+    volumeClaimTemplate:
+      # -- StorageClass (empty: cluster default).
+      storageClassName: ""
+      # @schema
+      # type: array
+      # items:
+      #   type: string
+      # @schema
+      # -- Access modes.
+      accessModes:
+        - ReadWriteOnce
+      # -- Requested size.
+      size: 100Mi
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- PVC annotations.
+      annotations: {}
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- PVC labels.
+      labels: {}
+    existingClaim:
+      # -- Name of an existing PVC (`type: existingClaim`).
+      name: ""
+      # -- Sub-path inside the claim.
+      subPath: ""
+    hostPath:
+      # -- Absolute node path (`type: hostPath`), owned by uid/gid 65532. Pin the pod to the node.
+      path: ""
+      # @schema
+      # type: string
+      # enum: [Directory, DirectoryOrCreate]
+      # @schema
+      # -- `hostPath` type.
+      type: Directory
+    emptyDir:
+      # -- Size limit (`type: emptyDir`). Empty: none.
+      sizeLimit: ""
+
+# -- Old ControllerRevisions to keep.
+revisionHistoryLimit: 3
+
+serviceAccount:
+  # -- Create the ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false).
+  name: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- ServiceAccount annotations.
+  annotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Pod annotations.
+podAnnotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Extra pod labels.
+podLabels: {}
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Pod security context. Overrides are merged onto these defaults. `fsGroup` does not apply to NFS/SMB volumes or `hostPath`.
+podSecurityContext:
+  fsGroup: 65532
+  fsGroupChangePolicy: OnRootMismatch
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Container security context of the Transmission container. Overrides are merged onto these defaults.
+securityContext:
+  allowPrivilegeEscalation: false
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: boolean
+# @schema
+# -- Run the pod in a user namespace (`false`: uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) and idmapped mounts on every volume's file system (not NFS/SMB, not `hostPath` on some file systems); pods fail to start otherwise. `true` uses host users.
+hostUsers: false
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Resources of the Transmission container. A scheduling floor, not a sizing: memory grows with the torrent count and the cache (measure, then tune; VPA in `Off` mode gives recommendations). No CPU limit on purpose.
+resources:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  limits:
+    memory: 512Mi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  requests:
+    cpu: 50m
+    memory: 64Mi
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- DNS config.
+dnsConfig:
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  #   additionalProperties: true
+  # @schema
+  # -- DNS options (fewer search-list lookups for tracker host names).
+  options:
+    - name: ndots
+      value: "2"
+
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Startup probe (TCP on the RPC port; an HTTP probe would get 401 with a login, and failed logins trip the anti brute force lock). Generous: many torrents take a while to load.
+startupProbe:
+  failureThreshold: 60
+  periodSeconds: 5
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Readiness probe (TCP on the RPC port).
+readinessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Liveness probe (TCP on the RPC port).
+livenessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Node selector. With `peer.hostPort` or a `hostPath`, pin the pod to the node.
+nodeSelector:
+  kubernetes.io/os: linux
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Tolerations.
+tolerations: []
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Affinity.
+affinity: {}
+# -- Priority class name.
+priorityClassName: ""
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volumes (for example a script directory for `script_torrent_done_filename`: the image has no shell).
+extraVolumes: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volume mounts for the Transmission container.
+extraVolumeMounts: []
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+#       minLength: 1
+#       not:
+#         enum: [TRANSMISSION_RPC_USERNAME, TRANSMISSION_RPC_PASSWORD, TRANSMISSION_HOME, TRANSMISSION_WEB_HOME]
+# @schema
+# -- Extra environment variables (`EnvVar` list) for the Transmission container. Chart-owned names are rejected.
+extraEnv: []
+# @schema
+# type: array
+# items:
+#   type: string
+#   minLength: 1
+#   not:
+#     pattern: '^(?:-[tTuvVdgpPcCr]|--(?:auth|no-auth|username|password|version|dump-settings|config-dir|port|peerport|watch-dir|no-watch-dir|rpc-bind-address)(?:=.*)?$)'
+# @schema
+# -- Extra `transmission-daemon` options, after the chart's own. They override `config` (arguments win). Options for chart-owned settings and options that exit are rejected.
+extraArgs: []
+
+metrics:
+  # -- Run the Prometheus exporter as a sidecar (`/metrics` on `metrics.port`). Per-torrent series grow with the torrent count.
+  enabled: false
+  image:
+    # -- Exporter image repository.
+    repository: ghcr.io/spnngl/images/transmission-exporter
+    # -- Exporter image tag. Empty: the tag and digest recorded for `metrics.image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`.
+    tag: ""
+    # @schema
+    # type: string
+    # pattern: "^(sha256:[a-f0-9]{64})?$"
+    # @schema
+    # -- Exporter image digest, only valid together with `metrics.image.tag`.
+    digest: ""
+    # @schema
+    # type: string
+    # enum: [Always, IfNotPresent, Never]
+    # @schema
+    # -- Exporter image pull policy.
+    pullPolicy: IfNotPresent
+  # @schema
+  # type: integer
+  # minimum: 1024
+  # maximum: 65535
+  # @schema
+  # -- Exporter listen port.
+  port: 19091
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Exporter resources. With a memory limit, `GOMEMLIMIT` follows it.
+  resources:
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    limits:
+      memory: 64Mi
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    requests:
+      cpu: 10m
+      memory: 16Mi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Exporter container security context. Overrides are merged onto these defaults.
+  securityContext:
+    allowPrivilegeEscalation: false
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    capabilities:
+      drop:
+        - ALL
+    privileged: false
+    readOnlyRootFilesystem: true
+    runAsGroup: 65532
+    runAsNonRoot: true
+    runAsUser: 65532
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    seccompProfile:
+      type: RuntimeDefault
+  service:
+    # -- Render the metrics Service (also rendered when `serviceMonitor.enabled`).
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Service annotations.
+    annotations: {}
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor. Exclusive with `podMonitor`.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels (for example `release: kube-prometheus-stack`).
+    labels: {}
+    # -- Scrape interval (empty: Prometheus default).
+    interval: ""
+    # -- Scrape timeout (empty: Prometheus default).
+    scrapeTimeout: ""
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Relabelings.
+    relabelings: []
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Metric relabelings.
+    metricRelabelings: []
+  podMonitor:
+    # -- Create a Prometheus Operator PodMonitor (no Service needed). Exclusive with `serviceMonitor`.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels.
+    labels: {}
+    # -- Scrape interval (empty: Prometheus default).
+    interval: ""
+    # -- Scrape timeout (empty: Prometheus default).
+    scrapeTimeout: ""
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Relabelings.
+    relabelings: []
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Metric relabelings.
+    metricRelabelings: []
+  prometheusRule:
+    # -- Create a Prometheus Operator PrometheusRule (alerts `TransmissionDown`, `TransmissionFreeSpaceLow`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels (for example `release: kube-prometheus-stack`).
+    labels: {}
+    # @schema
+    # type: array
+    # uniqueItems: true
+    # maxItems: 1
+    # items:
+    #   type: string
+    #   enum: [TransmissionDown, TransmissionFreeSpaceLow]
+    # @schema
+    # -- Alerts to leave out (at most one: disable `prometheusRule` instead).
+    disabled: []
+    # @schema
+    # type: string
+    # pattern: "^[0-9]+$"
+    # @schema
+    # -- `TransmissionFreeSpaceLow` threshold in bytes (a string: Helm would render a large number in scientific notation).
+    freeSpaceBytes: "10000000000"
+
+networkPolicy:
+  # -- Create a NetworkPolicy (ingress: RPC port, peer port, and the metrics port when `metrics.enabled`).
+  enabled: true
+  rpc:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach the RPC and web UI port. Empty: any source (the `helm test` pod needs it too).
+    from: []
+  metrics:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach the metrics port. Empty: any source.
+    from: []
+  egress:
+    # -- Restrict egress (DNS, internet peers and trackers, `extraEgress`).
+    enabled: false
+    dns:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels.
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    peers:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- Peers and trackers (any port). Default: the internet, not the private, CGNAT and link-local ranges, so a compromised P2P process cannot move sideways. Remove an `except` entry to reach a peer there.
+      to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 100.64.0.0/10
+              - 127.0.0.0/8
+              - 169.254.0.0/16
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+              - fc00::/7
+              - fe80::/10
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Extra `NetworkPolicyEgressRule`s.
+    extraEgress: []
+
+verticalPodAutoscaler:
+  # -- Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).
+  enabled: false
+  # @schema
+  # type: string
+  # enum: ["Off", Initial, Recreate, InPlaceOrRecreate]
+  # @schema
+  # -- VPA update mode.
+  updateMode: "Off"
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   enum: [cpu, memory]
+  # @schema
+  # -- Resources VPA controls.
+  controlledResources:
+    - cpu
+    - memory
+  # @schema
+  # type: string
+  # enum: [RequestsAndLimits, RequestsOnly]
+  # @schema
+  # -- Whether VPA also scales limits.
+  controlledValues: RequestsAndLimits
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Lower bound of recommendations (for example `{cpu: 25m, memory: 64Mi}`).
+  minAllowed: {}
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Upper bound of recommendations.
+  maxAllowed: {}

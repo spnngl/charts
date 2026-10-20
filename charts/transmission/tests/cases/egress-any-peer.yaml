@@ -1,0 +1,6 @@
+values:
+  networkPolicy:
+    egress:
+      enabled: true
+      peers:
+        to: []

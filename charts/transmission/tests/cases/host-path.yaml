@@ -1,0 +1,14 @@
+values:
+  hostUsers: true
+  persistence:
+    config:
+      type: hostPath
+      hostPath:
+        path: /srv/transmission/config
+    downloads:
+      type: hostPath
+      hostPath:
+        path: /srv/media/downloads
+        type: DirectoryOrCreate
+  nodeSelector:
+    kubernetes.io/hostname: node-1

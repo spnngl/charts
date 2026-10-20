@@ -1,0 +1,6 @@
+values:
+  metrics:
+    enabled: true
+    image:
+      tag: 0.4.0
+      digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb

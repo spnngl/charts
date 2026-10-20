@@ -1,0 +1,247 @@
+{{- $fullname := include "transmission.fullname" . }}
+{{- $persistence := fromYamlArray (include "transmission.persistence" .) }}
+{{- $memLimit := dig "limits" "memory" "" .Values.metrics.resources }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    {{- if .Values.auth.enabled }}
+    ignore-check.kube-linter.io/env-value-from: "The login Secret is created by the user, outside the chart."
+    {{- end }}
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: the daemon is the single writer of /config and of one peer identity."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    {{- if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: isolation is the user's choice."
+    {{- end }}
+    {{- if .Values.auth.enabled }}
+    ignore-check.kube-linter.io/read-secret-from-env-var: "transmission-daemon has no option to read the password from a file: the login comes from a Secret through env vars and arguments."
+    {{- end }}
+    {{- if include "transmission.hasHostPath" . }}
+    ignore-check.kube-linter.io/writable-host-mount: "A hostPath volume is the user's choice (persistence.*.type: hostPath)."
+    {{- end }}
+  labels:
+    {{- include "transmission.labels" . | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "transmission.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- toYaml (merge (dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum)) (deepCopy .Values.podAnnotations)) | nindent 8 }}
+      labels:
+        {{- toYaml (merge (include "transmission.labels" . | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            {{- if .Values.auth.enabled }}
+            - --auth
+            - --username
+            - $(TRANSMISSION_RPC_USERNAME)
+            - --password
+            - $(TRANSMISSION_RPC_PASSWORD)
+            {{- else }}
+            - --no-auth
+            {{- end }}
+            {{- with .Values.extraArgs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if or .Values.auth.enabled .Values.extraEnv }}
+          env:
+            {{- if .Values.auth.enabled }}
+            - name: TRANSMISSION_RPC_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: {{ .Values.auth.existingSecret.usernameKey }}
+                  name: {{ include "transmission.secretName" . }}
+            - name: TRANSMISSION_RPC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: {{ .Values.auth.existingSecret.passwordKey }}
+                  name: {{ include "transmission.secretName" . }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          image: {{ include "transmission.image" (dict "image" .Values.image "ctx" $) | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            {{- toYaml (merge (dict "tcpSocket" (dict "port" "http")) (deepCopy .Values.livenessProbe)) | nindent 12 }}
+          name: transmission
+          ports:
+            - containerPort: 9091
+              name: http
+              protocol: TCP
+            - containerPort: {{ .Values.peer.port }}
+              {{- if .Values.peer.hostPort }}
+              hostPort: {{ .Values.peer.port }}
+              {{- end }}
+              name: peer-tcp
+              protocol: TCP
+            - containerPort: {{ .Values.peer.port }}
+              {{- if .Values.peer.hostPort }}
+              hostPort: {{ .Values.peer.port }}
+              {{- end }}
+              name: peer-udp
+              protocol: UDP
+          readinessProbe:
+            {{- toYaml (merge (dict "tcpSocket" (dict "port" "http")) (deepCopy .Values.readinessProbe)) | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- toYaml (merge (dict "tcpSocket" (dict "port" "http")) (deepCopy .Values.startupProbe)) | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            {{- range $persistence }}
+            - mountPath: {{ .path }}
+              name: {{ .name }}
+              {{- if and (eq .p.type "existingClaim") .p.existingClaim.subPath }}
+              subPath: {{ .p.existingClaim.subPath }}
+              {{- end }}
+            {{- end }}
+            - mountPath: /config/settings.json
+              name: settings
+              readOnly: true
+              subPath: settings.json
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+        {{- if .Values.metrics.enabled }}
+        - env:
+            - name: TRANSMISSION_ADDR
+              value: http://127.0.0.1:9091
+            - name: WEB_ADDR
+              value: {{ printf ":%d" (int .Values.metrics.port) | quote }}
+            {{- if $memLimit }}
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+            {{- end }}
+            {{- if .Values.auth.enabled }}
+            - name: TRANSMISSION_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: {{ .Values.auth.existingSecret.usernameKey }}
+                  name: {{ include "transmission.secretName" . }}
+            - name: TRANSMISSION_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: {{ .Values.auth.existingSecret.passwordKey }}
+                  name: {{ include "transmission.secretName" . }}
+            {{- end }}
+          image: {{ include "transmission.image" (dict "image" .Values.metrics.image "ctx" $) | quote }}
+          imagePullPolicy: {{ .Values.metrics.image.pullPolicy }}
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: metrics
+            periodSeconds: 10
+          name: exporter
+          ports:
+            - containerPort: {{ .Values.metrics.port }}
+              name: metrics
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: metrics
+            periodSeconds: 10
+          {{- if $memLimit }}
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          {{- end }}
+          resources:
+            {{- toYaml .Values.metrics.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.metrics.securityContext | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+        {{- end }}
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      enableServiceLinks: false
+      hostUsers: {{ .Values.hostUsers }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "transmission.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 30
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - configMap:
+            name: {{ $fullname }}
+          name: settings
+        {{- range $persistence }}
+        {{- with include "transmission.volume" . }}
+        {{- . | nindent 8 }}
+        {{- end }}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+  updateStrategy:
+    type: RollingUpdate
+  {{- /* Template metadata carries no chart labels: a volumeClaimTemplate is immutable, a version label would fail every upgrade. */}}
+  {{- $claims := list }}
+  {{- range $persistence }}
+  {{- if eq .p.type "volumeClaimTemplate" }}
+  {{- $claims = append $claims . }}
+  {{- end }}
+  {{- end }}
+  {{- if $claims }}
+  volumeClaimTemplates:
+    {{- range $claims }}
+    {{- $t := .p.volumeClaimTemplate }}
+    - metadata:
+        {{- with $t.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with $t.labels }}
+        labels:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        name: {{ .name }}
+      spec:
+        accessModes:
+          {{- toYaml $t.accessModes | nindent 10 }}
+        resources:
+          requests:
+            storage: {{ $t.size }}
+        {{- with $t.storageClassName }}
+        storageClassName: {{ . }}
+        {{- end }}
+    {{- end }}
+  {{- end }}

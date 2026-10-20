@@ -1,0 +1,5 @@
+values:
+  config:
+    download-dir: /downloads
+expect:
+  error: download-dir

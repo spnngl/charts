@@ -1,0 +1,9 @@
+values:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+    podMonitor:
+      enabled: true
+expect:
+  error: exclusive

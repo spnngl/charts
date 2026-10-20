@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    {{- if .Values.auth.enabled }}
+    ignore-check.kube-linter.io/env-value-from: "The login Secret is created by the user, outside the chart."
+    {{- end }}
+    ignore-check.kube-linter.io/no-liveness-probe: "One-shot hook pod that exits within seconds."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-readiness-probe: "One-shot hook pod that exits within seconds."
+    ignore-check.kube-linter.io/non-isolated-pod: "Short-lived test pod that only dials the RPC Service."
+    {{- if .Values.auth.enabled }}
+    ignore-check.kube-linter.io/read-secret-from-env-var: "transmission-remote takes the login as an argument, there is no file option."
+    {{- end }}
+    ignore-check.kube-linter.io/restart-policy: "Never makes a failing helm test fail fast instead of retrying until the timeout."
+  labels:
+    {{- toYaml (merge (dict "app.kubernetes.io/component" "test" "app.kubernetes.io/name" (printf "%s-test" (include "transmission.name" .))) (include "transmission.labels" . | fromYaml)) | nindent 4 }}
+  name: {{ include "transmission.fullname" . }}-test-rpc
+  namespace: {{ .Release.Namespace }}
+spec:
+  automountServiceAccountToken: false
+  containers:
+    - args:
+        - {{ printf "%s.%s.svc:%d" (include "transmission.fullname" .) .Release.Namespace (int .Values.service.port) | quote }}
+        {{- if .Values.auth.enabled }}
+        - --auth
+        - $(TRANSMISSION_RPC_USERNAME):$(TRANSMISSION_RPC_PASSWORD)
+        {{- end }}
+        - --session-info
+      command:
+        - /usr/bin/transmission-remote
+      {{- if .Values.auth.enabled }}
+      env:
+        - name: TRANSMISSION_RPC_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: {{ .Values.auth.existingSecret.usernameKey }}
+              name: {{ include "transmission.secretName" . }}
+        - name: TRANSMISSION_RPC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: {{ .Values.auth.existingSecret.passwordKey }}
+              name: {{ include "transmission.secretName" . }}
+      {{- end }}
+      image: {{ include "transmission.image" (dict "image" .Values.image "ctx" $) | quote }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      name: rpc
+      resources:
+        {{- toYaml .Values.resources | nindent 8 }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+  dnsConfig:
+    {{- toYaml .Values.dnsConfig | nindent 4 }}
+  enableServiceLinks: false
+  hostUsers: {{ .Values.hostUsers }}
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  restartPolicy: Never
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}

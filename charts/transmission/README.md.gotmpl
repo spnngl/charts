@@ -1,0 +1,213 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.description" . }}
+
+Runs [Transmission](https://github.com/transmission/transmission)
+(`transmission-daemon` and its web UI) as a single-replica StatefulSet, with an
+optional [transmission-exporter](https://github.com/spnngl/transmission-exporter)
+sidecar for Prometheus. Both images are built from
+[spnngl/images](https://github.com/spnngl/images): distroless, non-root, no shell.
+
+One replica only: the daemon is the sole writer of its state and owns one peer
+identity. Every upgrade or reschedule is a short downtime (the daemon gets 30
+seconds to save its resume data on SIGTERM).
+
+## Install
+
+The chart never creates the login Secret: credentials must not live in Helm
+values, release history or Git. Create it first, then install.
+
+```sh
+kubectl create namespace transmission
+kubectl -n transmission create secret generic transmission \
+  --from-literal=username=<user> --from-literal=password=<password>
+helm install transmission oci://ghcr.io/spnngl/charts/transmission --version <version> -n transmission
+```
+
+The Secret is named after the release (`auth.existingSecret.name`, `usernameKey`
+and `passwordKey` to override). The daemon reads the login once at startup (it
+is passed as `--username` / `--password`, so the Secret is not written into
+`settings.json`): restart the pod after changing it.
+
+```sh
+kubectl -n transmission rollout restart statefulset/transmission
+```
+
+`auth.enabled: false` runs with `--no-auth`. The web UI is then open to anything
+that can reach the Service: keep the NetworkPolicy, or put an authenticating proxy in front.
+
+### Settings
+
+Other Transmission options go in `config` (`settings.json` keys, snake_case).
+The chart renders them into a ConfigMap mounted read-only on
+`/config/settings.json`, so changes made in the web UI last until the pod
+restarts: set them in `config` to keep them. Transmission also tries to rewrite
+`settings.json` at start and stop; the read-only mount makes that rename fail
+(`Couldn't save '/config/settings.json': Device or resource busy` in the log,
+harmless) and leaves a `settings.json.tmp.*` file in `/config` each time:
+delete them now and then. Keys the chart owns (the RPC
+settings, the login, `peer_port`, `watch_dir`) are rejected there; `peer_port`
+is `peer.port`, `watch_dir` comes from `persistence.watch.enabled`.
+Command-line options go in `extraArgs`; the ones the chart sets (`--auth`,
+`--username`, `--password`, `--port`, `--peerport`, `--config-dir`,
+`--watch-dir`, ...) are rejected.
+
+`rpc_host_whitelist_enabled` is on by default in Transmission, but only applies
+without a login (`auth.enabled: false`): a request whose `Host` header is a DNS
+name is then answered `421 Misdirected Request` unless the name is in
+`rpc_host_whitelist`. Add the Ingress / HTTPRoute host name and the Service name
+(`<service>.<namespace>.svc`, used by `helm test`) to it.
+
+## Web UI
+
+Open `/transmission/web/`:
+
+```sh
+kubectl -n transmission port-forward service/transmission 9091:9091
+```
+
+then <http://127.0.0.1:9091/transmission/web/>. `ingress` (Ingress) and
+`httpRoute` (Gateway API HTTPRoute) expose it publicly; both need explicit
+hosts (and `parentRefs` for the route). Terminate TLS in front: the daemon
+serves plain HTTP.
+
+## Storage
+
+`/config` and `/downloads` (and `/watch` when `persistence.watch.enabled`)
+each take one of four types:
+
+- `volumeClaimTemplate` (default): a PVC per pod from the StatefulSet,
+  `1Gi` for `/config`, `10Gi` for `/downloads` (sizes are a starting point:
+  set them). The StatefulSet keeps its PVCs when it is deleted or scaled down
+  (`persistentVolumeClaimRetentionPolicy: Retain`), so `helm uninstall` leaves
+  your data; delete the PVCs by hand to remove it.
+- `existingClaim`: an existing PVC (and optional `subPath`). Use it to share
+  the downloads with other applications (a media server) through a
+  `ReadWriteMany` volume.
+- `hostPath`: a directory on the node, owned by uid/gid 65532 (the chart sets
+  `fsGroup`, but Kubernetes does not apply it to `hostPath`). Pin the pod with
+  `nodeSelector`. `type: DirectoryOrCreate` makes a root-owned directory the
+  daemon cannot write.
+- `emptyDir`: scratch space, lost with the pod.
+
+A `volumeClaimTemplate` cannot be edited on an existing StatefulSet, so changing
+`size` in values makes the upgrade fail. To grow a volume, expand the PVCs
+(`kubectl patch pvc ...`, the StorageClass must allow expansion), then
+recreate the StatefulSet without touching pods or PVCs:
+
+```sh
+kubectl -n transmission delete statefulset transmission --cascade=orphan
+helm upgrade transmission ... -n transmission
+```
+
+On NFS or SMB, inotify does not see changes made by other clients: add
+`watch_dir_force_generic: true` to `config` so the watch directory is polled.
+NFS also needs `hostUsers: true` (idmapped mounts are not available there).
+
+## Peers
+
+Transmission uses one port number, `peer.port` (51413), on **TCP and UDP**
+(UDP carries µTP peers, DHT and UDP tracker replies). Outgoing connections need
+nothing. To be **connectable**, i.e. accept incoming peers, the same port must
+reach the pod from the internet. Without it the daemon still downloads and
+seeds to peers it dials itself, only slower. The chart does not use `hostNetwork`,
+and turns UPnP / NAT-PMP (`port_forwarding_enabled`) and LPD off: they would
+map the pod IP, not a reachable address.
+
+Transmission announces `peer.port` to trackers, so every hop must use the same
+number end to end (hostPort, NodePort, Gateway listener, router forward). Pick one:
+
+- `peer.hostPort: true`: publishes the port on the node IP, TCP and UDP.
+  Forward the port on your router to that node, and pin the pod with
+  `nodeSelector` (a pod that moves to another node loses the forward). The
+  namespace must be labelled `pod-security.kubernetes.io/enforce: privileged`
+  (Pod Security `baseline` rejects any `hostPort`), and the CNI must support
+  `hostPort` (`portmap`: kindnet, Flannel and Calico do; Cilium needs
+  `hostPort.enabled`).
+- `peer.service` with `type: LoadBalancer` (or `NodePort`; the node port is
+  `peer.port`, so it must be within 30000-32767).
+- `peer.tcpRoute` and `peer.udpRoute`: Gateway API `TCPRoute` / `UDPRoute`
+  (`v1`, standard channel) to the peer Service, on a Gateway with a TCP and a
+  UDP listener on `peer.port`.
+
+The chart refuses combinations that would publish the port twice (hostPort with
+a NodePort Service, a route with a LoadBalancer or NodePort Service).
+
+## Image
+
+The default images are `appVersion` (Transmission) and the exporter version,
+each pinned by the digest recorded in the `artifacthub.io/images` annotation of
+`Chart.yaml` (Renovate updates tag and digest together). Setting `image.tag`
+(or `metrics.image.tag`) drops that digest; add `image.digest` to pin the tag
+again (a digest without a tag is an error).
+
+The images are signed with the `spnngl/images` key. Verify a digest with:
+
+```sh
+curl -fsSLO https://raw.githubusercontent.com/spnngl/images/main/cosign.pub
+cosign verify --key cosign.pub --new-bundle-format=false --insecure-ignore-tlog=true \
+  ghcr.io/spnngl/images/transmission@sha256:<digest>
+```
+
+## Security
+
+Defaults satisfy the `restricted` Pod Security Standard (while `peer.hostPort`
+is off): non-root uid/gid 65532, read-only root filesystem, all capabilities
+dropped, no privilege escalation, `RuntimeDefault` seccomp, no ServiceAccount
+token, no Service environment variables. The daemon writes only to
+`/config`, `/downloads` and `/watch`.
+
+### User namespaces
+
+`hostUsers: false` (default) runs the pod in a user namespace: uid 65532 in
+the pod maps to an unprivileged host uid, which limits what a container escape
+gains. Nodes need a container runtime with user namespace support
+(containerd 2.0+ or CRI-O), runc 1.2+ or crun, and a Linux kernel 6.3+
+(idmapped mounts on tmpfs for Secret and ConfigMap volumes). On other nodes the
+pod sandbox cannot be created: set `hostUsers: true`. Volumes without idmapped
+mounts (NFS, SMB) and `hostPath` ownership need it too.
+
+## Network
+
+- The NetworkPolicy (`networkPolicy.enabled`, on by default) allows the RPC
+  port, the peer port (TCP and UDP, from anywhere) and the metrics port. Restrict
+  the RPC and metrics sources with `networkPolicy.rpc.from` and
+  `networkPolicy.metrics.from` (your ingress controller, Prometheus); empty
+  means any source. The `helm test` pod needs RPC access.
+- `networkPolicy.egress.enabled` (off by default) allows DNS, `peers.to` (the
+  internet except private, CGNAT and link-local ranges, so a compromised P2P
+  process cannot move sideways) and `extraEgress`. A tracker or peer on your LAN
+  needs an `except` entry removed, or an `extraEgress` rule.
+- `metrics.enabled` adds the exporter sidecar. `metrics.serviceMonitor` or
+  `metrics.podMonitor` (not both) integrate with the Prometheus Operator;
+  a PodMonitor needs no Service.
+- `metrics.prometheusRule` adds `TransmissionDown` (critical) and
+  `TransmissionFreeSpaceLow` (warning, below `freeSpaceBytes`) and needs one of
+  the monitors (the rules select the `job` label it sets). The exporter reports
+  `-1` free space while `download_dir` does not exist yet (before the first
+  completed torrent): the alert ignores it.
+- `helm test` runs `transmission-remote --session-info` against the RPC Service
+  (`<service>.<namespace>.svc`).
+
+## Autoscaling and resources
+
+There is no HPA (one replica). `verticalPodAutoscaler` supports `Off`,
+`Initial`, `Recreate` and `InPlaceOrRecreate` (in-place resize needs
+Kubernetes 1.33+). The default requests (`50m` CPU, `64Mi` memory) are
+scheduling floors, not a sizing: memory grows with the number of active
+torrents and peers, so measure then tune. With a memory limit on the exporter,
+`GOMEMLIMIT` follows it.
+
+## Compatibility
+
+The values schema is strict: unknown keys fail the install. A breaking change
+to values bumps the chart MAJOR version; deprecations are announced one MINOR
+version ahead. Requires Kubernetes 1.33 or later.
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}

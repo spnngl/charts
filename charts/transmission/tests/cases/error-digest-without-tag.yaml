@@ -1,0 +1,5 @@
+values:
+  image:
+    digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+expect:
+  error: image.digest requires image.tag

@@ -1,0 +1,6 @@
+values:
+  auth:
+    enabled: false
+  metrics:
+    enabled: true
+    port: 9100

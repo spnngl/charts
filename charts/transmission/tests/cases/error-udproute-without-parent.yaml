@@ -1,0 +1,6 @@
+values:
+  peer:
+    udpRoute:
+      enabled: true
+expect:
+  error: peer.udpRoute.parentRefs is required
