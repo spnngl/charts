@@ -130,7 +130,10 @@ CRDs live in `templates/`, not `crds/`, so `helm upgrade` updates them.
 
 - Image: the `artifacthub.io/images` annotation in `Chart.yaml` holds
   `<image>:<tag>@sha256:<digest>`; templates read the image from it, so the
-  chart pins one digest in one place. `appVersion` = the image tag.
+  chart pins one digest per image in one place (a chart with a second image
+  lists it as a second entry). `appVersion` = the main image tag. charttest
+  pins `appVersion`, every entry's tag and every digest, so goldens survive
+  Renovate bumps.
 - Updates: a Renovate custom manager bumps `appVersion` and the annotation in
   one PR; one package rule for all charts automerges minor/patch/digest
   after a 2-day release age (none on ghcr.io/quay.io: no release
