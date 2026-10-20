@@ -5,7 +5,7 @@
 CustomResourceDefinitions for Traefik Proxy (IngressRoutes, Middlewares, TLS options, transports).
 
 CRDs are copied verbatim from [traefik/traefik](https://github.com/traefik/traefik)
-at tag [`v3.7.15`](https://github.com/traefik/traefik/tree/v3.7.15) (commit `351a5ab1e884a6be95d02997016cbb2751106bc0`),
+at tag [`v3.7.16`](https://github.com/traefik/traefik/tree/v3.7.16) (commit `af6d927c51191ae1df104aaf907793386b816c28`),
 path(s) `docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
