@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: ghcr-exporter
+description: Prometheus exporter for GitHub Container Registry package metrics (ghcr-exporter) running as a hardened Deployment
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/d0ugal/ghcr-exporter
+appVersion: "v2.13.66"
+kubeVersion: ">=1.33.0-0"
+home: https://github.com/d0ugal/ghcr-exporter
+icon: https://avatars.githubusercontent.com/u/48211?s=200
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/d0ugal/ghcr-exporter
+keywords:
+  - ghcr
+  - github
+  - packages
+  - exporter
+  - prometheus
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: MIT
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # ghcr-exporter.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: ghcr-exporter
+      image: ghcr.io/d0ugal/ghcr-exporter:v2.13.66@sha256:402ad8ba07518984c58d85a1563bd70049ae50d5925ec6f88365ce5e5d1f2b5f
+  artifacthub.io/links: |-
+    - name: Upstream project
+      url: https://github.com/d0ugal/ghcr-exporter
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/ghcr-exporter
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

@@ -1,0 +1,6 @@
+values:
+  packages:
+    - owner: spnngl
+      bogus: x
+expect:
+  error: bogus

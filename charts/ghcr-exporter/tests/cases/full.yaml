@@ -1,0 +1,57 @@
+values:
+  image:
+    tag: v2.13.65
+  hostUsers: true
+  github:
+    token: ghp_example
+  packages:
+    - owner: spnngl
+      repo: charts
+    - owner: d0ugal
+  collectionIntervalSeconds: 300
+  logLevel: debug
+  logFormat: text
+  minReadySeconds: 30
+  metrics:
+    serviceMonitor:
+      enabled: true
+      labels:
+        release: kube-prometheus-stack
+      interval: 60s
+    prometheusRule:
+      enabled: true
+      labels:
+        release: kube-prometheus-stack
+      disabled: [GhcrExporterCollectionStale]
+      staleIntervals: 5
+  networkPolicy:
+    metrics:
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+    egress:
+      enabled: true
+      extraEgress:
+        - ports:
+            - port: 4318
+              protocol: TCP
+  service:
+    annotations:
+      example.com/note: hello
+    labels:
+      example.com/team: platform
+  podAnnotations:
+    example.com/note: hello
+  podLabels:
+    example.com/team: platform
+  priorityClassName: system-cluster-critical
+  extraVolumes:
+    - name: scratch
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: scratch
+      mountPath: /tmp
+  extraEnv:
+    - name: TRACING_ENABLED
+      value: "true"

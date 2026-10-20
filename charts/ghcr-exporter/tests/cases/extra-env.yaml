@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: PROFILING_ENABLED
+      value: "true"
+    - name: TRACING_ENABLED
+      value: "true"

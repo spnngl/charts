@@ -1,0 +1,4 @@
+values:
+  collectionIntervalSeconds: 0
+expect:
+  error: collectionIntervalSeconds

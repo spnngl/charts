@@ -17,6 +17,7 @@ Two kinds of charts live here:
 | Chart | Upstream | Contents |
 |-------|----------|----------|
 | [`cloudflared`](./charts/cloudflared) | [cloudflare/cloudflared](https://github.com/cloudflare/cloudflared) | Cloudflare Tunnel connector Deployment (HPA, VPA, ServiceMonitor/PodMonitor) |
+| [`ghcr-exporter`](./charts/ghcr-exporter) | [d0ugal/ghcr-exporter](https://github.com/d0ugal/ghcr-exporter) | GHCR package metrics exporter Deployment (ServiceMonitor/PodMonitor/PrometheusRule) |
 | [`cs-firewall-bouncer`](./charts/cs-firewall-bouncer) | [crowdsecurity/cs-firewall-bouncer](https://github.com/crowdsecurity/cs-firewall-bouncer) | CrowdSec firewall bouncer DaemonSet (nftables, PodMonitor/PrometheusRule) |
 | [`nftables-exporter`](./charts/nftables-exporter) | [metal-stack/nftables-exporter](https://github.com/metal-stack/nftables-exporter) | nftables ruleset exporter DaemonSet (counters, chains, rules; PodMonitor/PrometheusRule) |
 | [`agent-substrate-crds`](./charts/agent-substrate-crds) | [agent-substrate/substrate](https://github.com/agent-substrate/substrate) | SandboxConfig, WorkerPool, CSIDriverConfig |

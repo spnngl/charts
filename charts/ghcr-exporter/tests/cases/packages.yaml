@@ -1,0 +1,5 @@
+values:
+  packages:
+    - owner: spnngl
+      repo: charts
+    - owner: d0ugal
