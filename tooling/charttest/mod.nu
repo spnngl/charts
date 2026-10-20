@@ -12,7 +12,7 @@
 #
 # CHARTTEST_OFFLINE=1 skips kubeconform (it fetches schemas).
 #
-# Charts render with version, appVersion and image digests pinned (see
+# Charts render with version, appVersion, image tags and digests pinned (see
 # `pin-chart`), so goldens do not change when Renovate or a release bumps them.
 
 use ../crdgen/config.nu [REPO_ROOT]
@@ -21,12 +21,13 @@ use ../crdgen/exec.nu [run-checked]
 # Schemas for the CRDs the charts render (ServiceMonitor, PodMonitor, VPA).
 const CRD_CATALOG = 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
 
-# Version, appVersion and image digest every chart renders with.
+# Version, appVersion, image tag and image digest every chart renders with.
 const PINNED_VERSION = "0.0.0"
 const PINNED_DIGEST = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
 
-# Copy `chart_dir` into `tmp_dir` with version, appVersion and every image
-# digest of Chart.yaml pinned; returns the copy (same basename: same release name).
+# Copy `chart_dir` into `tmp_dir` with version, appVersion, the tag of every
+# `image: <repo>:<tag>@sha256:...` entry and every digest of Chart.yaml pinned;
+# returns the copy (same basename: same release name).
 def pin-chart [chart_dir: path, tmp_dir: path]: nothing -> path {
   let copy = ($tmp_dir | path join ($chart_dir | path basename))
   cp -r $chart_dir $copy
@@ -34,6 +35,7 @@ def pin-chart [chart_dir: path, tmp_dir: path]: nothing -> path {
   open --raw $chart_file
   | str replace -r '(?m)^version:.*$' $"version: ($PINNED_VERSION)"
   | str replace -r '(?m)^appVersion:.*$' $"appVersion: \"($PINNED_VERSION)\""
+  | str replace -a -r '(image: [^\s@]*:)[^:@\s/]+(@sha256:)' $"${1}($PINNED_VERSION)${2}"
   | str replace -a -r 'sha256:[0-9a-f]{64}' $PINNED_DIGEST
   | save -f $chart_file
   $copy
