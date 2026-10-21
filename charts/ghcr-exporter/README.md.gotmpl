@@ -128,9 +128,12 @@ created (`FailedCreatePodSandBox` event): set `hostUsers: true`.
 - `metrics.prometheusRule` adds alerts and needs one of the monitors (the
   rules select the `job` label it sets; do not rewrite `job` in
   `relabelings`): `GhcrExporterDown` (critical, also fires with
-  `replicaCount: 0` or a Pending pod), `GhcrExporterCollectionFailing` and
-  `GhcrExporterCollectionStale` (warning). Silence some with
-  `metrics.prometheusRule.disabled`.
+  `replicaCount: 0` or a Pending pod), `GhcrExporterCollectionFailing`,
+  `GhcrExporterCollectionStale` and `GhcrExporterDownloadsUnknown` (warning).
+  The last one fires when a download count stays unreadable for an hour: the
+  count is scraped from the package page on github.com, and a failed scrape
+  sets `ghcr_package_downloads` to `-1` without failing the collection.
+  Silence some with `metrics.prometheusRule.disabled`.
 - `helm test` calls `/health` through the Service. It works with a fake token
   because `/health` does not depend on GitHub, so it checks the wiring, not
   the token. It exists only when `replicaCount` > 0.

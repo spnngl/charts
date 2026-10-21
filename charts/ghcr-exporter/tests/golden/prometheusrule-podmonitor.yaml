@@ -274,6 +274,14 @@ spec:
           for: 15m
           labels:
             severity: warning
+        - alert: GhcrExporterDownloadsUnknown
+          annotations:
+            description: "The download count of {{ $labels.owner }}/{{ $labels.repo }} could not be read from its package page on github.com for 1 hour on {{ $labels.namespace }}/{{ $labels.pod }} (ghcr_package_downloads is -1): page unreachable, HTTP 429, or a GitHub page layout the exporter no longer parses."
+            summary: ghcr-exporter cannot read download counts.
+          expr: "ghcr_package_downloads{job=\"ghcr-exporter/ghcr-exporter\", namespace=\"ghcr-exporter\"} < 0"
+          for: 1h
+          labels:
+            severity: warning
 ---
 # Source: ghcr-exporter/templates/tests/test-health.yaml
 apiVersion: v1

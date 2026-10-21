@@ -412,21 +412,22 @@
           "additionalProperties": false,
           "properties": {
             "disabled": {
-              "description": "Alerts to leave out (at most two: disable `prometheusRule` instead). `GhcrExporterDown` also fires when no target exists (pod Pending) and with `replicaCount: 0`.",
+              "description": "Alerts to leave out (at most three: disable `prometheusRule` instead). `GhcrExporterDown` also fires when no target exists (pod Pending) and with `replicaCount: 0`.",
               "items": {
                 "enum": [
                   "GhcrExporterDown",
                   "GhcrExporterCollectionFailing",
-                  "GhcrExporterCollectionStale"
+                  "GhcrExporterCollectionStale",
+                  "GhcrExporterDownloadsUnknown"
                 ],
                 "type": "string"
               },
-              "maxItems": 2,
+              "maxItems": 3,
               "type": "array",
               "uniqueItems": true
             },
             "enabled": {
-              "description": "Create a Prometheus Operator PrometheusRule (alerts `GhcrExporterDown`, `GhcrExporterCollectionFailing`, `GhcrExporterCollectionStale`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.",
+              "description": "Create a Prometheus Operator PrometheusRule (alerts `GhcrExporterDown`, `GhcrExporterCollectionFailing`, `GhcrExporterCollectionStale`, `GhcrExporterDownloadsUnknown`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.",
               "type": "boolean"
             },
             "labels": {

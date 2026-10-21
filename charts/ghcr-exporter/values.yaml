@@ -459,7 +459,7 @@ metrics:
     # -- Metric relabelings.
     metricRelabelings: []
   prometheusRule:
-    # -- Create a Prometheus Operator PrometheusRule (alerts `GhcrExporterDown`, `GhcrExporterCollectionFailing`, `GhcrExporterCollectionStale`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.
+    # -- Create a Prometheus Operator PrometheusRule (alerts `GhcrExporterDown`, `GhcrExporterCollectionFailing`, `GhcrExporterCollectionStale`, `GhcrExporterDownloadsUnknown`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.
     enabled: false
     # @schema
     # type: object
@@ -471,12 +471,12 @@ metrics:
     # @schema
     # type: array
     # uniqueItems: true
-    # maxItems: 2
+    # maxItems: 3
     # items:
     #   type: string
-    #   enum: [GhcrExporterDown, GhcrExporterCollectionFailing, GhcrExporterCollectionStale]
+    #   enum: [GhcrExporterDown, GhcrExporterCollectionFailing, GhcrExporterCollectionStale, GhcrExporterDownloadsUnknown]
     # @schema
-    # -- Alerts to leave out (at most two: disable `prometheusRule` instead). `GhcrExporterDown` also fires when no target exists (pod Pending) and with `replicaCount: 0`.
+    # -- Alerts to leave out (at most three: disable `prometheusRule` instead). `GhcrExporterDown` also fires when no target exists (pod Pending) and with `replicaCount: 0`.
     disabled: []
     # @schema
     # type: number
