@@ -269,7 +269,6 @@ metadata:
     ignore-check.kube-linter.io/no-readiness-probe: "One-shot hook pod that exits within seconds."
     ignore-check.kube-linter.io/non-isolated-pod: "Short-lived test pod that only dials the RPC Service."
     ignore-check.kube-linter.io/read-secret-from-env-var: "transmission-remote takes the login as an argument, there is no file option."
-    ignore-check.kube-linter.io/restart-policy: "Never makes a failing helm test fail fast instead of retrying until the timeout."
   labels:
     app.kubernetes.io/component: test
     app.kubernetes.io/instance: transmission
@@ -280,6 +279,8 @@ metadata:
   name: transmission-test-rpc
   namespace: transmission
 spec:
+  # The Service can lag the pod's readiness by a few seconds (connection refused): retry, bounded.
+  activeDeadlineSeconds: 60
   automountServiceAccountToken: false
   containers:
     - args:
@@ -329,7 +330,7 @@ spec:
   hostUsers: false
   nodeSelector:
     kubernetes.io/os: linux
-  restartPolicy: Never
+  restartPolicy: OnFailure
   securityContext:
     fsGroup: 65532
     fsGroupChangePolicy: OnRootMismatch

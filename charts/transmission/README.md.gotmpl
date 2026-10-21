@@ -187,7 +187,8 @@ mounts (NFS, SMB) and `hostPath` ownership need it too.
   `-1` free space while `download_dir` does not exist yet (before the first
   completed torrent): the alert ignores it.
 - `helm test` runs `transmission-remote --session-info` against the RPC Service
-  (`<service>.<namespace>.svc`).
+  (`<service>.<namespace>.svc`). It retries for 60 s: the Service can refuse
+  connections for a few seconds after the pod is ready.
 
 ## Autoscaling and resources
 
