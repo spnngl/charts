@@ -5,7 +5,7 @@
 CustomResourceDefinitions for the Kubernetes Vertical Pod Autoscaler (VerticalPodAutoscaler, checkpoints).
 
 CRDs are copied verbatim from [kubernetes/autoscaler](https://github.com/kubernetes/autoscaler)
-at tag [`vertical-pod-autoscaler-1.8.0`](https://github.com/kubernetes/autoscaler/tree/vertical-pod-autoscaler-1.8.0) (commit `238579734e73e4a263d1ab75a44353e58eeee3ea`),
+at tag [`vertical-pod-autoscaler-1.8.1`](https://github.com/kubernetes/autoscaler/tree/vertical-pod-autoscaler-1.8.1) (commit `de59752fd24e25cca63e8e779561b97c9240623a`),
 path(s) `vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
