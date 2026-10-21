@@ -4,6 +4,6 @@ values:
       enabled: true
     prometheusRule:
       enabled: true
-      disabled: [GhcrExporterDown, GhcrExporterCollectionFailing, GhcrExporterCollectionStale]
+      disabled: [GhcrExporterDown, GhcrExporterCollectionFailing, GhcrExporterCollectionStale, GhcrExporterDownloadsUnknown]
 expect:
   error: maxItems

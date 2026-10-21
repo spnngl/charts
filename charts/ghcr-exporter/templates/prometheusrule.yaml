@@ -45,4 +45,14 @@ spec:
           labels:
             severity: warning
         {{- end }}
+        {{- if not (has "GhcrExporterDownloadsUnknown" $m.disabled) }}
+        - alert: GhcrExporterDownloadsUnknown
+          annotations:
+            description: {{ printf "The download count of %s/%s could not be read from its package page on github.com for 1 hour on %s (ghcr_package_downloads is -1): page unreachable, HTTP 429, or a GitHub page layout the exporter no longer parses." "{{ $labels.owner }}" "{{ $labels.repo }}" "{{ $labels.namespace }}/{{ $labels.pod }}" | quote }}
+            summary: ghcr-exporter cannot read download counts.
+          expr: {{ printf "ghcr_package_downloads{%s} < 0" $sel | quote }}
+          for: 1h
+          labels:
+            severity: warning
+        {{- end }}
 {{- end }}
