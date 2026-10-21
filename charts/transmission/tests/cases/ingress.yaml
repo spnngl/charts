@@ -4,5 +4,7 @@ values:
     className: nginx
     annotations:
       nginx.ingress.kubernetes.io/proxy-body-size: 10m
+    labels:
+      external-dns: "true"
     hosts:
     - torrents.example.com

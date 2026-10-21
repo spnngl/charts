@@ -192,6 +192,13 @@ ingress:
   # -- Ingress annotations.
   annotations: {}
   # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra Ingress labels (for example the label an external-dns `--label-filter` selects).
+  labels: {}
+  # @schema
   # type: array
   # items:
   #   type: string
@@ -835,6 +842,11 @@ verticalPodAutoscaler:
   # @schema
   # -- VPA update mode.
   updateMode: "Off"
+  # @schema
+  # type: string
+  # @schema
+  # -- Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`. Set it when the cluster's recommender runs under another `--recommender-name`: a VPA nobody serves gets no recommendation.
+  recommender: ""
   # @schema
   # type: array
   # items:

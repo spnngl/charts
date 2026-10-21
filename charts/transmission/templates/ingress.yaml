@@ -8,7 +8,7 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   labels:
-    {{- include "transmission.labels" . | nindent 4 }}
+    {{- toYaml (merge (include "transmission.labels" . | fromYaml) (deepCopy .Values.ingress.labels)) | nindent 4 }}
   name: {{ $fullname }}
   namespace: {{ .Release.Namespace }}
 spec:

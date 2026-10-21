@@ -262,7 +262,8 @@ metadata:
     app.kubernetes.io/instance: transmission
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: transmission
-    app.kubernetes.io/version: "0.0.0"
+    app.kubernetes.io/version: 0.0.0
+    external-dns: "true"
     helm.sh/chart: transmission-0.0.0
   name: transmission
   namespace: transmission

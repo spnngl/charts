@@ -286,6 +286,14 @@
           },
           "type": "array"
         },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Extra Ingress labels (for example the label an external-dns `--label-filter` selects).",
+          "required": [],
+          "type": "object"
+        },
         "tls": {
           "description": "Ingress TLS blocks (`secretName`, `hosts`).",
           "items": {
@@ -1399,6 +1407,10 @@
           "description": "Lower bound of recommendations (for example `{cpu: 25m, memory: 64Mi}`).",
           "required": [],
           "type": "object"
+        },
+        "recommender": {
+          "description": "Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`. Set it when the cluster's recommender runs under another `--recommender-name`: a VPA nobody serves gets no recommendation.",
+          "type": "string"
         },
         "updateMode": {
           "description": "VPA update mode.",

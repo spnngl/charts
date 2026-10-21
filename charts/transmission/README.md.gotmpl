@@ -193,7 +193,9 @@ mounts (NFS, SMB) and `hostPath` ownership need it too.
 
 There is no HPA (one replica). `verticalPodAutoscaler` supports `Off`,
 `Initial`, `Recreate` and `InPlaceOrRecreate` (in-place resize needs
-Kubernetes 1.33+). The default requests (`50m` CPU, `64Mi` memory) are
+Kubernetes 1.33+). A recommender started with another `--recommender-name`
+than `default` ignores the VPA unless `verticalPodAutoscaler.recommender`
+names it. The default requests (`50m` CPU, `64Mi` memory) are
 scheduling floors, not a sizing: memory grows with the number of active
 torrents and peers, so measure then tune. With a memory limit on the exporter,
 `GOMEMLIMIT` follows it.
