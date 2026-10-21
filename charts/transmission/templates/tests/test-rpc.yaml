@@ -14,12 +14,13 @@ metadata:
     {{- if .Values.auth.enabled }}
     ignore-check.kube-linter.io/read-secret-from-env-var: "transmission-remote takes the login as an argument, there is no file option."
     {{- end }}
-    ignore-check.kube-linter.io/restart-policy: "Never makes a failing helm test fail fast instead of retrying until the timeout."
   labels:
     {{- toYaml (merge (dict "app.kubernetes.io/component" "test" "app.kubernetes.io/name" (printf "%s-test" (include "transmission.name" .))) (include "transmission.labels" . | fromYaml)) | nindent 4 }}
   name: {{ include "transmission.fullname" . }}-test-rpc
   namespace: {{ .Release.Namespace }}
 spec:
+  # The Service can lag the pod's readiness by a few seconds (connection refused): retry, bounded.
+  activeDeadlineSeconds: 60
   automountServiceAccountToken: false
   containers:
     - args:
@@ -63,6 +64,6 @@ spec:
   nodeSelector:
     {{- toYaml . | nindent 4 }}
   {{- end }}
-  restartPolicy: Never
+  restartPolicy: OnFailure
   securityContext:
     {{- toYaml .Values.podSecurityContext | nindent 4 }}
