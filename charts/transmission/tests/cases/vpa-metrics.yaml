@@ -4,6 +4,7 @@ values:
   verticalPodAutoscaler:
     enabled: true
     updateMode: InPlaceOrRecreate
+    recommender: standard
     controlledResources:
     - memory
     controlledValues: RequestsOnly

@@ -1,0 +1,7 @@
+values:
+  ingress:
+    enabled: true
+    labels:
+      a: 1
+expect:
+  error: "/ingress/labels/a': got number, want string"

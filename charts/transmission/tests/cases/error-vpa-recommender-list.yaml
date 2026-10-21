@@ -1,0 +1,8 @@
+values:
+  verticalPodAutoscaler:
+    enabled: true
+    recommender:
+    - a
+    - b
+expect:
+  error: "/verticalPodAutoscaler/recommender': got array, want string"

@@ -15,6 +15,10 @@ metadata:
   name: {{ include "transmission.fullname" . }}
   namespace: {{ .Release.Namespace }}
 spec:
+  {{- with $v.recommender }}
+  recommenders:
+    - name: {{ . | quote }}
+  {{- end }}
   resourcePolicy:
     containerPolicies:
       {{- toYaml $policies | nindent 6 }}

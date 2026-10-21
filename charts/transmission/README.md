@@ -193,7 +193,9 @@ mounts (NFS, SMB) and `hostPath` ownership need it too.
 
 There is no HPA (one replica). `verticalPodAutoscaler` supports `Off`,
 `Initial`, `Recreate` and `InPlaceOrRecreate` (in-place resize needs
-Kubernetes 1.33+). The default requests (`50m` CPU, `64Mi` memory) are
+Kubernetes 1.33+). A recommender started with another `--recommender-name`
+than `default` ignores the VPA unless `verticalPodAutoscaler.recommender`
+names it. The default requests (`50m` CPU, `64Mi` memory) are
 scheduling floors, not a sizing: memory grows with the number of active
 torrents and peers, so measure then tune. With a memory limit on the exporter,
 `GOMEMLIMIT` follows it.
@@ -253,6 +255,7 @@ Kubernetes: `>=1.33.0-0`
 | ingress.className | string | `""` | Ingress class name (empty: cluster default). |
 | ingress.enabled | bool | `false` | Create an Ingress for the web UI (path `/transmission`). |
 | ingress.hosts | list | `[]` | Host names. Required when enabled. |
+| ingress.labels | object | `{}` | Extra Ingress labels (for example the label an external-dns `--label-filter` selects). |
 | ingress.tls | list | `[]` | Ingress TLS blocks (`secretName`, `hosts`). |
 | livenessProbe | object | `{"failureThreshold":3,"periodSeconds":10}` | Liveness probe (TCP on the RPC port). |
 | metrics.enabled | bool | `false` | Run the Prometheus exporter as a sidecar (`/metrics` on `metrics.port`). Per-torrent series grow with the torrent count. |
@@ -360,4 +363,5 @@ Kubernetes: `>=1.33.0-0`
 | verticalPodAutoscaler.enabled | bool | `false` | Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart). |
 | verticalPodAutoscaler.maxAllowed | object | `{}` | Upper bound of recommendations. |
 | verticalPodAutoscaler.minAllowed | object | `{}` | Lower bound of recommendations (for example `{cpu: 25m, memory: 64Mi}`). |
+| verticalPodAutoscaler.recommender | string | `""` | Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`. Set it when the cluster's recommender runs under another `--recommender-name`: a VPA nobody serves gets no recommendation. |
 | verticalPodAutoscaler.updateMode | string | `"Off"` | VPA update mode. |

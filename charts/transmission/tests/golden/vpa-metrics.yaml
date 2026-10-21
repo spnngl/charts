@@ -328,6 +328,8 @@ metadata:
   name: transmission
   namespace: transmission
 spec:
+  recommenders:
+    - name: "standard"
   resourcePolicy:
     containerPolicies:
       - containerName: transmission
