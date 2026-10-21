@@ -1,0 +1,5 @@
+values:
+  github:
+    rateLimitBuffer: 1.5
+expect:
+  error: rateLimitBuffer

@@ -1,0 +1,35 @@
+{{ include "github-exporter.fullname" . }} runs {{ .Values.replicaCount }} github-exporter pod(s).
+
+The GitHub token is read from the Secret `{{ include "github-exporter.secretName" . }}`, key `{{ .Values.github.existingSecret.key }}`, which this release does not create. Without it the pod stays in
+CreateContainerConfigError (`secret "{{ include "github-exporter.secretName" . }}" not found`). Create it
+(a dedicated token: the exporter spends most of the remaining API rate limit of its token):
+
+  kubectl -n {{ .Release.Namespace }} create secret generic {{ include "github-exporter.secretName" . }} \
+    --from-literal={{ .Values.github.existingSecret.key }}=<token>
+
+The token is read at startup only: roll the pod after rotating it.
+
+  kubectl -n {{ .Release.Namespace }} rollout restart deployment/{{ include "github-exporter.fullname" . }}
+{{- if and (eq (len .Values.github.repos) 1) (eq (first .Values.github.repos) "d0ugal/github-exporter") }}
+
+github.repos still holds the placeholder `d0ugal/github-exporter`: the exporter polls that
+public repository. Set github.repos to your repositories, or `repos: []` when you use
+github.orgs only.
+{{- end }}
+
+The web interface at `/` cannot be turned off in this upstream version: it lists the
+metrics and basic server settings (no token). Restrict port 8080 to Prometheus with
+networkPolicy.metrics.from.
+
+Check the exporter:
+
+  kubectl -n {{ .Release.Namespace }} get pods -l {{ include "github-exporter.selectorLabels" . | replace ": " "=" | replace "\n" "," }}
+{{- if include "github-exporter.metricsService" . }}
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+{{- end }}
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: pods run in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) cannot start them; set
+hostUsers=true to use host users.
+{{- end }}

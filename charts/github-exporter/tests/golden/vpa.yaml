@@ -1,0 +1,199 @@
+---
+# Source: github-exporter/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: github-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: github-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: github-exporter-0.0.0
+  name: github-exporter
+  namespace: github-exporter
+spec:
+  ingress:
+    - ports:
+      - port: 8080
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: github-exporter
+      app.kubernetes.io/name: github-exporter
+  policyTypes:
+    - Ingress
+---
+# Source: github-exporter/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: github-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: github-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: github-exporter-0.0.0
+  name: github-exporter
+  namespace: github-exporter
+---
+# Source: github-exporter/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/env-value-from: "The token Secret is created by the user (github.existingSecret), so it is not in the release."
+    ignore-check.kube-linter.io/minimum-three-replicas: "A single exporter on purpose: each replica polls GitHub with the same token and exports duplicate series."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/read-secret-from-env-var: "Upstream reads the token from its configuration or its environment only, with no token-file option."
+  labels:
+    app.kubernetes.io/instance: github-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: github-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: github-exporter-0.0.0
+  name: github-exporter
+  namespace: github-exporter
+spec:
+  minReadySeconds: 10
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: github-exporter
+      app.kubernetes.io/name: github-exporter
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: github-exporter
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: github-exporter
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: github-exporter-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - command:
+            - /app/github-exporter
+          env:
+            - name: GITHUB_EXPORTER_GITHUB_RATE_LIMIT_BUFFER
+              value: "0.8"
+            - name: GITHUB_EXPORTER_GITHUB_REPOS
+              value: "d0ugal/github-exporter"
+            - name: GITHUB_EXPORTER_GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: token
+                  name: github-exporter
+            - name: GITHUB_EXPORTER_LOG_FORMAT
+              value: "json"
+            - name: GITHUB_EXPORTER_LOG_LEVEL
+              value: "info"
+            - name: GITHUB_EXPORTER_SERVER_HOST
+              value: 0.0.0.0
+            - name: GITHUB_EXPORTER_SERVER_PORT
+              value: "8080"
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+          image: "ghcr.io/d0ugal/github-exporter:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http-metrics
+            periodSeconds: 10
+          name: github-exporter
+          ports:
+            - containerPort: 8080
+              name: http-metrics
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 1
+            httpGet:
+              path: /health
+              port: http-metrics
+            periodSeconds: 10
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 1000
+            runAsNonRoot: true
+            runAsUser: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /health
+              port: http-metrics
+            periodSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: github-exporter
+      terminationGracePeriodSeconds: 45
+---
+# Source: github-exporter/templates/vpa.yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    app.kubernetes.io/instance: github-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: github-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: github-exporter-0.0.0
+  name: github-exporter
+  namespace: github-exporter
+spec:
+  resourcePolicy:
+    containerPolicies:
+      - containerName: github-exporter
+        controlledResources:
+        - cpu
+        - memory
+        controlledValues: RequestsAndLimits
+        minAllowed:
+          cpu: 10m
+          memory: 32Mi
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: github-exporter
+  updatePolicy:
+    updateMode: "Initial"

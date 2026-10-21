@@ -1,0 +1,58 @@
+values:
+  image:
+    tag: v0.5.72
+  hostUsers: true
+  github:
+    existingSecret:
+      name: my-token
+    orgs: [spnngl]
+    repos: [d0ugal/github-exporter, other/repo]
+    branches: [main, develop]
+    workflows: [CI, Release Please]
+    refreshInterval: 5m
+    rateLimitBuffer: 0.5
+  logLevel: debug
+  logFormat: text
+  minReadySeconds: 30
+  metrics:
+    serviceMonitor:
+      enabled: true
+      labels:
+        release: kube-prometheus-stack
+      interval: 60s
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: github_check_run_status
+          action: drop
+    prometheusRule:
+      enabled: true
+      labels:
+        release: kube-prometheus-stack
+      disabled: [GitHubExporterRateLimitLow]
+      apiErrorsFor: 30m
+  networkPolicy:
+    metrics:
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+    egress:
+      enabled: true
+      extraEgress:
+        - ports:
+            - port: 4318
+              protocol: TCP
+  podAnnotations:
+    example.com/note: hello
+  podLabels:
+    example.com/team: platform
+  priorityClassName: system-cluster-critical
+  extraVolumes:
+    - name: scratch
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: scratch
+      mountPath: /tmp
+  extraEnv:
+    - name: TRACING_ENABLED
+      value: "true"

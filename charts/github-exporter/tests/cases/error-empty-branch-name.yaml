@@ -1,0 +1,5 @@
+values:
+  github:
+    branches: [""]
+expect:
+  error: branches

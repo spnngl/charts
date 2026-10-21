@@ -1,0 +1,188 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.description" . }}
+
+Runs [github-exporter](https://github.com/d0ugal/github-exporter) as a single
+Deployment. It polls the GitHub API with a token and exports metrics for the
+repositories you list (or those of the organizations you list): repository
+statistics, open pull requests and issues, and, for the branches you list,
+workflow runs, check runs and build status. Each replica would poll GitHub on
+its own with the same token and export duplicate series, so keep
+`replicaCount` at 1.
+
+## Install
+
+The exporter needs a GitHub token and something to export (`github.repos`
+and/or `github.orgs`).
+
+The chart never creates the token Secret: the token stays out of Helm values,
+release history and Git. Create it, then install:
+
+```sh
+kubectl create namespace github-exporter
+kubectl -n github-exporter create secret generic github-exporter --from-literal=token=<token>
+helm install github-exporter oci://ghcr.io/spnngl/charts/github-exporter --version <version> -n github-exporter \
+  --set 'github.repos[0]=spnngl/charts'
+```
+
+The Secret is named after the release (`github.existingSecret.name` to
+override, `github.existingSecret.key` defaults to `token`). Without it the pod
+stays in `CreateContainerConfigError` (`secret "github-exporter" not found`)
+until the Secret exists.
+
+**Use a dedicated token.** Before each rate limit reset the exporter spends
+80% of what the token has left (`github.rateLimitBuffer`), which starves every
+other tool sharing the token. The token needs read access to the repositories
+it exports (and to Actions and checks when `github.branches` is set); the
+chart was not tested against a real token. For a shared token lower
+`github.rateLimitBuffer` or set `github.refreshInterval`.
+
+`github.repos` and `github.orgs`:
+
+- `github.repos` takes `owner/name` entries, or `"*"` for every repository the
+  token can see.
+- `github.orgs` lists the repositories of each organization.
+- At least one of them is required: the exporter exits at startup otherwise,
+  and the chart refuses to render. **`github.repos` defaults to a
+  placeholder (`d0ugal/github-exporter`)** that keeps the default render valid.
+  Helm replaces lists instead of merging them, so when you set `github.orgs`
+  only, also set `github.repos: []`, or the placeholder stays. `NOTES.txt`
+  warns while it is there.
+
+The token is visible in the container environment (upstream has no token-file
+option) and is read at startup: after rotating it, restart the pod,
+
+```sh
+kubectl -n github-exporter rollout restart deployment/github-exporter
+```
+
+or let [Reloader](https://github.com/stakater/Reloader) do it with
+`podAnnotations: {reloader.stakater.com/auto: "true"}`.
+
+## Image
+
+The default image is `appVersion` pinned by the digest recorded in the
+`artifacthub.io/images` annotation of `Chart.yaml` (Renovate updates both
+together, weekly). Setting `image.tag` drops that digest; add `image.digest` to
+pin the tag again (`image.digest` without `image.tag` is an error).
+
+The upstream image is not signed (no cosign signature, no attestations beyond
+the build ones, checked on v0.5.73). The digest pin only guarantees that the
+same bytes are pulled every time, not who built them.
+
+## Configuration
+
+- Upstream ignores the `server`, `logging`, `metrics`, `tracing` and
+  `profiling` keys of its YAML configuration file (an upstream bug: the
+  embedded base configuration is not inlined), and its `/` page only shows
+  those ignored defaults. The chart therefore has no
+  configuration file: every setting is an environment variable, built from
+  the values. Settings without a value (`GITHUB_EXPORTER_GITHUB_TIMEOUT`,
+  tracing `TRACING_*`, profiling `PROFILING_*`) go through `extraEnv`; names
+  the chart owns are rejected. OTLP headers cannot be set at all.
+- Entries of `github.orgs`, `github.repos`, `github.branches` and
+  `github.workflows` are joined with commas: they cannot contain commas
+  (workflow names can contain spaces, the others cannot contain whitespace).
+- Build status (`github.branches`) costs API calls per repository and
+  branch every cycle, and the open pull request counts use the Search API,
+  which allows 30 requests per minute: with more than about 30 repositories
+  the exporter hits that limit on every cycle (`github_api_errors_total` with
+  `endpoint="search_issues"`; the chart's alert leaves it out for that reason).
+- The refresh interval is computed from the remaining rate limit unless you
+  set `github.refreshInterval`; it does not account for the Search API limit
+  or for the repositories behind `github.orgs`.
+- The exporter never forgets a series. A deleted or renamed repository, and a
+  workflow run `conclusion` that changed, keep their last value until the pod
+  restarts. Alert and graph on `github_branch_build_status` (no `conclusion`
+  label, the worst status of the branch wins), not on
+  `github_workflow_run_status`.
+- `github_check_run_status` has one series per repository, branch, check and
+  conclusion: with many repositories it dominates the cardinality. Drop it with
+  `metrics.serviceMonitor.metricRelabelings` (or `podMonitor`) when you do not
+  need it:
+
+  ```yaml
+  metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: github_check_run_status
+      action: drop
+  ```
+
+- The exporter logs every HTTP request at `info`, probes and scrapes
+  included; `logLevel: warn` silences them.
+- `/health` answers 200 once the server listens, whatever GitHub does: a
+  GitHub outage or a bad token never restarts or unreadies the pod. Watch
+  `github_api_errors_total` (or the alerts below) instead.
+
+## Resources
+
+Requests `10m` CPU / `32Mi` memory and a `128Mi` memory limit, no CPU limit.
+These are estimates, not measurements under a real collection: tune them for
+your repository count. With a memory limit set, `GOMEMLIMIT` follows it, and a
+memory resize restarts the container so the value never goes stale.
+
+## Security
+
+Defaults satisfy the `restricted` Pod Security Standard: non-root uid/gid 1000,
+read-only root filesystem, all capabilities dropped, no privilege escalation,
+`RuntimeDefault` seccomp, no ServiceAccount token, no Service environment
+variables. The exporter writes nothing to disk.
+
+### User namespaces
+
+`hostUsers: false` (default) runs the pod in a user namespace: uid 1000 in the
+pod maps to an unprivileged host uid, which limits what a container escape
+gains. Nodes need a container runtime with user namespace support (containerd
+2.0+ or CRI-O), runc 1.2+ or crun, and a Linux kernel 6.3+; see the Kubernetes
+documentation on user namespaces. On other nodes the pod sandbox cannot be
+created (`FailedCreatePodSandBox` event): set `hostUsers: true`.
+
+## Network
+
+- **Warning**: upstream cannot turn off its web interface, and the metrics
+  port serves it at `/`: it lists the metrics and basic server settings (no token,
+  no repository names; its footer even links to another exporter). The NetworkPolicy (`networkPolicy.enabled`, on by default)
+  restricts ingress to port 8080, but with `networkPolicy.metrics.from: []`
+  any in-cluster source is allowed: set it to your Prometheus namespace / pods.
+- `networkPolicy.egress.enabled` (off by default) allows DNS, HTTPS to GitHub
+  (`api.github.com`) and `networkPolicy.egress.extraEgress` (for example a
+  tracing endpoint). GitHub has no stable address, so `egress.github.to`
+  defaults to any address. Narrow it to GitHub's published ranges (regional
+  `/32`s serve clusters outside the US and EU):
+
+  ```sh
+  curl -s https://api.github.com/meta | jq '[.api[]] | unique'
+  ```
+
+  The list changes over time: refresh it. Override `dns.to` for NodeLocal DNSCache
+  or a non-default DNS namespace.
+- `metrics.serviceMonitor` or `metrics.podMonitor` (not both) integrate with
+  the Prometheus Operator; a PodMonitor needs no Service. The ClusterIP
+  Service `<fullname>-metrics` on port 8080 is rendered with a ServiceMonitor,
+  or with `metrics.service.enabled`.
+- `metrics.prometheusRule` adds alerts and needs one of the monitors (the
+  rules select the `job` label it sets; do not rewrite `job` in
+  `relabelings`): `GitHubExporterDown` (critical, also fires with
+  `replicaCount: 0` or a Pending pod), `GitHubExporterAPIErrors` and
+  `GitHubExporterRateLimitLow` (warning). Silence some with
+  `metrics.prometheusRule.disabled`. The exporter spends most of the
+  remaining quota before each reset, so the rate limit gauge dips right before
+  it by design: keep `rateLimitLowFor` above 10 minutes.
+- `helm test` calls `/health` through the Service. It works with a fake token
+  because `/health` does not depend on GitHub, so it checks the wiring, not
+  the token. It exists only with the Service and when `replicaCount` > 0, and
+  fails when `networkPolicy.metrics.from` does not allow the test pod.
+
+## Compatibility
+
+The values schema is strict: unknown keys fail the install. A breaking change
+to values bumps the chart MAJOR version; deprecations are announced one MINOR
+version ahead. Requires Kubernetes 1.33 or later.
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}

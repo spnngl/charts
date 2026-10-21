@@ -1,0 +1,48 @@
+{{- if .Values.metrics.prometheusRule.enabled }}
+{{- $m := .Values.metrics.prometheusRule }}
+{{- $fullname := include "github-exporter.fullname" . }}
+{{- /* job label set by the Prometheus Operator: Service name (ServiceMonitor) or <namespace>/<name> (PodMonitor). */}}
+{{- $job := ternary (include "github-exporter.metricsServiceName" .) (printf "%s/%s" .Release.Namespace $fullname) .Values.metrics.serviceMonitor.enabled }}
+{{- $sel := printf "job=%q, namespace=%q" $job .Release.Namespace }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    {{- toYaml (merge (include "github-exporter.labels" . | fromYaml) (deepCopy $m.labels)) | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: {{ $fullname }}
+      rules:
+        {{- if not (has "GitHubExporterDown" $m.disabled) }}
+        - alert: GitHubExporterDown
+          annotations:
+            description: {{ printf "No github-exporter target of %s/%s has been up for %s (pod not running or not scraped; also fires when replicaCount is 0)." .Release.Namespace $fullname $m.downFor | quote }}
+            summary: github-exporter is down.
+          expr: {{ printf "absent(up{%s} == 1)" $sel | quote }}
+          for: {{ $m.downFor }}
+          labels:
+            severity: critical
+        {{- end }}
+        {{- if not (has "GitHubExporterAPIErrors" $m.disabled) }}
+        - alert: GitHubExporterAPIErrors
+          annotations:
+            description: {{ printf "github-exporter on %s got GitHub API errors (%s, %s) for %s: check the logs (invalid or expired token, missing scopes, rate limit). Search API errors are excluded." "{{ $labels.namespace }}/{{ $labels.pod }}" "{{ $labels.endpoint }}" "{{ $labels.error_type }}" $m.apiErrorsFor | quote }}
+            summary: github-exporter cannot collect GitHub data.
+          expr: {{ printf "sum by (namespace, pod, endpoint, error_type) (increase(github_api_errors_total{%s, endpoint!=\"search_issues\"}[%s])) > 0" $sel $m.apiErrorsFor | quote }}
+          for: {{ $m.apiErrorsFor }}
+          labels:
+            severity: warning
+        {{- end }}
+        {{- if not (has "GitHubExporterRateLimitLow" $m.disabled) }}
+        - alert: GitHubExporterRateLimitLow
+          annotations:
+            description: {{ printf "The GitHub API rate limit of the token used by %s has been below %v%% for %s." "{{ $labels.namespace }}/{{ $labels.pod }}" (round (mulf $m.rateLimitRemainingRatio 100) 2) $m.rateLimitLowFor | quote }}
+            summary: GitHub API rate limit almost exhausted.
+          expr: {{ printf "github_rate_limit_remaining{%s} / github_rate_limit_total{%s} < %v" $sel $sel $m.rateLimitRemainingRatio | quote }}
+          for: {{ $m.rateLimitLowFor }}
+          labels:
+            severity: warning
+        {{- end }}
+{{- end }}

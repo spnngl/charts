@@ -1,0 +1,5 @@
+values:
+  github:
+    workflows: [" "]
+expect:
+  error: workflows

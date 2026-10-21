@@ -1,0 +1,4 @@
+values:
+  logFormat: yaml
+expect:
+  error: logFormat

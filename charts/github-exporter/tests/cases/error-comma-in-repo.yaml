@@ -1,0 +1,5 @@
+values:
+  github:
+    repos: ["a/b,c/d"]
+expect:
+  error: repos
