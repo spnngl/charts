@@ -1339,6 +1339,9 @@
 "additionalProperties": {
 "items": {
 "properties": {
+"filter": {
+"type": "string"
+},
 "jmesPath": {
 "type": "string"
 },
@@ -5276,6 +5279,9 @@
 "additionalProperties": {
 "items": {
 "properties": {
+"filter": {
+"type": "string"
+},
 "jmesPath": {
 "type": "string"
 },
@@ -9146,6 +9152,9 @@
 "additionalProperties": {
 "items": {
 "properties": {
+"filter": {
+"type": "string"
+},
 "jmesPath": {
 "type": "string"
 },
@@ -13034,6 +13043,9 @@
 "additionalProperties": {
 "items": {
 "properties": {
+"filter": {
+"type": "string"
+},
 "jmesPath": {
 "type": "string"
 },
