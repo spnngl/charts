@@ -1,0 +1,154 @@
+{{- include "github-exporter.validate" . }}
+{{- $memLimit := dig "limits" "memory" "" .Values.resources }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/env-value-from: "The token Secret is created by the user (github.existingSecret), so it is not in the release."
+    ignore-check.kube-linter.io/minimum-three-replicas: "A single exporter on purpose: each replica polls GitHub with the same token and exports duplicate series."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    {{- if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: the user isolates the pod, or chooses not to."
+    {{- end }}
+    {{- if ne .Values.strategy.type "RollingUpdate" }}
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "strategy.type is Recreate: the old exporter stops first, so two never poll GitHub at once."
+    {{- end }}
+    ignore-check.kube-linter.io/read-secret-from-env-var: "Upstream reads the token from its configuration or its environment only, with no token-file option."
+  labels:
+    {{- include "github-exporter.labels" . | nindent 4 }}
+  name: {{ include "github-exporter.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  minReadySeconds: {{ .Values.minReadySeconds }}
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "github-exporter.selectorLabels" . | nindent 6 }}
+  strategy:
+    {{- if eq .Values.strategy.type "RollingUpdate" }}
+    rollingUpdate:
+      {{- toYaml .Values.strategy.rollingUpdate | nindent 6 }}
+    {{- end }}
+    type: {{ .Values.strategy.type }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- toYaml (merge (include "github-exporter.labels" . | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        - command:
+            - /app/github-exporter
+          env:
+            {{- with .Values.github.branches }}
+            - name: GITHUB_EXPORTER_GITHUB_BRANCHES
+              value: {{ join "," . | quote }}
+            {{- end }}
+            {{- with .Values.github.orgs }}
+            - name: GITHUB_EXPORTER_GITHUB_ORGS
+              value: {{ join "," . | quote }}
+            {{- end }}
+            - name: GITHUB_EXPORTER_GITHUB_RATE_LIMIT_BUFFER
+              value: {{ .Values.github.rateLimitBuffer | toString | quote }}
+            {{- with .Values.github.refreshInterval }}
+            - name: GITHUB_EXPORTER_GITHUB_REFRESH_INTERVAL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.github.repos }}
+            - name: GITHUB_EXPORTER_GITHUB_REPOS
+              value: {{ join "," . | quote }}
+            {{- end }}
+            - name: GITHUB_EXPORTER_GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: {{ .Values.github.existingSecret.key }}
+                  name: {{ include "github-exporter.secretName" . }}
+            {{- with .Values.github.workflows }}
+            - name: GITHUB_EXPORTER_GITHUB_WORKFLOWS
+              value: {{ join "," . | quote }}
+            {{- end }}
+            - name: GITHUB_EXPORTER_LOG_FORMAT
+              value: {{ .Values.logFormat | quote }}
+            - name: GITHUB_EXPORTER_LOG_LEVEL
+              value: {{ .Values.logLevel | quote }}
+            - name: GITHUB_EXPORTER_SERVER_HOST
+              value: 0.0.0.0
+            - name: GITHUB_EXPORTER_SERVER_PORT
+              value: "8080"
+            {{- if $memLimit }}
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          image: {{ include "github-exporter.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          name: github-exporter
+          ports:
+            - containerPort: 8080
+              name: http-metrics
+              protocol: TCP
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- if $memLimit }}
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          {{- with .Values.extraVolumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      enableServiceLinks: false
+      hostUsers: {{ .Values.hostUsers }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "github-exporter.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 45
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.extraVolumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

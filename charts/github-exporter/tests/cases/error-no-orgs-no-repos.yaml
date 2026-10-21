@@ -1,0 +1,5 @@
+values:
+  github:
+    repos: []
+expect:
+  error: github.orgs and github.repos are both empty

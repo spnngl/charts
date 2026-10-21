@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: GITHUB_EXPORTER_GITHUB_TOKEN
+      value: x
+expect:
+  error: extraEnv

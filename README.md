@@ -18,6 +18,7 @@ Two kinds of charts live here:
 |-------|----------|----------|
 | [`cloudflared`](./charts/cloudflared) | [cloudflare/cloudflared](https://github.com/cloudflare/cloudflared) | Cloudflare Tunnel connector Deployment (HPA, VPA, ServiceMonitor/PodMonitor) |
 | [`ghcr-exporter`](./charts/ghcr-exporter) | [d0ugal/ghcr-exporter](https://github.com/d0ugal/ghcr-exporter) | GHCR package metrics exporter Deployment (ServiceMonitor/PodMonitor/PrometheusRule) |
+| [`github-exporter`](./charts/github-exporter) | [d0ugal/github-exporter](https://github.com/d0ugal/github-exporter) | GitHub repository and build status exporter Deployment (ServiceMonitor/PodMonitor/PrometheusRule, VPA) |
 | [`cs-firewall-bouncer`](./charts/cs-firewall-bouncer) | [crowdsecurity/cs-firewall-bouncer](https://github.com/crowdsecurity/cs-firewall-bouncer) | CrowdSec firewall bouncer DaemonSet (nftables, PodMonitor/PrometheusRule) |
 | [`nftables-exporter`](./charts/nftables-exporter) | [metal-stack/nftables-exporter](https://github.com/metal-stack/nftables-exporter) | nftables ruleset exporter DaemonSet (counters, chains, rules; PodMonitor/PrometheusRule) |
 | [`transmission`](./charts/transmission) | [transmission/transmission](https://github.com/transmission/transmission) | BitTorrent daemon and web UI StatefulSet (Ingress/HTTPRoute, peer hostPort/Service/TCPRoute/UDPRoute, exporter sidecar, ServiceMonitor/PodMonitor/PrometheusRule, VPA) |

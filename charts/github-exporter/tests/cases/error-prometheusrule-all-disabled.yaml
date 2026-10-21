@@ -1,0 +1,9 @@
+values:
+  metrics:
+    serviceMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+      disabled: [GitHubExporterDown, GitHubExporterAPIErrors, GitHubExporterRateLimitLow]
+expect:
+  error: maxItems

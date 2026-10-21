@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: GITHUB_EXPORTER_GITHUB_TIMEOUT
+      value: 60s
+    - name: TRACING_ENABLED
+      value: "true"

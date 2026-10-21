@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: github-exporter
+description: Prometheus exporter for GitHub repository, organization and build status metrics (github-exporter) running as a hardened Deployment
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/d0ugal/github-exporter
+appVersion: "v0.5.73"
+kubeVersion: ">=1.33.0-0"
+home: https://github.com/d0ugal/github-exporter
+icon: https://avatars.githubusercontent.com/u/9919?s=200
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/d0ugal/github-exporter
+keywords:
+  - github
+  - repositories
+  - workflows
+  - exporter
+  - prometheus
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  # The upstream repository has no LICENSE file; its README (License section)
+  # says MIT.
+  artifacthub.io/license: MIT
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # github-exporter.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: github-exporter
+      image: ghcr.io/d0ugal/github-exporter:v0.5.73@sha256:3c710feb81b3b2149861d95c622fc96a6f5d48959c97e466c944b339e2231e7d
+  artifacthub.io/links: |-
+    - name: Upstream project
+      url: https://github.com/d0ugal/github-exporter
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/github-exporter
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

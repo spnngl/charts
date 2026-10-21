@@ -1,0 +1,7 @@
+values:
+  verticalPodAutoscaler:
+    enabled: true
+    updateMode: Initial
+    minAllowed:
+      cpu: 10m
+      memory: 32Mi

@@ -1,0 +1,4 @@
+values:
+  logLevel: trace
+expect:
+  error: logLevel
