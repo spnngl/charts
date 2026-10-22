@@ -5,7 +5,7 @@
 CustomResourceDefinitions for kagent (agents, model configs, memories, tool and MCP servers).
 
 CRDs are copied verbatim from [kagent-dev/kagent](https://github.com/kagent-dev/kagent)
-at tag [`v0.10.3`](https://github.com/kagent-dev/kagent/tree/v0.10.3) (commit `8878c39ac64421cb665c8e62ecc6411dd12f2fc2`),
+at tag [`v0.10.4`](https://github.com/kagent-dev/kagent/tree/v0.10.4) (commit `79fd5973f37c2ea589a8ad9033449ee8d8dddb2a`),
 path(s) `go/api/config/crd/bases`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
