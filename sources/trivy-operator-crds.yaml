@@ -10,7 +10,7 @@ version:
   # Repo also carries `-rc*` pre-release tags; this pattern excludes them.
   tagPattern: '^v(\d+\.\d+\.\d+)$'
   allow: all
-  current: v0.35.0
+  current: v0.36.0
 sources:
   # Only CRD location upstream: controller-gen writes here directly (plain YAML,
   # no templating); deploy/static/trivy-operator.yaml is a bundle built from it.
