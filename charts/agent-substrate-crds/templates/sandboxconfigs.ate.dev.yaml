@@ -45,7 +45,7 @@
 "name": "v1alpha1",
 "schema": {
 "openAPIV3Schema": {
-"description": "SandboxConfig is cluster-scoped configuration describing the versions of the\nsandbox binaries for a sandbox runtime family. It is referenced by an\nActorTemplate's sandbox_config.config_name (required) and decouples sandbox\nbinary selection from the workload definition.",
+"description": "SandboxConfig is cluster-scoped configuration describing the versions of the\nsandbox binaries for a sandbox runtime family. It is referenced by a\nWorkerPool's spec.sandboxClasses[].configRef (or resolved via the\nsandboxconfig.ate.dev/is-class-default annotation) and decouples sandbox\nbinary selection from the workload definition.",
 "properties": {
 "apiVersion": {
 "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
@@ -69,7 +69,7 @@
 },
 "sandboxClass": {
 "default": "gvisor",
-"description": "SandboxClass is the sandbox runtime family this config applies to. An\nActorTemplate only uses SandboxConfigs whose SandboxClass matches its\nsandbox_config.sandbox_class.",
+"description": "sandboxClass is the sandbox runtime family this config applies to. A\nWorkerPool only uses SandboxConfigs whose sandboxClass matches the entry\nin its spec.sandboxClasses.",
 "enum": [
 "gvisor",
 "microvm"
@@ -79,7 +79,7 @@
 "versions": {
 "description": "versions are the sandbox versions this config offers, keyed by name.",
 "items": {
-"description": "SandboxVersionConfig is one version of a SandboxConfig: the exact pause image\nand asset set a sandbox boots with.",
+"description": "SandboxVersionConfig is one version of a SandboxConfig: the asset set a\nsandbox boots with.",
 "properties": {
 "assets": {
 "additionalProperties": {
@@ -87,12 +87,12 @@
 "description": "AssetFile is one content-addressed file that atelet fetches for a sandbox\nruntime (e.g. the gVisor runsc binary, or a micro-VM kernel/firmware/config).",
 "properties": {
 "sha256": {
-"description": "SHA256 is the lower-case hex SHA256 of the asset. It both names the cached\nfile (preventing collisions) and verifies the download's integrity.",
+"description": "sha256 is the lower-case hex SHA256 of the asset. It both names the cached\nfile (preventing collisions) and verifies the download's integrity.",
 "pattern": "^[a-f0-9]{64}$",
 "type": "string"
 },
 "url": {
-"description": "URL is where to download the asset from (e.g. a gs:// URL). atelet\nfetches every URL through the node's object-store plugin, with the\nplugin's credentials. The plugin refuses URLs under a snapshot location.\nThe in-tree plugin serves only its storage backend's scheme: gs:// on\nGCS, s3:// on S3. A gs:// URL the plugin has no object for or cannot\nserve is then read anonymously, which serves public buckets such as\ngs://gvisor.",
+"description": "url is where to download the asset from (e.g. a gs:// URL). atelet\nfetches every URL through the node's object-store plugin, with the\nplugin's credentials. The plugin refuses URLs under a snapshot location.\nThe in-tree plugin serves only its storage backend's scheme: gs:// on\nGCS, s3:// on S3. A gs:// URL the plugin has no object for or cannot\nserve is then read anonymously, which serves public buckets such as\ngs://gvisor.",
 "maxLength": 2048,
 "minLength": 1,
 "type": "string"
@@ -106,7 +106,7 @@
 },
 "type": "object"
 },
-"description": "Assets is the set of files atelet fetches for this runtime, keyed first by\narchitecture (GOARCH, e.g. \"amd64\", \"arm64\") and then by asset name. The\nasset names are interpreted by the sandbox backend: gVisor expects a\n\"gvisor\" asset (the release's gvisor.tar.zstd, which atelet extracts so\nthe gvisor-bin/ helpers sit next to runsc; a legacy bare-binary \"runsc\"\nasset is still accepted); a micro-VM backend expects several (e.g.\n\"cloud-hypervisor\", \"kata-kernel\", \"kata-image\"). The schema is\nintentionally generic; per-class requirements are enforced by a\nValidatingAdmissionPolicy.",
+"description": "assets is the set of files atelet fetches for this runtime, keyed first by\narchitecture (GOARCH, e.g. \"amd64\", \"arm64\") and then by asset name. The\nasset names are interpreted by the sandbox backend: gVisor expects a\n\"gvisor\" asset (the release's gvisor.tar.zstd, which atelet extracts so\nthe gvisor-bin/ helpers sit next to runsc); a micro-VM backend expects\nseveral (e.g. \"cloud-hypervisor\", \"kata-kernel\", \"kata-image\"). The\nschema is intentionally generic; per-class requirements are enforced by\na ValidatingAdmissionPolicy.",
 "type": "object"
 },
 "name": {
@@ -115,18 +115,6 @@
 "minLength": 1,
 "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
 "type": "string"
-},
-"pauseImage": {
-"description": "PauseImage is the container image used as the root sandbox container.\nIt holds the sandbox's namespaces and runs no workload code, so it is an\nimplementation detail of the sandbox rather than something actor authors\nchoose. Required for gvisor; not allowed for microvm, which runs no pause\ncontainer. It is captured in the snapshot manifest alongside the sandbox\nbinaries, so a restore always re-creates the sandbox from the same image\nthe snapshot was taken with.\n\nTypically, set it to [1] for on-gcp, and [2] for off-gcp\n\n  - [1] gcr.io/gke-release/pause@sha256:bcbd57ba5653580ec647b16d8163cdd1112df3609129b01f912a8032e48265da\n  - [2] registry.k8s.io/pause:3.10.2@sha256:f548e0e8e3dc1896ca956272154dde3314e8cc4fde0a57577ee9fa1c63f5baf4",
-"maxLength": 512,
-"minLength": 1,
-"type": "string",
-"x-kubernetes-validations": [
-{
-"message": "All images must include a digest",
-"rule": "self.contains('@')"
-}
-]
 },
 "state": {
 "default": "Enabled",
@@ -154,7 +142,6 @@
 },
 "required": [
 "defaultVersion",
-"sandboxClass",
 "versions"
 ],
 "type": "object",
@@ -166,10 +153,6 @@
 {
 "message": "the version named by defaultVersion must not be Disabled",
 "rule": "!self.versions.exists(v, v.name == self.defaultVersion && has(v.state) && v.state == 'Disabled')"
-},
-{
-"message": "pauseImage is required on every version for gvisor and not allowed for other sandbox classes",
-"rule": "self.sandboxClass == 'gvisor' ? self.versions.all(v, has(v.pauseImage) && size(v.pauseImage) > 0) : self.versions.all(v, !has(v.pauseImage) || size(v.pauseImage) == 0)"
 }
 ]
 }

@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for Agent Substrate (sandbox configs, worker pools,
   CSI driver configs)
 type: application
-version: 0.5.0
-appVersion: 0.5.0
+version: 0.6.0
+appVersion: 0.6.0
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/agent-substrate/substrate
 icon: >-
@@ -48,13 +48,13 @@ annotations:
       url: https://github.com/agent-substrate/substrate
     - name: Upstream CRD source (manifests/ate-install/generated)
       url: >-
-        https://github.com/agent-substrate/substrate/tree/v0.5.0/manifests/ate-install/generated
+        https://github.com/agent-substrate/substrate/tree/v0.6.0/manifests/ate-install/generated
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/agent-substrate-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/agent-substrate/substrate
-  charts.spnngl.io/upstream-tag: v0.5.0
-  charts.spnngl.io/upstream-commit: e8d40c33f96f4b7a4984bfea7334a36ab5b45b7b
+  charts.spnngl.io/upstream-tag: v0.6.0
+  charts.spnngl.io/upstream-commit: d3f2363590a11b2f50489971985ba033b4c9eff7
   artifacthub.io/changes: |
-    - Initial release, CRDs from upstream v0.5.0
+    - Upstream CRDs updated from v0.5.0 to v0.6.0
