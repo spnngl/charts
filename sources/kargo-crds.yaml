@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=./schema.json
+name: kargo-crds
+description: CustomResourceDefinitions for Kargo (Projects, Warehouses, Freight, Stages, Promotions)
+upstream:
+  repo: https://github.com/akuity/kargo
+  homepage: https://kargo.io
+  icon: https://raw.githubusercontent.com/akuity/kargo/main/ui/public/kargo-logo-head-only.png
+  license: Apache-2.0
+version:
+  # Pre-releases (-rc) are excluded by the pattern.
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v1.12.4
+sources:
+  # controller-gen writes its output straight into the Helm chart as plain
+  # YAML; the chart's templates/crds.yaml only wraps these files.
+  - kind: git-path
+    path: charts/kargo/resources/crds
+transform:
+  include: []
+  exclude: []
+  patches: []
