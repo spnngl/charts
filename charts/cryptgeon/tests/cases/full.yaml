@@ -1,0 +1,88 @@
+values:
+  nameOverride: pigeon
+  imagePullSecrets:
+  - name: regcred
+  config:
+    SIZE_LIMIT: 512 MiB
+    MAX_VIEWS: 10
+    MAX_EXPIRATION: 4294967295
+    ID_LENGTH: 16
+    ALLOW_ADVANCED: false
+    ALLOW_FILES: false
+    IMPRINT_URL: https://example.com/imprint
+    IMPRINT_HTML: "<p>Imprint</p>"
+    THEME_IMAGE: https://example.com/logo.png
+    THEME_TEXT: Welcome
+    THEME_PAGE_TITLE: Notes
+    THEME_FAVICON: https://example.com/favicon.png
+    THEME_NEW_NOTE_NOTICE: false
+    THEME_HOME_LINK: false
+  redis:
+    existingSecret:
+      name: redis-url
+      key: uri
+  serviceAccount:
+    annotations:
+      a: b
+  service:
+    annotations:
+      a: b
+  podAnnotations:
+    a: b
+  podLabels:
+    c: d
+  priorityClassName: low
+  tolerations:
+  - key: k
+    operator: Exists
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: disk
+            operator: In
+            values:
+            - ssd
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+    - notes.example.com
+    tls:
+    - secretName: notes-tls
+      hosts:
+      - notes.example.com
+  httpRoute:
+    enabled: true
+    parentRefs:
+    - name: gw
+    hostnames:
+    - notes.example.com
+  extraArgs:
+  - --foo
+  extraEnv:
+  - name: TZ
+    value: UTC
+  networkPolicy:
+    http:
+      from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress
+    egress:
+      enabled: true
+      extraEgress:
+      - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+        ports:
+        - port: 6379
+          protocol: TCP
+  verticalPodAutoscaler:
+    enabled: true
+    minAllowed:
+      cpu: 10m
+      memory: 32Mi
+    maxAllowed:
+      memory: 1Gi

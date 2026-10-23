@@ -1,0 +1,6 @@
+values:
+  redis:
+    existingSecret:
+      key: ""
+expect:
+  error: redis

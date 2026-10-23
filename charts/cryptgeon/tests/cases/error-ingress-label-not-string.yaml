@@ -1,0 +1,6 @@
+values:
+  ingress:
+    labels:
+      a: 1
+expect:
+  error: labels

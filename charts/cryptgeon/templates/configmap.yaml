@@ -1,0 +1,10 @@
+{{- include "cryptgeon.validate" . }}
+apiVersion: v1
+data:
+  {{- include "cryptgeon.config" . | nindent 2 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "cryptgeon.labels" . | nindent 4 }}
+  name: {{ include "cryptgeon.fullname" . }}
+  namespace: {{ .Release.Namespace }}

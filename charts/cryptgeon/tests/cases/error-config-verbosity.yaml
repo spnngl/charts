@@ -1,0 +1,5 @@
+values:
+  config:
+    VERBOSITY: debug
+expect:
+  error: config

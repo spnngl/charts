@@ -1,0 +1,27 @@
+{{- if .Values.verticalPodAutoscaler.enabled }}
+{{- $v := .Values.verticalPodAutoscaler }}
+{{- $policy := dict "containerName" "cryptgeon" "controlledResources" $v.controlledResources "controlledValues" $v.controlledValues }}
+{{- with $v.minAllowed }}{{ $_ := set $policy "minAllowed" . }}{{ end }}
+{{- with $v.maxAllowed }}{{ $_ := set $policy "maxAllowed" . }}{{ end }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    {{- include "cryptgeon.labels" . | nindent 4 }}
+  name: {{ include "cryptgeon.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- with $v.recommender }}
+  recommenders:
+    - name: {{ . | quote }}
+  {{- end }}
+  resourcePolicy:
+    containerPolicies:
+      {{- toYaml (list $policy) | nindent 6 }}
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "cryptgeon.fullname" . }}
+  updatePolicy:
+    updateMode: {{ $v.updateMode | quote }}
+{{- end }}

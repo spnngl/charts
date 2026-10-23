@@ -17,6 +17,7 @@ Two kinds of charts live here:
 | Chart | Upstream | Contents |
 |-------|----------|----------|
 | [`cloudflared`](./charts/cloudflared) | [cloudflare/cloudflared](https://github.com/cloudflare/cloudflared) | Cloudflare Tunnel connector Deployment (HPA, VPA, ServiceMonitor/PodMonitor) |
+| [`cryptgeon`](./charts/cryptgeon) | [cupcakearmy/cryptgeon](https://github.com/cupcakearmy/cryptgeon) | Encrypted self-destructing notes Deployment, external Redis (Ingress/HTTPRoute, NetworkPolicy, VPA) |
 | [`ghcr-exporter`](./charts/ghcr-exporter) | [d0ugal/ghcr-exporter](https://github.com/d0ugal/ghcr-exporter) | GHCR package metrics exporter Deployment (ServiceMonitor/PodMonitor/PrometheusRule) |
 | [`github-exporter`](./charts/github-exporter) | [d0ugal/github-exporter](https://github.com/d0ugal/github-exporter) | GitHub repository and build status exporter Deployment (ServiceMonitor/PodMonitor/PrometheusRule, VPA) |
 | [`cs-firewall-bouncer`](./charts/cs-firewall-bouncer) | [crowdsecurity/cs-firewall-bouncer](https://github.com/crowdsecurity/cs-firewall-bouncer) | CrowdSec firewall bouncer DaemonSet (nftables, PodMonitor/PrometheusRule) |

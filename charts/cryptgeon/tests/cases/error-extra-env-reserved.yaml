@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+  - name: REDIS
+    value: redis://x/
+expect:
+  error: extraEnv
