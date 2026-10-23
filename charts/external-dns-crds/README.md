@@ -5,7 +5,7 @@
 CustomResourceDefinitions for ExternalDNS (DNSEndpoint, DNSRecord).
 
 CRDs are copied verbatim from [kubernetes-sigs/external-dns](https://github.com/kubernetes-sigs/external-dns)
-at tag [`v0.23.0`](https://github.com/kubernetes-sigs/external-dns/tree/v0.23.0) (commit `a10c5665a5bc30e7163eb17e853e317964500e99`),
+at tag [`v0.24.0`](https://github.com/kubernetes-sigs/external-dns/tree/v0.24.0) (commit `c40894ac060e0920b2b49035df18005954f83a7a`),
 path(s) `config/crd/standard`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
@@ -16,7 +16,7 @@ helm install external-dns oci://ghcr.io/spnngl/charts/external-dns-crds --versio
 ```
 
 Chart `version` equals the upstream version it ships; `appVersion` is always the exact upstream version.
-Installing requires Kubernetes >=1.16.0.
+Installing requires Kubernetes >=1.25.0.
 
 ### Already have these CRDs?
 
