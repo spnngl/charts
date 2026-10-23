@@ -4,9 +4,9 @@ apiVersion: v2
 name: external-dns-crds
 description: CustomResourceDefinitions for ExternalDNS (DNSEndpoint, DNSRecord)
 type: application
-version: 0.23.3
-appVersion: 0.23.0
-kubeVersion: ">=1.16.0-0"
+version: 0.24.0
+appVersion: 0.24.0
+kubeVersion: ">=1.25.0-0"
 home: https://kubernetes-sigs.github.io/external-dns/
 icon: >-
   https://raw.githubusercontent.com/kubernetes-sigs/external-dns/master/docs/img/external-dns.png
@@ -40,13 +40,13 @@ annotations:
     - name: Upstream repository
       url: https://github.com/kubernetes-sigs/external-dns
     - name: Upstream CRD source (config/crd/standard)
-      url: https://github.com/kubernetes-sigs/external-dns/tree/v0.23.0/config/crd/standard
+      url: https://github.com/kubernetes-sigs/external-dns/tree/v0.24.0/config/crd/standard
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/external-dns-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/kubernetes-sigs/external-dns
-  charts.spnngl.io/upstream-tag: v0.23.0
-  charts.spnngl.io/upstream-commit: a10c5665a5bc30e7163eb17e853e317964500e99
+  charts.spnngl.io/upstream-tag: v0.24.0
+  charts.spnngl.io/upstream-commit: c40894ac060e0920b2b49035df18005954f83a7a
   artifacthub.io/changes: |
-    - Chart regenerated with updated tooling (upstream unchanged at v0.23.0)
+    - Upstream CRDs updated from v0.23.0 to v0.24.0

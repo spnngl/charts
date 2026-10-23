@@ -10,7 +10,7 @@ version:
   # Repo also carries `external-dns-helm-chart-*` tags; this pattern excludes them.
   tagPattern: '^v(\d+\.\d+\.\d+)$'
   allow: all
-  current: v0.23.0
+  current: v0.24.0
 sources:
   # Authoritative location. The in-tree chart's crds/ dir lagged behind it at v0.22.0.
   - kind: git-path
