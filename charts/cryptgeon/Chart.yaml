@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: cryptgeon
+description: Cryptgeon, a secure self-destructing notes and files service, as a hardened single-replica Deployment on an external Redis
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/cryptgeon
+appVersion: "2.9.3"
+kubeVersion: ">=1.33.0-0"
+home: https://github.com/cupcakearmy/cryptgeon
+icon: https://raw.githubusercontent.com/cupcakearmy/cryptgeon/v2.9.3/design/dove.svg
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/cupcakearmy/cryptgeon
+  - https://github.com/spnngl/images
+keywords:
+  - cryptgeon
+  - notes
+  - secrets
+  - encryption
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: MIT
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # cryptgeon.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: cryptgeon
+      image: ghcr.io/spnngl/images/cryptgeon:2.9.3@sha256:8b9df4fc488475c2eb2a7401231d4255cc63ee223c6b282609235ab8618c2e8a
+  artifacthub.io/links: |-
+    - name: Upstream repository
+      url: https://github.com/cupcakearmy/cryptgeon
+    - name: Images repository
+      url: https://github.com/spnngl/images
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/cryptgeon
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

@@ -1,0 +1,4 @@
+# ct install: no Redis nor URL Secret exist in CI, so no pod may start
+# (replicas = 0). The chart wiring (ConfigMap, ServiceAccount, Service,
+# NetworkPolicy, Deployment) is still created and validated by the API server.
+replicaCount: 0

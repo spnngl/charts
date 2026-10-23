@@ -1,0 +1,6 @@
+values:
+  config:
+    SIZE_LIMIT: 1 KiB
+    MAX_VIEWS: 4294967295
+    ALLOW_FILES: false
+    THEME_TEXT: "true"

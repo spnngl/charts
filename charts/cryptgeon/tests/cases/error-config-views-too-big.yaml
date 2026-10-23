@@ -1,0 +1,5 @@
+values:
+  config:
+    MAX_VIEWS: 4294967296
+expect:
+  error: MAX_VIEWS

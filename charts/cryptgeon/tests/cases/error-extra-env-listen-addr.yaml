@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+  - name: LISTEN_ADDR
+    value: 0.0.0.0:9000
+expect:
+  error: extraEnv

@@ -1,0 +1,5 @@
+values:
+  config:
+    ALLOW_FILES: "True"
+expect:
+  error: ALLOW_FILES

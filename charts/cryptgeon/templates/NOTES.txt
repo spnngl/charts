@@ -1,0 +1,36 @@
+{{ include "cryptgeon.fullname" . }} runs one cryptgeon instance (Deployment, short downtime on every upgrade).
+
+The chart ships no Redis and never creates the Redis URL Secret. Both must exist in
+namespace {{ .Release.Namespace }}, with the Redis reachable from the pod. Without the Secret the pod stays in
+CreateContainerConfigError; without a reachable Redis it crashes until Redis answers.
+
+  kubectl -n {{ .Release.Namespace }} create secret generic {{ include "cryptgeon.secretName" . }} \
+    --from-literal={{ .Values.redis.existingSecret.key }}=redis://<host>:6379/
+
+Configure Redis without persistence and with a memory limit and an eviction policy
+(see the README). The URL is read at startup only: roll the pod after changing it.
+
+  kubectl -n {{ .Release.Namespace }} rollout restart deployment/{{ include "cryptgeon.fullname" . }}
+
+Cryptgeon needs HTTPS (WebCrypto): browsers refuse it over plain HTTP, except on localhost.
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+  https://{{ . }}/
+{{- end }}
+{{- end }}
+{{- if .Values.httpRoute.enabled }}
+{{- range .Values.httpRoute.hostnames }}
+  https://{{ . }}/
+{{- end }}
+{{- end }}
+
+Or, from your machine:
+
+  kubectl -n {{ .Release.Namespace }} port-forward service/{{ include "cryptgeon.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+  then open http://localhost:{{ .Values.service.port }}/
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: the pod runs in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) cannot start it; set
+hostUsers=true to use host users.
+{{- end }}

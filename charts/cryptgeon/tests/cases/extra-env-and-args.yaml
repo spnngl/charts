@@ -1,0 +1,6 @@
+values:
+  extraArgs:
+  - --foo
+  extraEnv:
+  - name: TZ
+    value: UTC

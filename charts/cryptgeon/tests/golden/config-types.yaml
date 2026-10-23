@@ -1,0 +1,185 @@
+---
+# Source: cryptgeon/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: cryptgeon
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cryptgeon
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cryptgeon-0.0.0
+  name: cryptgeon
+  namespace: cryptgeon
+spec:
+  ingress:
+    - ports:
+      - port: 8000
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: cryptgeon
+      app.kubernetes.io/name: cryptgeon
+  policyTypes:
+    - Ingress
+---
+# Source: cryptgeon/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: cryptgeon
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cryptgeon
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cryptgeon-0.0.0
+  name: cryptgeon
+  namespace: cryptgeon
+---
+# Source: cryptgeon/templates/configmap.yaml
+apiVersion: v1
+data:
+  ALLOW_FILES: "false"
+  MAX_VIEWS: "4294967295"
+  SIZE_LIMIT: 1 KiB
+  THEME_TEXT: "true"
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: cryptgeon
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cryptgeon
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cryptgeon-0.0.0
+  name: cryptgeon
+  namespace: cryptgeon
+---
+# Source: cryptgeon/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: cryptgeon
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cryptgeon
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cryptgeon-0.0.0
+  name: cryptgeon
+  namespace: cryptgeon
+spec:
+  ports:
+    - name: http
+      port: 8000
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: cryptgeon
+    app.kubernetes.io/name: cryptgeon
+  type: ClusterIP
+---
+# Source: cryptgeon/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/env-value-from: "The Redis URL Secret is created by the user, outside the chart."
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: the view counter is guarded by an in-process lock, so two instances can serve a note beyond its view limit."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "Recreate on purpose: a surge pod would run a second instance next to the first (see minimum-three-replicas)."
+    ignore-check.kube-linter.io/read-secret-from-env-var: "cryptgeon reads the Redis URL (which can carry a password) from the REDIS environment variable only: no option to read it from a file."
+  labels:
+    app.kubernetes.io/instance: cryptgeon
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cryptgeon
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cryptgeon-0.0.0
+  name: cryptgeon
+  namespace: cryptgeon
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: cryptgeon
+      app.kubernetes.io/name: cryptgeon
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        checksum/config: 1919255d6a6cc407207c191632fd2e9639f48c042da020fdedb2352055d7a154
+      labels:
+        app.kubernetes.io/instance: cryptgeon
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: cryptgeon
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: cryptgeon-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            - name: REDIS
+              valueFrom:
+                secretKeyRef:
+                  key: url
+                  name: cryptgeon
+          envFrom:
+            - configMapRef:
+                name: cryptgeon
+          image: "ghcr.io/spnngl/images/cryptgeon:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/status
+              port: http
+            periodSeconds: 10
+          name: cryptgeon
+          ports:
+            - containerPort: 8000
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/live
+              port: http
+            periodSeconds: 10
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePolicy: FallbackToLogsOnError
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: cryptgeon
+      terminationGracePeriodSeconds: 10

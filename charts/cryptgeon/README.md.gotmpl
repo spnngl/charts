@@ -1,0 +1,211 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.description" . }}
+
+Runs [cryptgeon](https://github.com/cupcakearmy/cryptgeon) (end-to-end encrypted
+self-destructing notes and files) as a single-replica Deployment. The image is
+built from [spnngl/images](https://github.com/spnngl/images): `scratch`, non-root,
+no shell.
+
+Cryptgeon keeps every note in **Redis**. The chart ships none: you bring one
+(see [Redis](#redis)).
+
+One replica only: the view counter is guarded by an in-process lock, so with two
+instances a note can be read more often than its view limit. Every upgrade or
+reschedule is a short downtime (`Recreate` strategy, so two instances never
+overlap).
+
+## Install
+
+The chart never creates the Redis URL Secret: the URL can carry a password, which
+must not live in Helm values, release history or Git. Create it first, then install.
+
+```sh
+kubectl create namespace cryptgeon
+kubectl -n cryptgeon create secret generic cryptgeon \
+  --from-literal=url=redis://<host>:6379/
+helm install cryptgeon oci://ghcr.io/spnngl/charts/cryptgeon --version <version> -n cryptgeon
+```
+
+The Secret is named after the release (`redis.existingSecret.name` and `key` to
+override). The URL is `redis://[:password@]host[:port]/[db]`; the image has no TLS
+client, so `rediss://` fails at startup. Cryptgeon reads it once at startup:
+restart the pod after changing the Secret.
+
+```sh
+kubectl -n cryptgeon rollout restart deployment/cryptgeon
+```
+
+Without the Secret the pod stays in `CreateContainerConfigError`. Without a
+reachable Redis, cryptgeon exits at startup and the pod crash-loops until Redis
+answers. Once running, a Redis outage only makes the pod unready (readiness
+checks `/api/live`, which pings Redis); liveness uses `/api/status`, which does
+not, so it never restarts the pod.
+
+## Redis
+
+Notes live only in Redis, and cryptgeon does not configure it. Settings that fit:
+
+- **No persistence** (`save ""`, `appendonly no`): notes are secrets meant to
+  vanish, persistence would write them to disk. A Redis restart loses every note.
+- **A memory limit and an eviction policy** (`maxmemory`, `maxmemory-policy
+  allkeys-lru`). Notes with a view limit have no expiry, so without eviction a
+  full Redis refuses new notes. Keep `maxmemory` below the container memory limit.
+- **Reachable only from cryptgeon** (NetworkPolicy): no TLS, and a password
+  travels in the URL.
+
+An example with the [valkey-helm](https://github.com/valkey-io/valkey-helm)
+`valkey` chart, in memory:
+
+```yaml
+# valkey-values.yaml
+valkeyConfig: |
+  save ""
+  appendonly no
+  maxmemory 400mb
+  maxmemory-policy allkeys-lru
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    memory: 512Mi
+```
+
+```sh
+helm install valkey oci://ghcr.io/valkey-io/valkey-helm/valkey -n cryptgeon -f valkey-values.yaml
+kubectl -n cryptgeon create secret generic cryptgeon \
+  --from-literal=url=redis://valkey:6379/
+```
+
+(the Service is named after the release: adjust the host.) Check the valkey chart
+values for your version.
+
+With `networkPolicy.egress.enabled`, add a rule to the Redis pods; without it the
+app cannot reach Redis:
+
+```yaml
+networkPolicy:
+  egress:
+    enabled: true
+    extraEgress:
+      - to:
+          - podSelector:
+              matchLabels:
+                app.kubernetes.io/name: valkey
+        ports:
+          - port: 6379
+            protocol: TCP
+```
+
+## Settings
+
+`config` holds the cryptgeon settings (upstream environment variable names). The
+chart renders them into a ConfigMap read through `envFrom`; a change rolls the
+pod (`checksum/config`). A key left out keeps the upstream default:
+
+| Key | Upstream default |
+|-----|------------------|
+| `SIZE_LIMIT` | `1 KiB` (chart: `20 MiB`) |
+| `MAX_VIEWS` | `100` |
+| `MAX_EXPIRATION` | `360` (minutes) |
+| `ID_LENGTH` | `32` |
+| `ALLOW_ADVANCED`, `ALLOW_FILES`, `THEME_NEW_NOTE_NOTICE`, `THEME_HOME_LINK` | `true` |
+| `IMPRINT_URL`, `IMPRINT_HTML`, `THEME_IMAGE`, `THEME_TEXT`, `THEME_PAGE_TITLE`, `THEME_FAVICON` | empty |
+
+Cryptgeon panics at startup on a value it cannot parse, so the schema types every
+key and rejects the others. `REDIS`, `LISTEN_ADDR` and `FRONTEND_PATH` belong to
+the chart and the image. For a setting added upstream later, use `extraEnv`
+(`EnvVar` list; the three owned names are rejected, and `extraEnv` wins over
+`config`). `extraArgs` is passed to the binary, which takes none today.
+
+`SIZE_LIMIT` bounds the whole request body, files included, and the body is
+buffered in memory. A browser adds about 35 % of encoding overhead to a file:
+with `20 MiB`, the largest file is about 15 MiB, and a body of about 27 MiB
+reaches the server before it is refused. Raise the memory limit with the limit
+and the number of concurrent uploads.
+
+## Access
+
+Open the app on `/`:
+
+```sh
+kubectl -n cryptgeon port-forward service/cryptgeon 8000:8000
+```
+
+then <http://localhost:8000/>. `ingress` (Ingress) and `httpRoute` (Gateway API
+HTTPRoute) expose it publicly; both need explicit hosts (and `parentRefs` for the
+route).
+
+- **HTTPS is mandatory.** The app encrypts in the browser with WebCrypto, which
+  browsers only offer on HTTPS (and `localhost`). The image serves plain HTTP:
+  terminate TLS in front.
+- **Body size.** ingress-nginx refuses bodies above 1 MiB by default
+  (`413`): set `nginx.ingress.kubernetes.io/proxy-body-size` above
+  `config.SIZE_LIMIT`, with the encoding overhead.
+- **Known issue in 2.9.3**: every path except `/` (a note link, for
+  example) is answered by the single-page app with status `404` even though the
+  page renders. Do not alert on it. The upstream fix is not released yet.
+
+## Image
+
+The default image is `appVersion`, pinned by the digest recorded in the
+`artifacthub.io/images` annotation of `Chart.yaml` (Renovate updates tag and
+digest together). Setting `image.tag` drops that digest; add `image.digest` to
+pin the tag again (a digest without a tag is an error).
+
+The image is signed with cosign (keyless, GitHub Actions OIDC). Verify a digest with:
+
+```sh
+cosign verify \
+  --certificate-identity-regexp 'https://github.com/spnngl/images/.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ghcr.io/spnngl/images/cryptgeon@sha256:<digest>
+```
+
+## Security
+
+Defaults satisfy the `restricted` Pod Security Standard: non-root uid/gid 65532,
+read-only root filesystem, all capabilities dropped, no privilege escalation,
+`RuntimeDefault` seccomp, no ServiceAccount token, no Service environment
+variables. The app writes nothing to disk.
+
+### User namespaces
+
+`hostUsers: false` (default) runs the pod in a user namespace: uid 65532 in
+the pod maps to an unprivileged host uid, which limits what a container escape
+gains. Nodes need a container runtime with user namespace support
+(containerd 2.0+ or CRI-O), runc 1.2+ or crun, and a Linux kernel 6.3+. On other
+nodes the pod sandbox cannot be created: set `hostUsers: true`.
+
+## Network
+
+The NetworkPolicy (`networkPolicy.enabled`, on by default) allows the HTTP port
+(8000). Restrict the sources with `networkPolicy.http.from` (your ingress
+controller or Gateway); empty means any source. `networkPolicy.egress.enabled`
+(off by default) allows DNS and `extraEgress`: add the Redis rule (see
+[Redis](#redis)).
+
+## Autoscaling and resources
+
+There is no HPA (one replica). `verticalPodAutoscaler` supports `Off`,
+`Initial`, `Recreate` and `InPlaceOrRecreate` (in-place resize needs
+Kubernetes 1.33+). A recommender started with another `--recommender-name`
+than `default` ignores the VPA unless `verticalPodAutoscaler.recommender`
+names it. The default requests (`10m` CPU, `32Mi` memory) are scheduling
+floors, not a sizing: memory follows `config.SIZE_LIMIT` and concurrent uploads,
+so measure then tune.
+
+## Compatibility
+
+The values schema is strict: unknown keys fail the install. A breaking change
+to values bumps the chart MAJOR version; deprecations are announced one MINOR
+version ahead. Requires Kubernetes 1.33 or later.
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}

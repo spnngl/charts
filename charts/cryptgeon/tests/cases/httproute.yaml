@@ -1,0 +1,13 @@
+values:
+  httpRoute:
+    enabled: true
+    annotations:
+      a: b
+    labels:
+      c: d
+    parentRefs:
+    - name: gw
+      namespace: gateways
+      sectionName: https
+    hostnames:
+    - notes.example.com

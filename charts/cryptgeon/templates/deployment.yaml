@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/env-value-from: "The Redis URL Secret is created by the user, outside the chart."
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: the view counter is guarded by an in-process lock, so two instances can serve a note beyond its view limit."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "Recreate on purpose: a surge pod would run a second instance next to the first (see minimum-three-replicas)."
+    {{- if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: isolation is the user's choice."
+    {{- end }}
+    ignore-check.kube-linter.io/read-secret-from-env-var: "cryptgeon reads the Redis URL (which can carry a password) from the REDIS environment variable only: no option to read it from a file."
+  labels:
+    {{- include "cryptgeon.labels" . | nindent 4 }}
+  name: {{ include "cryptgeon.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "cryptgeon.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        {{- toYaml (merge (dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum)) (deepCopy .Values.podAnnotations)) | nindent 8 }}
+      labels:
+        {{- toYaml (merge (include "cryptgeon.labels" . | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        {{- if .Values.extraArgs }}
+        - args:
+            {{- toYaml .Values.extraArgs | nindent 12 }}
+          env:
+        {{- else }}
+        - env:
+        {{- end }}
+            - name: REDIS
+              valueFrom:
+                secretKeyRef:
+                  key: {{ .Values.redis.existingSecret.key }}
+                  name: {{ include "cryptgeon.secretName" . }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "cryptgeon.fullname" . }}
+          image: {{ include "cryptgeon.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            {{- toYaml (merge (dict "httpGet" (dict "path" "/api/status" "port" "http")) (deepCopy .Values.livenessProbe)) | nindent 12 }}
+          name: cryptgeon
+          ports:
+            - containerPort: 8000
+              name: http
+              protocol: TCP
+          readinessProbe:
+            {{- toYaml (merge (dict "httpGet" (dict "path" "/api/live" "port" "http")) (deepCopy .Values.readinessProbe)) | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      enableServiceLinks: false
+      hostUsers: {{ .Values.hostUsers }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "cryptgeon.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 10
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
