@@ -5,7 +5,7 @@
 CustomResourceDefinitions for cert-manager (certificates, issuers, ACME orders and challenges).
 
 CRDs are copied verbatim from [cert-manager/cert-manager](https://github.com/cert-manager/cert-manager)
-at tag [`v1.21.2`](https://github.com/cert-manager/cert-manager/tree/v1.21.2) (commit `922a06aa49ee4bb802db268ef72a174af70edd32`),
+at tag [`v1.21.3`](https://github.com/cert-manager/cert-manager/tree/v1.21.3) (commit `925c22283de556172d48d96a165dc2fa27f7a6ff`),
 path(s) `deploy/crds`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 

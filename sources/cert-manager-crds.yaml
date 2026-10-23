@@ -10,7 +10,7 @@ version:
   # Repo also carries `cmd/ctl/v*` tags; this pattern excludes them.
   tagPattern: '^v(\d+\.\d+\.\d+)$'
   allow: all
-  current: v1.21.2
+  current: v1.21.3
 sources:
   # controller-gen output. The in-tree chart's templates/crd-*.yaml are
   # derived from it and wrapped in `{{ if .Values.crds.enabled }}`.
