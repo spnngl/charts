@@ -3,9 +3,9 @@ apiVersion: v2
 name: cloudflared
 description: Cloudflare Tunnel connector (cloudflared) running as a hardened, highly available Deployment
 type: application
-version: 0.2.3
+version: 0.2.4
 # renovate: datasource=docker depName=docker.io/cloudflare/cloudflared
-appVersion: "2026.10.2"
+appVersion: "2026.10.3"
 kubeVersion: ">=1.33.0-0"
 home: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
 icon: https://avatars.githubusercontent.com/u/314135?s=200
@@ -26,7 +26,7 @@ annotations:
   # cloudflared.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: cloudflared
-      image: docker.io/cloudflare/cloudflared:2026.10.2@sha256:0e56c13c7058fcef9c4f0e7d83372f82330548dbf8f8b366f3d8b506526d93b2
+      image: docker.io/cloudflare/cloudflared:2026.10.3@sha256:faa8e0a1475f137c910be6025f43c8e4092fdd35461b31e19fd1390657a1ff39
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
