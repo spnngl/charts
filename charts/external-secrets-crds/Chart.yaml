@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for External Secrets Operator (stores, external/push
   secrets, generators)
 type: application
-version: 2.13.0
-appVersion: 2.13.0
+version: 2.14.0
+appVersion: 2.14.0
 kubeVersion: ">=1.25.0-0"
 home: https://external-secrets.io
 icon: >-
@@ -182,13 +182,13 @@ annotations:
       url: https://github.com/external-secrets/external-secrets
     - name: Upstream CRD source (config/crds/bases)
       url: >-
-        https://github.com/external-secrets/external-secrets/tree/v2.13.0/config/crds/bases
+        https://github.com/external-secrets/external-secrets/tree/v2.14.0/config/crds/bases
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/external-secrets-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/external-secrets/external-secrets
-  charts.spnngl.io/upstream-tag: v2.13.0
-  charts.spnngl.io/upstream-commit: a82d14894fbca270a5e87610fa1efd907dbae341
+  charts.spnngl.io/upstream-tag: v2.14.0
+  charts.spnngl.io/upstream-commit: e932f3a3f6f274e8e269c01aa1f5fb3d1322e3c9
   artifacthub.io/changes: |
-    - Upstream CRDs updated from v2.12.0 to v2.13.0
+    - Upstream CRDs updated from v2.13.0 to v2.14.0

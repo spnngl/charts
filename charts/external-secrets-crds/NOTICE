@@ -1,6 +1,6 @@
 The CustomResourceDefinition manifests under templates/ were copied from
   https://github.com/external-secrets/external-secrets
-at tag v2.13.0 (commit a82d14894fbca270a5e87610fa1efd907dbae341), path(s): config/crds/bases
+at tag v2.14.0 (commit e932f3a3f6f274e8e269c01aa1f5fb3d1322e3c9), path(s): config/crds/bases
 and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
 added; server-side metadata and upstream Helm release metadata were removed.
 Upstream license: Apache-2.0 (see LICENSE in this directory).
