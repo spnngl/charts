@@ -5,7 +5,7 @@
 CustomResourceDefinitions for Cilium (cilium.io v2 and v2alpha1).
 
 CRDs are copied verbatim from [cilium/cilium](https://github.com/cilium/cilium)
-at tag [`v1.20.3`](https://github.com/cilium/cilium/tree/v1.20.3) (commit `bf1aba7b34ab6d9c711315d78d8eefbea81962d1`),
+at tag [`v1.20.4`](https://github.com/cilium/cilium/tree/v1.20.4) (commit `beb276d2f38d4aadfda14710acf8d14a0f1ba723`),
 path(s) `pkg/k8s/apis/cilium.io/client/crds`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
