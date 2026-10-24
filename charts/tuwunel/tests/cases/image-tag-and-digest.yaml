@@ -1,0 +1,5 @@
+values:
+  serverName: example.com
+  image:
+    tag: 1.9.3
+    digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

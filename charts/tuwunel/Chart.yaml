@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: tuwunel
+description: Tuwunel Matrix homeserver as a hardened single-replica StatefulSet
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/tuwunel
+appVersion: "1.9.4"
+kubeVersion: ">=1.33.0-0"
+home: https://tuwunel.chat
+icon: https://matrix.org/images/matrix-logo.svg
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/matrix-construct/tuwunel
+  - https://github.com/spnngl/images
+keywords:
+  - tuwunel
+  - matrix
+  - homeserver
+  - chat
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: Apache-2.0
+  # The pinned digests are the default images (templates/_helpers.tpl,
+  # tuwunel.image): each image takes the entry whose repository it uses.
+  # Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: tuwunel
+      image: ghcr.io/spnngl/images/tuwunel:1.9.4@sha256:465b0a74d0b50dfd59a09a1009c163d2a9b7c9128c5f74a61960917d93ba5043
+  artifacthub.io/links: |-
+    - name: Upstream project
+      url: https://tuwunel.chat
+    - name: Upstream repository
+      url: https://github.com/matrix-construct/tuwunel
+    - name: Images repository
+      url: https://github.com/spnngl/images
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/tuwunel
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

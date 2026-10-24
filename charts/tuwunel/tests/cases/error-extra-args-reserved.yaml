@@ -1,0 +1,6 @@
+values:
+  serverName: example.com
+  extraArgs:
+  - --config=/other.toml
+expect:
+  error: extraArgs

@@ -1,0 +1,9 @@
+values:
+  serverName: example.com
+  persistence:
+    data:
+      type: hostPath
+      hostPath:
+        path: /srv/tuwunel
+  nodeSelector:
+    kubernetes.io/hostname: node-1

@@ -1,0 +1,6 @@
+values:
+  serverName: example.com
+  ingress:
+    wellKnown: true
+expect:
+  error: ingress.wellKnown needs ingress.enabled and ingress.hosts

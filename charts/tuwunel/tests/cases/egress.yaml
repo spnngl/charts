@@ -1,0 +1,17 @@
+values:
+  serverName: example.com
+  networkPolicy:
+    homeserver:
+      from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+    egress:
+      enabled: true
+      extraEgress:
+      - ports:
+        - port: 3478
+          protocol: UDP
+        to:
+        - ipBlock:
+            cidr: 192.168.1.10/32

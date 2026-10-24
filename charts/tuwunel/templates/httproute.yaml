@@ -1,0 +1,58 @@
+{{- if .Values.httpRoute.enabled }}
+{{- $fullname := include "tuwunel.fullname" . }}
+{{- $labels := merge (include "tuwunel.labels" (dict "ctx" . "component" "homeserver") | fromYaml) (deepCopy .Values.httpRoute.labels) }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  {{- with .Values.httpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- toYaml $labels | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- with .Values.httpRoute.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  parentRefs:
+    {{- toYaml .Values.httpRoute.parentRefs | nindent 4 }}
+  rules:
+    - backendRefs:
+        - name: {{ $fullname }}
+          port: {{ .Values.service.port }}
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+{{- /* A route holds one set of host names: the delegation host gets its own route. A serverName that is also a host is already served in full. */}}
+{{- if and .Values.httpRoute.wellKnown (not (has .Values.serverName .Values.httpRoute.hostnames)) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  {{- with .Values.httpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- toYaml $labels | nindent 4 }}
+  name: {{ $fullname }}-well-known
+  namespace: {{ .Release.Namespace }}
+spec:
+  hostnames:
+    - {{ .Values.serverName | quote }}
+  parentRefs:
+    {{- toYaml .Values.httpRoute.parentRefs | nindent 4 }}
+  rules:
+    - backendRefs:
+        - name: {{ $fullname }}
+          port: {{ .Values.service.port }}
+      matches:
+        - path:
+            type: PathPrefix
+            value: /.well-known/matrix
+{{- end }}
+{{- end }}

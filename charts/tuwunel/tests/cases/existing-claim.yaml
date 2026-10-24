@@ -1,0 +1,8 @@
+values:
+  serverName: example.com
+  persistence:
+    data:
+      type: existingClaim
+      existingClaim:
+        name: matrix-data
+        subPath: tuwunel

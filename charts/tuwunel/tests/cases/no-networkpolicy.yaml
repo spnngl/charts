@@ -1,0 +1,4 @@
+values:
+  serverName: example.com
+  networkPolicy:
+    enabled: false

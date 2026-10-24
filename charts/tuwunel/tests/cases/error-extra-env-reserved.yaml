@@ -1,0 +1,7 @@
+values:
+  serverName: example.com
+  extraEnv:
+  - name: TUWUNEL_CONFIG
+    value: /other.toml
+expect:
+  error: extraEnv
