@@ -7,7 +7,7 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   labels:
-    {{- include "tuwunel.labels" (dict "ctx" . "component" "livekit") | nindent 4 }}
+    {{- toYaml (merge (include "tuwunel.labels" (dict "ctx" . "component" "livekit") | fromYaml) (dict "app.kubernetes.io/service" "metrics")) | nindent 4 }}
   name: {{ include "tuwunel.fullname" . }}-livekit-metrics
   namespace: {{ .Release.Namespace }}
 spec:

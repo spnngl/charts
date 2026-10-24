@@ -34,7 +34,9 @@ spec:
   template:
     metadata:
       annotations:
-        {{- toYaml (merge (dict "checksum/config" (include (print $.Template.BasePath "/livekit-configmap.yaml") . | sha256sum)) (deepCopy .Values.podAnnotations)) | nindent 8 }}
+        {{- $annotations := dict "checksum/config" (include (print $.Template.BasePath "/livekit-configmap.yaml") . | sha256sum) }}
+        {{- with $l.existingSecret.revision }}{{ $_ := set $annotations "checksum/secret" . }}{{ end }}
+        {{- toYaml (merge $annotations (deepCopy .Values.podAnnotations)) | nindent 8 }}
       labels:
         {{- toYaml (merge (include "tuwunel.labels" $component | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
     spec:
@@ -45,12 +47,16 @@ spec:
       automountServiceAccountToken: false
       containers:
         - env:
-            {{- if dig "limits" "memory" "" $l.resources }}
+            {{- with dig "limits" "memory" "" $l.resources }}
             - name: GOMEMLIMIT
+              {{- with include "tuwunel.goMemLimit" . }}
+              value: {{ . | quote }}
+              {{- else }}
               valueFrom:
                 resourceFieldRef:
                   containerName: livekit
                   resource: limits.memory
+              {{- end }}
             {{- end }}
             {{- if and $hostPort (not $advertised) }}
             - name: NODE_IP

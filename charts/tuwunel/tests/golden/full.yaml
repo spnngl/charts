@@ -292,7 +292,8 @@ metadata:
     app.kubernetes.io/instance: tuwunel
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: ts
-    app.kubernetes.io/version: "0.0.0"
+    app.kubernetes.io/service: metrics
+    app.kubernetes.io/version: 0.0.0
     helm.sh/chart: tuwunel-0.0.0
   name: tuwunel-ts-livekit-metrics
   namespace: tuwunel
@@ -597,10 +598,7 @@ spec:
       containers:
         - env:
             - name: GOMEMLIMIT
-              valueFrom:
-                resourceFieldRef:
-                  containerName: livekit
-                  resource: limits.memory
+              value: "483183819"
           image: "ghcr.io/spnngl/images/livekit:1.13.9"
           imagePullPolicy: IfNotPresent
           livenessProbe:
@@ -1329,6 +1327,7 @@ spec:
       app.kubernetes.io/component: livekit
       app.kubernetes.io/instance: tuwunel
       app.kubernetes.io/name: ts
+      app.kubernetes.io/service: metrics
 ---
 # Source: tuwunel/templates/cinny-vpa.yaml
 apiVersion: autoscaling.k8s.io/v1

@@ -28,7 +28,9 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      {{- $annotations := deepCopy .Values.podAnnotations }}
+      {{- with $l.existingSecret.revision }}{{ $_ := set $annotations "checksum/secret" . }}{{ end }}
+      {{- with $annotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}

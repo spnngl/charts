@@ -615,6 +615,8 @@ livekit:
     name: ""
     # -- Key of the Secret: a file holding one line, `<api key>: <api secret>` (a secret of 32 characters or more).
     key: keys.yaml
+    # -- Opaque string added to both pods as the `checksum/secret` annotation: change it when you rotate the Secret to restart them (a mounted Secret is not re-read by a running process). The chart cannot hash a Secret it does not own, so it is yours to set, for example from CI: `--set-string livekit.existingSecret.revision=$(kubectl get secret livekit-keys -o json | sha256sum | cut -c1-12)`. Empty: no annotation.
+    revision: ""
   image:
     # -- Image repository.
     repository: ghcr.io/spnngl/images/livekit
@@ -739,7 +741,7 @@ livekit:
   # type: object
   # additionalProperties: true
   # @schema
-  # -- Resources of the livekit container. A scheduling floor, not a sizing. `GOMEMLIMIT` follows `limits.memory`.
+  # -- Resources of the livekit container. A scheduling floor, not a sizing. `GOMEMLIMIT` is 90% of `limits.memory` (an integer with a Ki/Mi/Gi/Ti or k/M/G/T suffix; any other form gets the full limit).
   resources:
     # @schema
     # type: object

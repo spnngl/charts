@@ -268,10 +268,7 @@ spec:
       containers:
         - env:
             - name: GOMEMLIMIT
-              valueFrom:
-                resourceFieldRef:
-                  containerName: livekit
-                  resource: limits.memory
+              value: "483183819"
             - name: NODE_IP
               valueFrom:
                 fieldRef:
