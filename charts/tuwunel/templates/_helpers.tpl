@@ -357,3 +357,18 @@ Paths served by lk-jwt-service (a YAML list), the rest of the host is LiveKit's.
 - /healthz
 - /sfu/get
 {{- end }}
+
+{{/*
+GOMEMLIMIT for a memory quantity: 90% of it in bytes, so the Go GC acts before
+the kernel OOM-kills the container. Empty when the quantity is not an integer
+with a binary or decimal suffix (the caller falls back to the full limit).
+*/}}
+{{- define "tuwunel.goMemLimit" -}}
+{{- $q := toString . }}
+{{- $units := dict "Ki" 1024 "Mi" 1048576 "Gi" 1073741824 "Ti" 1099511627776 "k" 1000 "K" 1000 "M" 1000000 "G" 1000000000 "T" 1000000000000 }}
+{{- $n := regexFind "^[0-9]+$|^[0-9]+(?:Ki|Mi|Gi|Ti|k|K|M|G|T)$" $q | regexFind "^[0-9]+" }}
+{{- if $n }}
+{{- $unit := get $units (trimPrefix $n $q) | default 1 }}
+{{- div (mul (int64 $n) $unit) 10 | mul 9 }}
+{{- end }}
+{{- end }}

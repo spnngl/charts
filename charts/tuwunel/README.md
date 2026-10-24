@@ -160,7 +160,9 @@ users of `serverName`.
 
 Create the Secret first: one file, `<api key>: <api secret>` (a secret of 32
 characters or more), shared by both pods (mode `0440`). The chart never creates it,
-and a rotation needs a restart of both pods.
+and a running pod does not re-read it: after a rotation, change
+`livekit.existingSecret.revision` (any string, a hash of the Secret from CI for
+instance) to restart both pods.
 
 ```sh
 kubectl -n matrix create secret generic livekit-keys \
@@ -198,7 +200,7 @@ Media is fixed on 7881/tcp (ICE over TCP) and 7882/udp (every call, multiplexed)
 
 - Both host modes need a namespace that allows privileged pods (Pod Security
   `baseline` and `restricted` refuse `hostPort`), a node with a public IP (pin it
-  with `livekit.nodeSelector`) and 7881/tcp + 7882/udp open to the internet on it.
+  with `livekit.nodeSelector`; `helm install` warns while it is empty) and 7881/tcp + 7882/udp open to the internet on it.
   `hostPort` needs the CNI `portmap` plugin, UDP included, and keeps the pod network
   (NetworkPolicy and `hostUsers: false` apply). `hostNetwork` has neither:
   LiveKit's API (7880) and metrics (6789) listen on the node's IP, and NetworkPolicy
@@ -321,7 +323,7 @@ than `default` ignores the VPA unless `verticalPodAutoscaler.recommender`
 names it. The default requests (`100m` CPU, `256Mi` memory) are scheduling
 floors, not a sizing: memory grows with the number of rooms and the cache, so
 measure then tune. Cinny's (`10m`, `16Mi`, limit `64Mi`), LiveKit's
-(`100m`, `128Mi`, limit `512Mi`; `GOMEMLIMIT` follows the limit) and
+(`100m`, `128Mi`, limit `512Mi`; `GOMEMLIMIT` is 90% of the limit) and
 lk-jwt-service's (`10m`, `16Mi`, limit `64Mi`) are floors too.
 
 ## Compatibility
@@ -427,6 +429,7 @@ Kubernetes: `>=1.33.0-0`
 | livekit.enabled | bool | `false` | Deploy LiveKit and lk-jwt-service (calls for Element Call and Element X). Needs `host` and `existingSecret.name`. |
 | livekit.existingSecret.key | string | `"keys.yaml"` | Key of the Secret: a file holding one line, `<api key>: <api secret>` (a secret of 32 characters or more). |
 | livekit.existingSecret.name | string | `""` | Name of a Secret holding the LiveKit API key and secret, shared by LiveKit and lk-jwt-service. Required when enabled. The chart never creates it. |
+| livekit.existingSecret.revision | string | `""` | Opaque string added to both pods as the `checksum/secret` annotation: change it when you rotate the Secret to restart them (a mounted Secret is not re-read by a running process). The chart cannot hash a Secret it does not own, so it is yours to set, for example from CI: `--set-string livekit.existingSecret.revision=$(kubectl get secret livekit-keys -o json | sha256sum | cut -c1-12)`. Empty: no annotation. |
 | livekit.host | string | `""` | Public host of LiveKit and lk-jwt-service (one host for both, `calls.example.com`). Required when enabled. Clients get `https://<host>` from the homeserver (`well_known.livekit_url`), lk-jwt-service gets `wss://<host>`. |
 | livekit.httpRoute.annotations | object | `{}` | HTTPRoute annotations. |
 | livekit.httpRoute.enabled | bool | `false` | Create a Gateway API HTTPRoute on `livekit.host`: the lk-jwt-service paths go to lk-jwt-service, `/` to LiveKit (WebSocket). |
@@ -473,7 +476,7 @@ Kubernetes: `>=1.33.0-0`
 | livekit.nodeSelector | object | `{}` | Node selector of the LiveKit pod, merged over `nodeSelector`. The host modes need the node with the public IP. |
 | livekit.priorityClassName | string | `""` | Priority class name of the LiveKit pod. |
 | livekit.readinessProbe | object | `{"failureThreshold":3,"periodSeconds":10,"timeoutSeconds":2}` | Readiness probe (`GET /` on 7880). |
-| livekit.resources | object | `{"limits":{"memory":"512Mi"},"requests":{"cpu":"100m","memory":"128Mi"}}` | Resources of the livekit container. A scheduling floor, not a sizing. `GOMEMLIMIT` follows `limits.memory`. |
+| livekit.resources | object | `{"limits":{"memory":"512Mi"},"requests":{"cpu":"100m","memory":"128Mi"}}` | Resources of the livekit container. A scheduling floor, not a sizing. `GOMEMLIMIT` is 90% of `limits.memory` (an integer with a Ki/Mi/Gi/Ti or k/M/G/T suffix; any other form gets the full limit). |
 | livekit.rtc.mode | string | `"hostPort"` | How media (7881/tcp, 7882/udp, fixed) reaches the pod. `hostPort`: published on the node, which LiveKit advertises (`NODE_IP`, unless `config.rtc.node_ip` or `config.rtc.use_external_ip` is set). `hostNetwork`: the pod uses the node's network, LiveKit finds the addresses itself. `LoadBalancer`: a Service of its own, needs `config.rtc.node_ip` or `config.rtc.use_external_ip`. Both host modes need a namespace that allows privileged pods and a node with a public IP (`livekit.nodeSelector`). |
 | livekit.rtc.service.annotations | object | `{}` | Annotations of the media Service (`mode: LoadBalancer`). |
 | livekit.rtc.service.externalTrafficPolicy | string | `""` | `externalTrafficPolicy` of the media Service. Empty: Kubernetes default. |

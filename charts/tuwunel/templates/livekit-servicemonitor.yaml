@@ -20,5 +20,5 @@ spec:
       - {{ .Release.Namespace }}
   selector:
     matchLabels:
-      {{- include "tuwunel.selectorLabels" (dict "ctx" . "component" "livekit") | nindent 6 }}
+      {{- toYaml (merge (include "tuwunel.selectorLabels" (dict "ctx" . "component" "livekit") | fromYaml) (dict "app.kubernetes.io/service" "metrics")) | nindent 6 }}
 {{- end }}
