@@ -108,7 +108,8 @@ These records cross module boundaries. Treat their shapes as interfaces.
 
 - **manifest**: the schema from the root ARCHITECTURE.md. After
   `manifest defaults`, the optional fields always exist (`upstream.icon` may be
-  null, `version.allow`, `conflictsWith`, and `transform.{include, exclude,
+  null, `upstream.formerly` with `keywords` (may be empty) and `chart` (may be
+  null) in each entry, `version.allow`, `conflictsWith`, and `transform.{include, exclude,
   patches, stripDocs}`). Downstream code reads them directly and never
   re-defaults them. Unknown keys are rejected at every level
   (`MANIFEST_KEYS`, `SOURCE_OPTIONAL_FIELDS` in `config.nu`).

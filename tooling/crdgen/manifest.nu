@@ -34,6 +34,28 @@ def validate-source [name: string, s: any, idx: int] {
   if ($unknown | is-not-empty) { fail $name $"unknown '($unknown | first)' for ($kind)" }
 }
 
+# Validate the piped upstream.formerly entry (untyped manifest data).
+def validate-formerly [name: string, idx: int]: any -> nothing {
+  let f = $in
+  let at = $"upstream.formerly[($idx)]"
+  if ($f | describe -d).type != record { fail $name $"'($at)' must be a record" }
+  for key in [name repo] {
+    let v = ($f | get -o $key)
+    if ($v | describe -d).type != string or ($v | str trim | is-empty) { fail $name $"'($at).($key)' must be a non-empty string" }
+  }
+  if not ($f.repo | str starts-with "https://") { fail $name $"'($at).repo' must be an https URL" }
+  let keywords = ($f | get -o keywords | default [])
+  if ($keywords | describe -d).type != list or ($keywords | any {|k| ($k | describe -d).type != string or ($k | str trim | is-empty) }) {
+    fail $name $"'($at).keywords' must be a list of non-empty strings"
+  }
+  let chart = ($f | get -o chart)
+  if $chart != null and (($chart | describe -d).type != string or ($chart | str trim | is-empty)) {
+    fail $name $"'($at).chart' must be a non-empty string"
+  }
+  let unknown = ($f | unknown-keys $MANIFEST_KEYS.formerly $"($at).")
+  if ($unknown | is-not-empty) { fail $name $"unknown keys: ($unknown | each {|k| $"'($k)'" } | str join ', ')" }
+}
+
 # Validate a manifest record. `name` is the file stem; must equal manifest.name.
 export def "manifest validate" [m: record, name: string]: nothing -> nothing {
   if ($m | get -o name) != $name {
@@ -52,6 +74,9 @@ export def "manifest validate" [m: record, name: string]: nothing -> nothing {
   if $m.upstream.license not-in $LICENSE_ALLOWLIST {
     fail $name $"'upstream.license' ($m.upstream.license) is not in the allowlist ($LICENSE_ALLOWLIST | str join ', '); onboarding needs a deliberate allowlist change"
   }
+  let formerly = ($m.upstream | get -o formerly | default [])
+  if ($formerly | describe -d).type != list { fail $name "'upstream.formerly' must be a list" }
+  for e in ($formerly | enumerate) { $e.item | validate-formerly $name $e.index }
   require-string $m $name "version.tagPattern"
   require-string $m $name "version.current"
   let allow = ($m | get -o version.allow | default "all")
@@ -98,6 +123,9 @@ export def "manifest validate" [m: record, name: string]: nothing -> nothing {
 export def "manifest defaults" [m: record]: nothing -> record {
   $m
   | upsert upstream.icon ($m | get -o upstream.icon)
+  | upsert upstream.formerly ($m | get -o upstream.formerly | default [] | each {|f|
+      {name: $f.name, repo: $f.repo, keywords: ($f | get -o keywords | default []), chart: ($f | get -o chart)}
+    })
   | upsert version.allow ($m | get -o version.allow | default "all")
   | upsert conflictsWith ($m | get -o conflictsWith | default [])
   | upsert transform {

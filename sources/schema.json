@@ -49,6 +49,13 @@
             "BSD-2-Clause",
             "BSD-3-Clause"
           ]
+        },
+        "formerly": {
+          "description": "Former names of the upstream project (renames): README note, Artifact Hub link, extra keywords.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/formerly"
+          }
         }
       }
     },
@@ -135,6 +142,36 @@
     "chartName": {
       "type": "string",
       "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-crds$"
+    },
+    "formerly": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "repo"
+      ],
+      "properties": {
+        "name": {
+          "description": "Former project name.",
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "repo": {
+          "description": "Former upstream git repository.",
+          "type": "string",
+          "pattern": "^https://\\S+$"
+        },
+        "keywords": {
+          "description": "Extra Chart.yaml keywords (search terms of the former name).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "chart": {
+          "description": "Upstream's own CRD chart under the former name (chart reference); the README points its users to adoption.",
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
     },
     "source": {
       "description": "Source kinds and their path field: tooling/crdgen/config.nu SOURCE_PATH_FIELD.",

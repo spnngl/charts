@@ -49,6 +49,11 @@ upstream:
   homepage: <url>
   icon: <url>                           # optional
   license: Apache-2.0                   # SPDX; allowlist: Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause
+  formerly:                             # optional; upstream renames: README note, Artifact Hub link, keywords
+    - name: <former name>
+      repo: https://github.com/<old-owner>/<old-repo>
+      keywords: [<search term>]         # optional; added to Chart.yaml keywords
+      chart: <chart ref>                # optional; upstream's CRD chart under the former name
 version:
   tagPattern: '^v(\d+\.\d+\.\d+)$'      # group 1 = appVersion
   allow: all | minor | patch            # which bumps sync may propose

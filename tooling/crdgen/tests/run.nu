@@ -114,9 +114,21 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
       manifest validate ($good | upsert transform {patches: [{op: remove, path: "/a", reason: "r"}]}) "x-crds"
       manifest validate ($good | upsert sources [{kind: "release-asset", asset: "a", archivePath: "p"}]) "x-crds"
       manifest validate ($good | upsert transform {stripDocs: true}) "x-crds"
+      let former = {name: "Old", repo: "https://github.com/o/old"}
+      manifest validate ($good | insert upstream.formerly [($former | insert keywords [old] | insert chart "oci://r/old")]) "x-crds"
+      expect-error { manifest validate ($good | insert upstream.formerly $former) "x-crds" } "'upstream.formerly' must be a list"
+      expect-error { manifest validate ($good | insert upstream.formerly [($former | reject name)]) "x-crds" } 'upstream\.formerly\[0\]\.name'
+      expect-error { manifest validate ($good | insert upstream.formerly [($former | upsert repo "o/old")]) "x-crds" } "https URL"
+      expect-error { manifest validate ($good | insert upstream.formerly [($former | insert keywords "old")]) "x-crds" } "list of non-empty strings"
+      expect-error { manifest validate ($good | insert upstream.formerly [($former | insert keywords [old 1])]) "x-crds" } "list of non-empty strings"
+      expect-error { manifest validate ($good | insert upstream.formerly [($former | insert keywords [" "])]) "x-crds" } "list of non-empty strings"
+      expect-error { manifest validate ($good | insert upstream.formerly [($former | insert chart "")]) "x-crds" } 'formerly\[0\]\.chart'
+      expect-error { manifest validate ($good | insert upstream.formerly [($former | insert url "u")]) "x-crds" } 'upstream\.formerly\[0\]\.url'
       let d = (manifest defaults $good)
       assert equal $d.transform $NO_TRANSFORM
       assert equal $d.version.allow "all"
+      assert equal $d.upstream.formerly []
+      assert equal (manifest defaults ($good | insert upstream.formerly [$former])).upstream.formerly [($former | insert keywords [] | insert chart null)]
     }}
     {name: "sources/schema.json matches config.nu", run: {
       let schema = (open ($REPO_ROOT | path join "sources" "schema.json"))
@@ -124,6 +136,7 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
       let keys = {|s| $s.properties | columns | sort }
       assert equal (do $keys $schema) ($MANIFEST_KEYS.root | sort)
       assert equal (do $keys $schema.properties.upstream) ($MANIFEST_KEYS.upstream | sort)
+      assert equal (do $keys $defs.formerly) ($MANIFEST_KEYS.formerly | sort)
       assert equal (do $keys $schema.properties.version) ($MANIFEST_KEYS.version | sort)
       assert equal (do $keys $schema.properties.transform) ($MANIFEST_KEYS.transform | sort)
       assert equal (do $keys $defs.patch) ($MANIFEST_KEYS.patch | sort)
@@ -290,6 +303,20 @@ def tests []: nothing -> list<record<name: string, run: closure>> {
         assert ($sreadme | str contains "CRDs are copied from")
         assert ($sreadme | str contains "`kubectl explain` shows field")
         assert ((emit notice $stripped_chart) | str contains "Field-level schema documentation (descriptions, titles, examples) was removed.")
+        assert (not ($readme | str contains "Formerly"))
+        assert equal $chart_yaml.keywords [crds fixture]
+        let renamed = ($chart | upsert manifest.upstream.formerly [
+          {name: "Old Fixture", repo: "https://github.com/example/old", keywords: [old fixture], chart: "oci://example.io/old-crds"}
+        ])
+        assert equal (emit chart-record $renamed).keywords [crds fixture old]
+        assert ((emit chart-record $renamed).annotations."artifacthub.io/links" | str contains "https://github.com/example/old")
+        let rreadme = (emit readme $renamed)
+        assert ($rreadme | str contains "> **Formerly [Old Fixture](https://github.com/example/old).** CRD API group: `example.io`.")
+        assert ($rreadme | str contains "`oci://example.io/old-crds`, keeps the former name")
+        assert ($rreadme | str contains "-l owner=helm,name=<old-release>")
+        let no_chart = (emit readme ($renamed | upsert manifest.upstream.formerly.0.chart null))
+        assert ($no_chart | str contains "**Formerly [Old Fixture]")
+        assert (not ($no_chart | str contains "keeps the former name"))
       } finally { rm -rf $tmp }
     }}
   ]
