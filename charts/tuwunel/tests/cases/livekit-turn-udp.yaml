@@ -1,0 +1,9 @@
+values:
+  serverName: example.com
+  livekit:
+    enabled: true
+    host: calls.example.com
+    existingSecret:
+      name: lk-keys
+    turn:
+      enabled: true

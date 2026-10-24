@@ -651,8 +651,13 @@ livekit:
   #     propertyNames:
   #       not:
   #         enum: [port]
+  #   turn:
+  #     type: object
+  #     propertyNames:
+  #       not:
+  #         enum: [enabled, domain, udp_port, tls_port, cert_file, key_file]
   # @schema
-  # -- LiveKit settings (`config.yaml`, see `config-sample.yaml` upstream), rendered into a ConfigMap. Chart-owned keys (`port`, `rtc.tcp_port`, `rtc.udp_port`, `key_file`, `prometheus.port`) are rejected. Keys go through `existingSecret`, never here. TURN, Redis and multi-node are out of scope.
+  # -- LiveKit settings (`config.yaml`, see `config-sample.yaml` upstream), rendered into a ConfigMap. Chart-owned keys (`port`, `rtc.tcp_port`, `rtc.udp_port`, `key_file`, `prometheus.port` and `turn.enabled`, `turn.domain`, `turn.udp_port`, `turn.tls_port`, `turn.cert_file`, `turn.key_file`) are rejected. Keys go through `existingSecret`, never here. Redis and multi-node are out of scope.
   config: {}
   rtc:
     # @schema
@@ -673,6 +678,14 @@ livekit:
       externalTrafficPolicy: ""
       # -- `loadBalancerClass` of the media Service. Empty: cloud provider default.
       loadBalancerClass: ""
+  turn:
+    # -- Run LiveKit's built-in TURN server: clients that cannot reach 7882/udp (strict firewalls, UDP blocked) relay media through it. Adds 3478/udp and, with `existingSecret`, 5349/tcp (TURN over TLS), published like the media ports (`rtc.mode`).
+    enabled: false
+    # -- DNS name of the TURN server, which must resolve to the address clients reach, and match the certificate. Required with `existingSecret.name`.
+    domain: ""
+    existingSecret:
+      # -- Name of a `kubernetes.io/tls` Secret (`tls.crt`, `tls.key`) for `domain`. Set: TURN over TLS listens on 5349/tcp. Empty: TURN over UDP only (3478/udp). The chart never creates it.
+      name: ""
   service:
     # @schema
     # type: object
@@ -1094,7 +1107,7 @@ networkPolicy:
     # items:
     #   type: object
     # @schema
-    # -- NetworkPolicyPeer list allowed to reach LiveKit's HTTP and WebSocket port (7880). Empty: any source (clients through your ingress controller or gateway, lk-jwt-service). Media (7881/tcp, 7882/udp) is open to any source. Does not apply with `livekit.rtc.mode: hostNetwork`.
+    # -- NetworkPolicyPeer list allowed to reach LiveKit's HTTP and WebSocket port (7880). Empty: any source (clients through your ingress controller or gateway, lk-jwt-service). Media and TURN (7881/tcp, 7882/udp, 3478/udp, 5349/tcp) are open to any source. Does not apply with `livekit.rtc.mode: hostNetwork`.
     from: []
     jwt:
       # @schema

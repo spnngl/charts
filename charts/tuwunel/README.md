@@ -144,8 +144,8 @@ and [lk-jwt-service](https://github.com/element-hq/lk-jwt-service), which checks
 Matrix user and hands out a LiveKit token. Each runs in a Deployment of its own,
 apart from the homeserver. LiveKit runs one replica (without Redis two pods split
 the sessions) and a rollout waits up to 10 minutes
-(`livekit.terminationGracePeriodSeconds`) for calls to end. Out of scope: TURN,
-Redis and multi-node LiveKit, lk-jwt-service appservice mode (it logs a warning:
+(`livekit.terminationGracePeriodSeconds`) for calls to end. Out of scope: Redis and
+multi-node LiveKit, lk-jwt-service appservice mode (it logs a warning:
 without it, room membership is not verified, which suits a single full-access
 homeserver).
 
@@ -213,9 +213,34 @@ Media is fixed on 7881/tcp (ICE over TCP) and 7882/udp (every call, multiplexed)
   needs mixed-protocol support from the provider; otherwise use a host mode.
   `livekit.rtc.service` sets its annotations, `externalTrafficPolicy` and
   `loadBalancerClass`.
-- Without TURN, clients behind strict firewalls reach LiveKit only over 7881/tcp.
+- Without TURN, clients behind strict firewalls reach LiveKit only over 7881/tcp
+  (see [TURN](#turn)).
 - ingress-nginx closes idle WebSockets after 60 s: raise `proxy-read-timeout` and
   `proxy-send-timeout` on the LiveKit Ingress.
+
+### TURN
+
+`livekit.turn.enabled` runs LiveKit's built-in TURN server for clients that cannot
+reach 7882/udp. It adds 3478/udp (TURN over UDP), published like the media ports
+(`rtc.mode`), and LiveKit hands its address to clients. For clients that only get
+TLS through, also set `livekit.turn.domain` and `livekit.turn.existingSecret.name`,
+a `kubernetes.io/tls` Secret for that name: TURN over TLS then listens on 5349/tcp.
+`domain` must resolve to the address clients reach (the node, or the load balancer)
+and the certificate must cover it. Open 3478/udp and 5349/tcp like 7881/7882.
+
+```yaml
+livekit:
+  turn:
+    enabled: true
+    domain: turn.example.com
+    existingSecret:
+      name: turn-tls
+```
+
+TLS terminated by a proxy in front of TURN (`turn.external_tls`) and a custom relay
+range (`config.turn.relay_range_start` / `relay_range_end`, 30000-40000 by default)
+are left to `livekit.config`. The chart owns `turn.enabled`, `turn.domain`,
+`turn.udp_port`, `turn.tls_port`, `turn.cert_file` and `turn.key_file`.
 
 ### Metrics
 
@@ -303,7 +328,7 @@ mounts (NFS, SMB) and `hostPath` ownership need it too.
   `networkPolicy.livekit.from` (7880), `networkPolicy.livekit.jwt.from` and
   `networkPolicy.livekit.metrics.from`; empty means any source: clients, other
   homeservers (federation) and your ingress controller can be anywhere. LiveKit's
-  media ports are open to any source. `hostNetwork` pods get no policy.
+  media and TURN ports are open to any source. `hostNetwork` pods get no policy.
 - `networkPolicy.egress.enabled` (off by default) allows DNS, `peers.to` (the
   internet except private, CGNAT and link-local ranges: federation, push
   gateways, URL previews) and `extraEgress` for the homeserver. lk-jwt-service and
@@ -425,7 +450,7 @@ Kubernetes: `>=1.33.0-0`
 | ingress.tls | list | `[]` | Ingress TLS blocks (`secretName`, `hosts`). |
 | ingress.wellKnown | bool | `false` | Delegate `serverName` to the homeserver host: add a rule on host `serverName`, path `/.well-known/matrix`, and default `well_known.client` to `https://<first host>` and `well_known.server` to `<first host>:443`. For a `serverName` that differs from the homeserver host (`example.com` served by `matrix.example.com`). Needs `hosts`. Add `serverName` to `tls`. |
 | livekit.affinity | object | `{}` | Affinity of the LiveKit pod. |
-| livekit.config | object | `{}` | LiveKit settings (`config.yaml`, see `config-sample.yaml` upstream), rendered into a ConfigMap. Chart-owned keys (`port`, `rtc.tcp_port`, `rtc.udp_port`, `key_file`, `prometheus.port`) are rejected. Keys go through `existingSecret`, never here. TURN, Redis and multi-node are out of scope. |
+| livekit.config | object | `{}` | LiveKit settings (`config.yaml`, see `config-sample.yaml` upstream), rendered into a ConfigMap. Chart-owned keys (`port`, `rtc.tcp_port`, `rtc.udp_port`, `key_file`, `prometheus.port` and `turn.enabled`, `turn.domain`, `turn.udp_port`, `turn.tls_port`, `turn.cert_file`, `turn.key_file`) are rejected. Keys go through `existingSecret`, never here. Redis and multi-node are out of scope. |
 | livekit.enabled | bool | `false` | Deploy LiveKit and lk-jwt-service (calls for Element Call and Element X). Needs `host` and `existingSecret.name`. |
 | livekit.existingSecret.key | string | `"keys.yaml"` | Key of the Secret: a file holding one line, `<api key>: <api secret>` (a secret of 32 characters or more). |
 | livekit.existingSecret.name | string | `""` | Name of a Secret holding the LiveKit API key and secret, shared by LiveKit and lk-jwt-service. Required when enabled. The chart never creates it. |
@@ -485,6 +510,9 @@ Kubernetes: `>=1.33.0-0`
 | livekit.startupProbe | object | `{"failureThreshold":30,"periodSeconds":2,"timeoutSeconds":2}` | Startup probe (`GET /` on 7880, 406 until the node is ready). |
 | livekit.terminationGracePeriodSeconds | int | `600` | Seconds LiveKit gets to stop: it drains on SIGTERM (no limit) and a second signal forces it. The longest call a rollout waits for. |
 | livekit.tolerations | list | `[]` | Tolerations of the LiveKit pod. |
+| livekit.turn.domain | string | `""` | DNS name of the TURN server, which must resolve to the address clients reach, and match the certificate. Required with `existingSecret.name`. |
+| livekit.turn.enabled | bool | `false` | Run LiveKit's built-in TURN server: clients that cannot reach 7882/udp (strict firewalls, UDP blocked) relay media through it. Adds 3478/udp and, with `existingSecret`, 5349/tcp (TURN over TLS), published like the media ports (`rtc.mode`). |
+| livekit.turn.existingSecret.name | string | `""` | Name of a `kubernetes.io/tls` Secret (`tls.crt`, `tls.key`) for `domain`. Set: TURN over TLS listens on 5349/tcp. Empty: TURN over UDP only (3478/udp). The chart never creates it. |
 | livenessProbe.failureThreshold | int | `3` |  |
 | livenessProbe.periodSeconds | int | `10` |  |
 | livenessProbe.timeoutSeconds | int | `5` |  |
@@ -496,7 +524,7 @@ Kubernetes: `>=1.33.0-0`
 | networkPolicy.egress.peers.to | list | `[{"ipBlock":{"cidr":"0.0.0.0/0","except":["10.0.0.0/8","100.64.0.0/10","127.0.0.0/8","169.254.0.0/16","172.16.0.0/12","192.168.0.0/16"]}},{"ipBlock":{"cidr":"::/0","except":["fc00::/7","fe80::/10"]}}]` | Internet peers (any port). Default: the internet, not the private, CGNAT and link-local ranges, so a compromised pod cannot move sideways. Remove an `except` entry to reach a server there. |
 | networkPolicy.enabled | bool | `true` | Create a NetworkPolicy per component (ingress: the homeserver port). |
 | networkPolicy.homeserver.from | list | `[]` | NetworkPolicyPeer list allowed to reach the homeserver port. Empty: any source (clients, federation and the ingress controller can be anywhere). |
-| networkPolicy.livekit.from | list | `[]` | NetworkPolicyPeer list allowed to reach LiveKit's HTTP and WebSocket port (7880). Empty: any source (clients through your ingress controller or gateway, lk-jwt-service). Media (7881/tcp, 7882/udp) is open to any source. Does not apply with `livekit.rtc.mode: hostNetwork`. |
+| networkPolicy.livekit.from | list | `[]` | NetworkPolicyPeer list allowed to reach LiveKit's HTTP and WebSocket port (7880). Empty: any source (clients through your ingress controller or gateway, lk-jwt-service). Media and TURN (7881/tcp, 7882/udp, 3478/udp, 5349/tcp) are open to any source. Does not apply with `livekit.rtc.mode: hostNetwork`. |
 | networkPolicy.livekit.jwt.from | list | `[]` | NetworkPolicyPeer list allowed to reach lk-jwt-service (8080). Empty: any source. |
 | networkPolicy.livekit.metrics.from | list | `[]` | NetworkPolicyPeer list allowed to scrape LiveKit's metrics port (6789). Empty: any source. |
 | nodeSelector | object | `{"kubernetes.io/os":"linux"}` | Node selector. With a `hostPath`, pin the pod to the node. |

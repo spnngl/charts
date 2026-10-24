@@ -1,0 +1,17 @@
+values:
+  serverName: example.com
+  livekit:
+    enabled: true
+    host: calls.example.com
+    existingSecret:
+      name: lk-keys
+    rtc:
+      mode: LoadBalancer
+    turn:
+      enabled: true
+      domain: turn.example.com
+      existingSecret:
+        name: turn-tls
+    config:
+      rtc:
+        use_external_ip: true
