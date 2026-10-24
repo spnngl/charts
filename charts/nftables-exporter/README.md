@@ -1,6 +1,6 @@
 # nftables-exporter
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.4.5](https://img.shields.io/badge/AppVersion-0.4.5-informational?style=flat-square)
+![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.4.5](https://img.shields.io/badge/AppVersion-0.4.5-informational?style=flat-square)
 
 Prometheus exporter for the nftables ruleset of every node (counters, chains, rules), running as a hardened DaemonSet
 
@@ -55,7 +55,7 @@ keyless like the charts, and carries a SLSA provenance and an SBOM:
 
 ```sh
 cosign verify --insecure-ignore-tlog=true --new-bundle-format=false \
-  --key https://raw.githubusercontent.com/spnngl/images/main/images/fedora/sysroot/common/usr/share/pki/containers/spnngl-images.pub \
+  --key https://raw.githubusercontent.com/spnngl/images/main/bootc/fedora/sysroot/common/usr/share/pki/containers/spnngl-images.pub \
   ghcr.io/spnngl/images/nftables-exporter@<digest>
 docker buildx imagetools inspect ghcr.io/spnngl/images/nftables-exporter@<digest> --format '{{ json .Provenance }}'
 ```
