@@ -96,3 +96,75 @@ values:
   - name: TZ
     value: UTC
   hostUsers: true
+  cinny:
+    enabled: true
+    replicaCount: 3
+    minReadySeconds: 5
+    image:
+      tag: 4.12.6
+    config:
+      featuredCommunities:
+        openAsDefault: true
+        rooms:
+        - '#room:example.com'
+    service:
+      annotations:
+        a: b
+    ingress:
+      enabled: true
+      className: nginx
+      annotations:
+        a: b
+      labels:
+        c: d
+      hosts:
+      - chat.example.com
+      tls:
+      - secretName: chat-tls
+        hosts:
+        - chat.example.com
+    httpRoute:
+      enabled: true
+      annotations:
+        a: b
+      labels:
+        c: d
+      parentRefs:
+      - name: gateway
+        namespace: gateway
+      hostnames:
+      - chat.example.com
+    priorityClassName: low
+    tolerations:
+    - key: k
+      operator: Exists
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: disk
+              operator: In
+              values:
+              - ssd
+    topologySpreadConstraints:
+    - labelSelector:
+        matchLabels:
+          app.kubernetes.io/component: cinny
+      maxSkew: 2
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+    podDisruptionBudget:
+      enabled: true
+      maxUnavailable: 50%
+    verticalPodAutoscaler:
+      enabled: true
+      updateMode: Initial
+      maxAllowed:
+        memory: 128Mi
+  networkPolicy:
+    cinny:
+      from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx

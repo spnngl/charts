@@ -1,0 +1,29 @@
+{{- if and .Values.cinny.enabled .Values.cinny.httpRoute.enabled }}
+{{- $fullname := printf "%s-cinny" (include "tuwunel.fullname" .) }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  {{- with .Values.cinny.httpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- toYaml (merge (include "tuwunel.labels" (dict "ctx" . "component" "cinny") | fromYaml) (deepCopy .Values.cinny.httpRoute.labels)) | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- with .Values.cinny.httpRoute.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  parentRefs:
+    {{- toYaml .Values.cinny.httpRoute.parentRefs | nindent 4 }}
+  rules:
+    - backendRefs:
+        - name: {{ $fullname }}
+          port: {{ .Values.cinny.service.port }}
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+{{- end }}

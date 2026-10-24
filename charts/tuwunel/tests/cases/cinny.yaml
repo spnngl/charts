@@ -1,0 +1,13 @@
+values:
+  serverName: example.com
+  cinny:
+    enabled: true
+    config:
+      defaultHomeserver: 1
+      homeserverList:
+      - example.com
+      - matrix.org
+      allowCustomHomeservers: true
+      hashRouter:
+        enabled: true
+        basename: /app

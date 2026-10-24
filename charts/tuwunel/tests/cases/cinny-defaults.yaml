@@ -1,0 +1,4 @@
+values:
+  serverName: example.com
+  cinny:
+    enabled: true

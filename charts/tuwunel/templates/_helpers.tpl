@@ -215,9 +215,7 @@ always rendered.
 {{- if not .Values.serverName }}
 {{- fail "serverName is required: the Matrix server name (for example example.com). It is permanent: changing it later orphans the database" }}
 {{- end }}
-{{- if and .Values.image.digest (not .Values.image.tag) }}
-{{- fail "image.digest requires image.tag: without a tag the chart pins the image by the digest recorded in Chart.yaml" }}
-{{- end }}
+{{- include "tuwunel.validateImage" (dict "key" "image" "image" .Values.image) }}
 {{- $p := .Values.persistence.data }}
 {{- if and (eq $p.type "existingClaim") (not $p.existingClaim.name) }}
 {{- fail "persistence.data.existingClaim.name is required when persistence.data.type is existingClaim" }}
@@ -225,17 +223,40 @@ always rendered.
 {{- if and (eq $p.type "hostPath") (not (hasPrefix "/" $p.hostPath.path)) }}
 {{- fail "persistence.data.hostPath.path must be an absolute path when persistence.data.type is hostPath" }}
 {{- end }}
-{{- if and .Values.ingress.enabled (not .Values.ingress.hosts) }}
-{{- fail "ingress.hosts is required when ingress.enabled is true" }}
-{{- end }}
-{{- if and .Values.httpRoute.enabled (not .Values.httpRoute.parentRefs) }}
-{{- fail "httpRoute.parentRefs is required when httpRoute.enabled is true" }}
-{{- end }}
+{{- include "tuwunel.validateExposure" (dict "key" "" "ingress" .Values.ingress "httpRoute" .Values.httpRoute) }}
 {{- if and .Values.ingress.wellKnown (not (and .Values.ingress.enabled .Values.ingress.hosts)) }}
 {{- fail "ingress.wellKnown needs ingress.enabled and ingress.hosts: the first host becomes well_known.client" }}
 {{- end }}
 {{- if and .Values.httpRoute.wellKnown (not (and .Values.httpRoute.enabled .Values.httpRoute.hostnames)) }}
 {{- fail "httpRoute.wellKnown needs httpRoute.enabled and httpRoute.hostnames: the first host name becomes well_known.client" }}
+{{- end }}
+{{- with .Values.cinny }}
+{{- if .enabled }}
+{{- include "tuwunel.validateImage" (dict "key" "cinny.image" "image" .image) }}
+{{- include "tuwunel.validateExposure" (dict "key" "cinny." "ingress" .ingress "httpRoute" .httpRoute) }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+A digest needs a tag. Takes "key" (the values path, for the message) and "image".
+*/}}
+{{- define "tuwunel.validateImage" -}}
+{{- if and .image.digest (not .image.tag) }}
+{{- fail (printf "%s.digest requires %s.tag: without a tag the chart pins the image by the digest recorded in Chart.yaml" .key .key) }}
+{{- end }}
+{{- end }}
+
+{{/*
+Ingress needs hosts, HTTPRoute needs parentRefs. Takes "key" (the values path
+prefix of the two, for the messages: "" or "cinny."), "ingress" and "httpRoute".
+*/}}
+{{- define "tuwunel.validateExposure" -}}
+{{- if and .ingress.enabled (not .ingress.hosts) }}
+{{- fail (printf "%singress.hosts is required when %singress.enabled is true" .key .key) }}
+{{- end }}
+{{- if and .httpRoute.enabled (not .httpRoute.parentRefs) }}
+{{- fail (printf "%shttpRoute.parentRefs is required when %shttpRoute.enabled is true" .key .key) }}
 {{- end }}
 {{- end }}
 
@@ -263,4 +284,13 @@ then extraEgress.
 {{- with $e.extraEgress }}
 {{ toYaml . }}
 {{- end }}
+{{- end }}
+
+{{/*
+Cinny config.json: user values over the defaults (the homeserver of this chart,
+no custom homeservers).
+*/}}
+{{- define "tuwunel.cinnyConfig" -}}
+{{- $defaults := dict "allowCustomHomeservers" false "defaultHomeserver" 0 "homeserverList" (list .Values.serverName) }}
+{{- merge (deepCopy .Values.cinny.config) $defaults | toPrettyJson }}
 {{- end }}

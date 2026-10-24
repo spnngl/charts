@@ -1,0 +1,8 @@
+values:
+  serverName: example.com
+  cinny:
+    enabled: true
+    httpRoute:
+      enabled: true
+expect:
+  error: cinny.httpRoute.parentRefs is required

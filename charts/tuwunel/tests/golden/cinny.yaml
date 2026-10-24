@@ -1,0 +1,443 @@
+---
+# Source: tuwunel/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel
+  namespace: tuwunel
+spec:
+  ingress:
+    - ports:
+      - port: 8008
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: homeserver
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: tuwunel
+  policyTypes:
+    - Ingress
+---
+# Source: tuwunel/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/component: cinny
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-cinny
+  namespace: tuwunel
+spec:
+  ingress:
+    - ports:
+      - port: 8080
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: cinny
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: tuwunel
+  policyTypes:
+    - Ingress
+---
+# Source: tuwunel/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel
+  namespace: tuwunel
+---
+# Source: tuwunel/templates/cinny-configmap.yaml
+apiVersion: v1
+data:
+  config.json: |
+    {
+      "allowCustomHomeservers": true,
+      "defaultHomeserver": 1,
+      "hashRouter": {
+        "basename": "/app",
+        "enabled": true
+      },
+      "homeserverList": [
+        "example.com",
+        "matrix.org"
+      ]
+    }
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: cinny
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-cinny
+  namespace: tuwunel
+---
+# Source: tuwunel/templates/configmap.yaml
+apiVersion: v1
+data:
+  tuwunel.toml: |
+    [global]
+    address = "0.0.0.0"
+    database_path = "/var/lib/tuwunel"
+    port = 8008
+    server_name = "example.com"
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel
+  namespace: tuwunel
+---
+# Source: tuwunel/templates/cinny-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: cinny
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-cinny
+  namespace: tuwunel
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/component: cinny
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/name: tuwunel
+  type: ClusterIP
+---
+# Source: tuwunel/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel
+  namespace: tuwunel
+spec:
+  ports:
+    - name: http
+      port: 8008
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/name: tuwunel
+  type: ClusterIP
+---
+# Source: tuwunel/templates/cinny-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "Cinny is a stateless static server: two replicas keep a rolling update gap-free."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/component: cinny
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-cinny
+  namespace: tuwunel
+spec:
+  minReadySeconds: 10
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: cinny
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: tuwunel
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/config: 67349968a6fa1b68304295fcf76d0f1849b3f55ed7c8d45b65bc7d7b5bb094b1
+      labels:
+        app.kubernetes.io/component: cinny
+        app.kubernetes.io/instance: tuwunel
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: tuwunel
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: tuwunel-0.0.0
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: cinny
+                  app.kubernetes.io/instance: tuwunel
+                  app.kubernetes.io/name: tuwunel
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      automountServiceAccountToken: false
+      containers:
+        - image: "ghcr.io/spnngl/images/cinny:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          name: cinny
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /app/config.json
+              name: config
+              readOnly: true
+              subPath: config.json
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: tuwunel
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: cinny
+              app.kubernetes.io/instance: tuwunel
+              app.kubernetes.io/name: tuwunel
+          maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+      volumes:
+        - configMap:
+            name: tuwunel-cinny
+          name: config
+---
+# Source: tuwunel/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: tuwunel is the single writer of its embedded database."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel
+  namespace: tuwunel
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: homeserver
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: tuwunel
+  template:
+    metadata:
+      annotations:
+        checksum/config: 3a6431c258276167e6862cec1d969660ea6f6e8dd43065f60e1eadb637a78ea8
+      labels:
+        app.kubernetes.io/component: homeserver
+        app.kubernetes.io/instance: tuwunel
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: tuwunel
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: tuwunel-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - args: []
+          env:
+            - name: TUWUNEL_CONFIG
+              value: /etc/tuwunel/tuwunel.toml
+          image: "ghcr.io/spnngl/images/tuwunel:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            exec:
+              command:
+              - /usr/bin/tuwunel
+              - --health-check
+            failureThreshold: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+          name: tuwunel
+          ports:
+            - containerPort: 8008
+              name: http
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - /usr/bin/tuwunel
+              - --health-check
+            failureThreshold: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            exec:
+              command:
+              - /usr/bin/tuwunel
+              - --health-check
+            failureThreshold: 180
+            periodSeconds: 10
+            timeoutSeconds: 5
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /var/lib/tuwunel
+              name: data
+            - mountPath: /etc/tuwunel/tuwunel.toml
+              name: config
+              readOnly: true
+              subPath: tuwunel.toml
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: tuwunel
+      terminationGracePeriodSeconds: 1800
+      volumes:
+        - configMap:
+            name: tuwunel
+          name: config
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi

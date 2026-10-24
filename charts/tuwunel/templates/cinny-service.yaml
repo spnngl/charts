@@ -1,0 +1,22 @@
+{{- if .Values.cinny.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- with .Values.cinny.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "tuwunel.labels" (dict "ctx" . "component" "cinny") | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}-cinny
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: http
+      port: {{ .Values.cinny.service.port }}
+      protocol: TCP
+      targetPort: http
+  selector:
+    {{- include "tuwunel.selectorLabels" (dict "ctx" . "component" "cinny") | nindent 4 }}
+  type: {{ .Values.cinny.service.type }}
+{{- end }}

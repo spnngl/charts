@@ -25,6 +25,58 @@ spec:
   policyTypes:
     - Ingress
 ---
+# Source: tuwunel/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/component: cinny
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-cinny
+  namespace: tuwunel
+spec:
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+      ports:
+      - port: 8080
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: cinny
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: ts
+  policyTypes:
+    - Ingress
+---
+# Source: tuwunel/templates/cinny-pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    app.kubernetes.io/component: cinny
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-cinny
+  namespace: tuwunel
+spec:
+  maxUnavailable: 50%
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: cinny
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: ts
+  unhealthyPodEvictionPolicy: AlwaysAllow
+---
 # Source: tuwunel/templates/serviceaccount.yaml
 apiVersion: v1
 automountServiceAccountToken: false
@@ -40,6 +92,35 @@ metadata:
     app.kubernetes.io/version: "0.0.0"
     helm.sh/chart: tuwunel-0.0.0
   name: tuwunel-ts
+  namespace: tuwunel
+---
+# Source: tuwunel/templates/cinny-configmap.yaml
+apiVersion: v1
+data:
+  config.json: |
+    {
+      "allowCustomHomeservers": false,
+      "defaultHomeserver": 0,
+      "featuredCommunities": {
+        "openAsDefault": true,
+        "rooms": [
+          "#room:example.com"
+        ]
+      },
+      "homeserverList": [
+        "example.com"
+      ]
+    }
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: cinny
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-cinny
   namespace: tuwunel
 ---
 # Source: tuwunel/templates/configmap.yaml
@@ -74,6 +155,33 @@ metadata:
   name: tuwunel-ts
   namespace: tuwunel
 ---
+# Source: tuwunel/templates/cinny-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/component: cinny
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-cinny
+  namespace: tuwunel
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/component: cinny
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/name: ts
+  type: ClusterIP
+---
 # Source: tuwunel/templates/service.yaml
 apiVersion: v1
 kind: Service
@@ -100,6 +208,160 @@ spec:
     app.kubernetes.io/instance: tuwunel
     app.kubernetes.io/name: ts
   type: ClusterIP
+---
+# Source: tuwunel/templates/cinny-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "Cinny is a stateless static server: two replicas keep a rolling update gap-free."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/component: cinny
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-cinny
+  namespace: tuwunel
+spec:
+  minReadySeconds: 5
+  replicas: 3
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: cinny
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: ts
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        a: b
+        checksum/config: 6d99419de1eee267dddafee08f189d6ca7103d7047606ba100ca3aa4d5dea700
+      labels:
+        app.kubernetes.io/component: cinny
+        app.kubernetes.io/instance: tuwunel
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: ts
+        app.kubernetes.io/version: 0.0.0
+        c: d
+        helm.sh/chart: tuwunel-0.0.0
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: disk
+                operator: In
+                values:
+                - ssd
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: cinny
+                  app.kubernetes.io/instance: tuwunel
+                  app.kubernetes.io/name: ts
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      automountServiceAccountToken: false
+      containers:
+        - image: "ghcr.io/spnngl/images/cinny:4.12.6"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          name: cinny
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /app/config.json
+              name: config
+              readOnly: true
+              subPath: config.json
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: true
+      imagePullSecrets:
+        - name: regcred
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: low
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: tuwunel-ts
+      terminationGracePeriodSeconds: 30
+      tolerations:
+        - key: k
+          operator: Exists
+      topologySpreadConstraints:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: cinny
+          maxSkew: 2
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+      volumes:
+        - configMap:
+            name: tuwunel-ts-cinny
+          name: config
 ---
 # Source: tuwunel/templates/statefulset.yaml
 apiVersion: apps/v1
@@ -274,6 +536,40 @@ spec:
             storage: 50Gi
         storageClassName: fast
 ---
+# Source: tuwunel/templates/cinny-ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/component: cinny
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: 0.0.0
+    c: d
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-cinny
+  namespace: tuwunel
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "chat.example.com"
+      http:
+        paths:
+          - backend:
+              service:
+                name: tuwunel-ts-cinny
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+      - chat.example.com
+      secretName: chat-tls
+---
 # Source: tuwunel/templates/ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -318,6 +614,37 @@ spec:
       - matrix.example.com
       - example.com
       secretName: matrix-tls
+---
+# Source: tuwunel/templates/cinny-httproute.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/component: cinny
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: 0.0.0
+    c: d
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-cinny
+  namespace: tuwunel
+spec:
+  hostnames:
+    - chat.example.com
+  parentRefs:
+    - name: gateway
+      namespace: gateway
+  rules:
+    - backendRefs:
+        - name: tuwunel-ts-cinny
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
 ---
 # Source: tuwunel/templates/httproute.yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -380,6 +707,36 @@ spec:
         - path:
             type: PathPrefix
             value: /.well-known/matrix
+---
+# Source: tuwunel/templates/cinny-vpa.yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    app.kubernetes.io/component: cinny
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-cinny
+  namespace: tuwunel
+spec:
+  resourcePolicy:
+    containerPolicies:
+      - containerName: cinny
+        controlledResources:
+        - cpu
+        - memory
+        controlledValues: RequestsAndLimits
+        maxAllowed:
+          memory: 128Mi
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: tuwunel-ts-cinny
+  updatePolicy:
+    updateMode: "Initial"
 ---
 # Source: tuwunel/templates/vpa.yaml
 apiVersion: autoscaling.k8s.io/v1

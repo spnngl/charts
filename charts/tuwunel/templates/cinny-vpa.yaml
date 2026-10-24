@@ -1,0 +1,28 @@
+{{- if and .Values.cinny.enabled .Values.cinny.verticalPodAutoscaler.enabled }}
+{{- $v := .Values.cinny.verticalPodAutoscaler }}
+{{- $policy := dict "controlledResources" $v.controlledResources "controlledValues" $v.controlledValues }}
+{{- with $v.minAllowed }}{{ $_ := set $policy "minAllowed" . }}{{ end }}
+{{- with $v.maxAllowed }}{{ $_ := set $policy "maxAllowed" . }}{{ end }}
+{{- $policies := list (merge (dict "containerName" "cinny") $policy) }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    {{- include "tuwunel.labels" (dict "ctx" . "component" "cinny") | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}-cinny
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- with $v.recommender }}
+  recommenders:
+    - name: {{ . | quote }}
+  {{- end }}
+  resourcePolicy:
+    containerPolicies:
+      {{- toYaml $policies | nindent 6 }}
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "tuwunel.fullname" . }}-cinny
+  updatePolicy:
+    updateMode: {{ $v.updateMode | quote }}
+{{- end }}

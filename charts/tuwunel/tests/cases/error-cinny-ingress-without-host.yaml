@@ -1,0 +1,8 @@
+values:
+  serverName: example.com
+  cinny:
+    enabled: true
+    ingress:
+      enabled: true
+expect:
+  error: cinny.ingress.hosts is required

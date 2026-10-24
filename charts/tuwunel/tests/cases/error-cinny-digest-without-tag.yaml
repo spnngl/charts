@@ -1,0 +1,8 @@
+values:
+  serverName: example.com
+  cinny:
+    enabled: true
+    image:
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+expect:
+  error: cinny.image.digest requires cinny.image.tag
