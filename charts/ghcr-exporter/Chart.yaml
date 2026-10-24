@@ -3,9 +3,9 @@ apiVersion: v2
 name: ghcr-exporter
 description: Prometheus exporter for GitHub Container Registry package metrics (ghcr-exporter) running as a hardened Deployment
 type: application
-version: 0.2.0
+version: 0.2.1
 # renovate: datasource=docker depName=ghcr.io/d0ugal/ghcr-exporter
-appVersion: "v2.13.66"
+appVersion: "v2.13.68"
 kubeVersion: ">=1.33.0-0"
 home: https://github.com/d0ugal/ghcr-exporter
 icon: https://avatars.githubusercontent.com/u/48211?s=200
@@ -27,7 +27,7 @@ annotations:
   # ghcr-exporter.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: ghcr-exporter
-      image: ghcr.io/d0ugal/ghcr-exporter:v2.13.66@sha256:402ad8ba07518984c58d85a1563bd70049ae50d5925ec6f88365ce5e5d1f2b5f
+      image: ghcr.io/d0ugal/ghcr-exporter:v2.13.68@sha256:b447b273ed78406cf6980cc23140213be140a56c597473a6a2b3a3c08dd44ec5
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://github.com/d0ugal/ghcr-exporter
