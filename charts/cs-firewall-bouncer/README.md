@@ -78,7 +78,7 @@ the charts, and carries a SLSA provenance attestation:
 ```sh
 gh attestation verify oci://ghcr.io/spnngl/images/cs-firewall-bouncer:<tag> -R spnngl/images
 cosign verify --insecure-ignore-tlog=true --new-bundle-format=false \
-  --key https://raw.githubusercontent.com/spnngl/images/main/images/fedora/sysroot/usr/share/pki/containers/spnngl-images.pub \
+  --key https://raw.githubusercontent.com/spnngl/images/main/bootc/fedora/sysroot/common/usr/share/pki/containers/spnngl-images.pub \
   ghcr.io/spnngl/images/cs-firewall-bouncer@<digest>
 ```
 
