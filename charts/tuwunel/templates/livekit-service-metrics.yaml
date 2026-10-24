@@ -1,0 +1,22 @@
+{{- if include "tuwunel.livekitMetricsService" . }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- with .Values.livekit.metrics.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "tuwunel.labels" (dict "ctx" . "component" "livekit") | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}-livekit-metrics
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: metrics
+      port: 6789
+      protocol: TCP
+      targetPort: metrics
+  selector:
+    {{- include "tuwunel.selectorLabels" (dict "ctx" . "component" "livekit") | nindent 4 }}
+  type: ClusterIP
+{{- end }}

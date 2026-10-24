@@ -1,0 +1,109 @@
+{{- if .Values.livekit.enabled }}
+{{- $l := .Values.livekit }}
+{{- $j := $l.jwt }}
+{{- $component := dict "ctx" . "component" "lk-jwt" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "lk-jwt-service is stateless but has no use for more replicas: the SFU is a single node."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    {{- if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: isolation is the user's choice."
+    {{- end }}
+  labels:
+    {{- include "tuwunel.labels" $component | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}-lk-jwt
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "tuwunel.selectorLabels" $component | nindent 6 }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- toYaml (merge (include "tuwunel.labels" $component | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      {{- with $j.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            - name: LIVEKIT_FULL_ACCESS_HOMESERVERS
+              value: {{ .Values.serverName | quote }}
+            - name: LIVEKIT_KEY_FILE
+              value: {{ printf "/etc/lk-jwt/keys/%s" $l.existingSecret.key | quote }}
+            - name: LIVEKIT_URL
+              value: {{ printf "wss://%s" $l.host | quote }}
+          image: {{ include "tuwunel.image" (dict "image" $j.image "ctx" $) | quote }}
+          imagePullPolicy: {{ $j.image.pullPolicy }}
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+          livenessProbe:
+            {{- toYaml (merge (dict "httpGet" (dict "path" "/healthz" "port" "http")) (deepCopy $j.livenessProbe)) | nindent 12 }}
+          name: lk-jwt
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            {{- toYaml (merge (dict "httpGet" (dict "path" "/healthz" "port" "http")) (deepCopy $j.readinessProbe)) | nindent 12 }}
+          resources:
+            {{- toYaml $j.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- toYaml (merge (dict "httpGet" (dict "path" "/healthz" "port" "http")) (deepCopy $j.startupProbe)) | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/lk-jwt/keys
+              name: keys
+              readOnly: true
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      enableServiceLinks: false
+      hostUsers: {{ .Values.hostUsers }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $j.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "tuwunel.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ $j.terminationGracePeriodSeconds }}
+      {{- with $j.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: keys
+          secret:
+            defaultMode: 288
+            items:
+              - key: {{ $l.existingSecret.key }}
+                path: {{ $l.existingSecret.key }}
+            secretName: {{ $l.existingSecret.name }}
+{{- end }}

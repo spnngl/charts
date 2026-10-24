@@ -1,0 +1,149 @@
+{{- if .Values.livekit.enabled }}
+{{- $l := .Values.livekit }}
+{{- $component := dict "ctx" . "component" "livekit" }}
+{{- $hostNetwork := eq $l.rtc.mode "hostNetwork" }}
+{{- $hostPort := eq $l.rtc.mode "hostPort" }}
+{{- $advertised := or (dig "rtc" "node_ip" "" $l.config) (dig "rtc" "use_external_ip" false $l.config) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    {{- if $hostNetwork }}
+    ignore-check.kube-linter.io/host-network: "livekit.rtc.mode is hostNetwork: media is served on the node's addresses."
+    {{- end }}
+    ignore-check.kube-linter.io/minimum-three-replicas: "LiveKit runs one replica: without Redis two pods split the sessions."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "Recreate: two LiveKit pods would split the sessions, and host modes collide on a node."
+    {{- if $hostNetwork }}
+    ignore-check.kube-linter.io/non-isolated-pod: "livekit.rtc.mode is hostNetwork: NetworkPolicy does not apply to host-networked pods."
+    {{- else if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: isolation is the user's choice."
+    {{- end }}
+  labels:
+    {{- include "tuwunel.labels" $component | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}-livekit
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "tuwunel.selectorLabels" $component | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        {{- toYaml (merge (dict "checksum/config" (include (print $.Template.BasePath "/livekit-configmap.yaml") . | sha256sum)) (deepCopy .Values.podAnnotations)) | nindent 8 }}
+      labels:
+        {{- toYaml (merge (include "tuwunel.labels" $component | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      {{- with $l.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            {{- if dig "limits" "memory" "" $l.resources }}
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: livekit
+                  resource: limits.memory
+            {{- end }}
+            {{- if and $hostPort (not $advertised) }}
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            {{- end }}
+          image: {{ include "tuwunel.image" (dict "image" $l.image "ctx" $) | quote }}
+          imagePullPolicy: {{ $l.image.pullPolicy }}
+          livenessProbe:
+            {{- toYaml (merge (dict "tcpSocket" (dict "port" "http")) (deepCopy $l.livenessProbe)) | nindent 12 }}
+          name: livekit
+          ports:
+            - containerPort: 7880
+              name: http
+              protocol: TCP
+            - containerPort: 7881
+              {{- if $hostPort }}
+              hostPort: 7881
+              {{- end }}
+              name: rtc-tcp
+              protocol: TCP
+            - containerPort: 7882
+              {{- if $hostPort }}
+              hostPort: 7882
+              {{- end }}
+              name: rtc-udp
+              protocol: UDP
+            {{- if $l.metrics.enabled }}
+            - containerPort: 6789
+              name: metrics
+              protocol: TCP
+            {{- end }}
+          readinessProbe:
+            {{- toYaml (merge (dict "httpGet" (dict "path" "/" "port" "http")) (deepCopy $l.readinessProbe)) | nindent 12 }}
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          resources:
+            {{- toYaml $l.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- toYaml (merge (dict "httpGet" (dict "path" "/" "port" "http")) (deepCopy $l.startupProbe)) | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/livekit/config.yaml
+              name: config
+              readOnly: true
+              subPath: config.yaml
+            - mountPath: /etc/livekit/keys
+              name: keys
+              readOnly: true
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      {{- if $hostNetwork }}
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
+      enableServiceLinks: false
+      {{- if $hostNetwork }}
+      hostNetwork: true
+      {{- else }}
+      hostUsers: {{ .Values.hostUsers }}
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with (merge (deepCopy $l.nodeSelector) (deepCopy .Values.nodeSelector)) }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $l.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "tuwunel.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ $l.terminationGracePeriodSeconds }}
+      {{- with $l.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - configMap:
+            name: {{ include "tuwunel.fullname" . }}-livekit
+          name: config
+        - name: keys
+          secret:
+            defaultMode: 288
+            items:
+              - key: {{ $l.existingSecret.key }}
+                path: {{ $l.existingSecret.key }}
+            secretName: {{ $l.existingSecret.name }}
+{{- end }}

@@ -1,0 +1,12 @@
+{{- if .Values.livekit.enabled }}
+apiVersion: v1
+data:
+  config.yaml: |
+    {{- include "tuwunel.livekitConfig" . | nindent 4 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "tuwunel.labels" (dict "ctx" . "component" "livekit") | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}-livekit
+  namespace: {{ .Release.Namespace }}
+{{- end }}

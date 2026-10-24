@@ -1,0 +1,38 @@
+{{- if and .Values.livekit.enabled .Values.livekit.ingress.enabled }}
+{{- $fullname := include "tuwunel.fullname" . }}
+{{- $jwt := dict "service" (dict "name" (printf "%s-lk-jwt" $fullname) "port" (dict "name" "http")) }}
+{{- $sfu := dict "service" (dict "name" (printf "%s-livekit" $fullname) "port" (dict "name" "http")) }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  {{- with .Values.livekit.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- toYaml (merge (include "tuwunel.labels" (dict "ctx" . "component" "livekit") | fromYaml) (deepCopy .Values.livekit.ingress.labels)) | nindent 4 }}
+  name: {{ $fullname }}-livekit
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- with .Values.livekit.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.livekit.host | quote }}
+      http:
+        paths:
+          {{- range (include "tuwunel.jwtPaths" . | fromYamlArray) }}
+          - backend:
+              {{- toYaml $jwt | nindent 14 }}
+            path: {{ . }}
+            pathType: Prefix
+          {{- end }}
+          - backend:
+              {{- toYaml $sfu | nindent 14 }}
+            path: /
+            pathType: Prefix
+  {{- with .Values.livekit.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

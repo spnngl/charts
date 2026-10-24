@@ -51,4 +51,65 @@ spec:
     - Egress
     {{- end }}
 {{- end }}
+{{- if .Values.livekit.enabled }}
+{{- $l := .Values.livekit }}
+{{- if ne $l.rtc.mode "hostNetwork" }}
+{{- $http := dict "ports" (list (dict "port" 7880 "protocol" "TCP")) }}
+{{- with $np.livekit.from }}{{ $_ := set $http "from" . }}{{ end }}
+{{- $rules := list $http (dict "ports" (list (dict "port" 7881 "protocol" "TCP") (dict "port" 7882 "protocol" "UDP"))) }}
+{{- if $l.metrics.enabled }}
+{{- $metrics := dict "ports" (list (dict "port" 6789 "protocol" "TCP")) }}
+{{- with $np.livekit.metrics.from }}{{ $_ := set $metrics "from" . }}{{ end }}
+{{- $rules = append $rules $metrics }}
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    {{- include "tuwunel.labels" (dict "ctx" . "component" "livekit") | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}-livekit
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- if $np.egress.enabled }}
+  egress:
+    {{- include "tuwunel.egress" . | nindent 4 }}
+  {{- end }}
+  ingress:
+    {{- toYaml $rules | nindent 4 }}
+  podSelector:
+    matchLabels:
+      {{- include "tuwunel.selectorLabels" (dict "ctx" . "component" "livekit") | nindent 6 }}
+  policyTypes:
+    - Ingress
+    {{- if $np.egress.enabled }}
+    - Egress
+    {{- end }}
+{{- end }}
+{{- $jwt := dict "ports" (list (dict "port" 8080 "protocol" "TCP")) }}
+{{- with $np.livekit.jwt.from }}{{ $_ := set $jwt "from" . }}{{ end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    {{- include "tuwunel.labels" (dict "ctx" . "component" "lk-jwt") | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}-lk-jwt
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- if $np.egress.enabled }}
+  egress:
+    {{- include "tuwunel.egress" . | nindent 4 }}
+  {{- end }}
+  ingress:
+    {{- toYaml (list $jwt) | nindent 4 }}
+  podSelector:
+    matchLabels:
+      {{- include "tuwunel.selectorLabels" (dict "ctx" . "component" "lk-jwt") | nindent 6 }}
+  policyTypes:
+    - Ingress
+    {{- if $np.egress.enabled }}
+    - Egress
+    {{- end }}
+{{- end }}
 {{- end }}

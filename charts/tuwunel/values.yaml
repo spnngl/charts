@@ -602,6 +602,370 @@ cinny:
     # @schema
     # -- Upper bound of recommendations.
     maxAllowed: {}
+
+# MatrixRTC calls: a LiveKit SFU and lk-jwt-service, which hands out LiveKit
+# tokens to Matrix users. Two Deployments of their own, apart from the homeserver.
+livekit:
+  # -- Deploy LiveKit and lk-jwt-service (calls for Element Call and Element X). Needs `host` and `existingSecret.name`.
+  enabled: false
+  # -- Public host of LiveKit and lk-jwt-service (one host for both, `calls.example.com`). Required when enabled. Clients get `https://<host>` from the homeserver (`well_known.livekit_url`), lk-jwt-service gets `wss://<host>`.
+  host: ""
+  existingSecret:
+    # -- Name of a Secret holding the LiveKit API key and secret, shared by LiveKit and lk-jwt-service. Required when enabled. The chart never creates it.
+    name: ""
+    # -- Key of the Secret: a file holding one line, `<api key>: <api secret>` (a secret of 32 characters or more).
+    key: keys.yaml
+  image:
+    # -- Image repository.
+    repository: ghcr.io/spnngl/images/livekit
+    # -- Image tag. Empty: the tag and digest recorded for `livekit.image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `livekit.image.digest` to pin it.
+    tag: ""
+    # @schema
+    # type: string
+    # pattern: "^(sha256:[a-f0-9]{64})?$"
+    # @schema
+    # -- Image digest, only valid together with `livekit.image.tag`.
+    digest: ""
+    # @schema
+    # type: string
+    # enum: [Always, IfNotPresent, Never]
+    # @schema
+    # -- Image pull policy.
+    pullPolicy: IfNotPresent
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # propertyNames:
+  #   not:
+  #     enum: [port, key_file]
+  # properties:
+  #   rtc:
+  #     type: object
+  #     propertyNames:
+  #       not:
+  #         enum: [tcp_port, udp_port]
+  #   prometheus:
+  #     type: object
+  #     propertyNames:
+  #       not:
+  #         enum: [port]
+  # @schema
+  # -- LiveKit settings (`config.yaml`, see `config-sample.yaml` upstream), rendered into a ConfigMap. Chart-owned keys (`port`, `rtc.tcp_port`, `rtc.udp_port`, `key_file`, `prometheus.port`) are rejected. Keys go through `existingSecret`, never here. TURN, Redis and multi-node are out of scope.
+  config: {}
+  rtc:
+    # @schema
+    # type: string
+    # enum: [hostPort, hostNetwork, LoadBalancer]
+    # @schema
+    # -- How media (7881/tcp, 7882/udp, fixed) reaches the pod. `hostPort`: published on the node, which LiveKit advertises (`NODE_IP`, unless `config.rtc.node_ip` or `config.rtc.use_external_ip` is set). `hostNetwork`: the pod uses the node's network, LiveKit finds the addresses itself. `LoadBalancer`: a Service of its own, needs `config.rtc.node_ip` or `config.rtc.use_external_ip`. Both host modes need a namespace that allows privileged pods and a node with a public IP (`livekit.nodeSelector`).
+    mode: hostPort
+    service:
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- Annotations of the media Service (`mode: LoadBalancer`).
+      annotations: {}
+      # -- `externalTrafficPolicy` of the media Service. Empty: Kubernetes default.
+      externalTrafficPolicy: ""
+      # -- `loadBalancerClass` of the media Service. Empty: cloud provider default.
+      loadBalancerClass: ""
+  service:
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Annotations of the LiveKit Service (HTTP and WebSocket, 7880).
+    annotations: {}
+  ingress:
+    # -- Create an Ingress on `livekit.host`: the lk-jwt-service paths go to lk-jwt-service, `/` to LiveKit (WebSocket).
+    enabled: false
+    # -- Ingress class name (empty: cluster default).
+    className: ""
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Ingress annotations.
+    annotations: {}
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra Ingress labels.
+    labels: {}
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Ingress TLS blocks (`secretName`, `hosts`).
+    tls: []
+  httpRoute:
+    # -- Create a Gateway API HTTPRoute on `livekit.host`: the lk-jwt-service paths go to lk-jwt-service, `/` to LiveKit (WebSocket).
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- HTTPRoute annotations.
+    annotations: {}
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra HTTPRoute labels.
+    labels: {}
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Gateways (`parentRefs`). Required when enabled.
+    parentRefs: []
+  # @schema
+  # type: integer
+  # minimum: 0
+  # @schema
+  # -- Seconds LiveKit gets to stop: it drains on SIGTERM (no limit) and a second signal forces it. The longest call a rollout waits for.
+  terminationGracePeriodSeconds: 600
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Resources of the livekit container. A scheduling floor, not a sizing. `GOMEMLIMIT` follows `limits.memory`.
+  resources:
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    limits:
+      memory: 512Mi
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Startup probe (`GET /` on 7880, 406 until the node is ready).
+  startupProbe:
+    failureThreshold: 30
+    periodSeconds: 2
+    timeoutSeconds: 2
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Readiness probe (`GET /` on 7880).
+  readinessProbe:
+    failureThreshold: 3
+    periodSeconds: 10
+    timeoutSeconds: 2
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Liveness probe (TCP on 7880).
+  livenessProbe:
+    failureThreshold: 3
+    periodSeconds: 10
+    timeoutSeconds: 2
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Affinity of the LiveKit pod.
+  affinity: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Node selector of the LiveKit pod, merged over `nodeSelector`. The host modes need the node with the public IP.
+  nodeSelector: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Tolerations of the LiveKit pod.
+  tolerations: []
+  # -- Priority class name of the LiveKit pod.
+  priorityClassName: ""
+  metrics:
+    # -- Serve Prometheus metrics (`prometheus.port`, 6789) and name the container port `metrics`. On the node's address with `mode: hostNetwork`.
+    enabled: false
+    service:
+      # -- Render the metrics Service (also rendered when `serviceMonitor.enabled`).
+      enabled: false
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- Service annotations.
+      annotations: {}
+    serviceMonitor:
+      # -- Create a Prometheus Operator ServiceMonitor. Exclusive with `podMonitor`.
+      enabled: false
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- Extra labels (for example `release: kube-prometheus-stack`).
+      labels: {}
+      # -- Scrape interval (empty: Prometheus default).
+      interval: ""
+      # -- Scrape timeout (empty: Prometheus default).
+      scrapeTimeout: ""
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- Relabelings.
+      relabelings: []
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- Metric relabelings.
+      metricRelabelings: []
+    podMonitor:
+      # -- Create a Prometheus Operator PodMonitor (no Service needed). Exclusive with `serviceMonitor`.
+      enabled: false
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- Extra labels.
+      labels: {}
+      # -- Scrape interval (empty: Prometheus default).
+      interval: ""
+      # -- Scrape timeout (empty: Prometheus default).
+      scrapeTimeout: ""
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- Relabelings.
+      relabelings: []
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- Metric relabelings.
+      metricRelabelings: []
+  jwt:
+    image:
+      # -- Image repository.
+      repository: ghcr.io/spnngl/images/lk-jwt-service
+      # -- Image tag. Empty: the tag and digest recorded for `livekit.jwt.image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `livekit.jwt.image.digest` to pin it.
+      tag: ""
+      # @schema
+      # type: string
+      # pattern: "^(sha256:[a-f0-9]{64})?$"
+      # @schema
+      # -- Image digest, only valid together with `livekit.jwt.image.tag`.
+      digest: ""
+      # @schema
+      # type: string
+      # enum: [Always, IfNotPresent, Never]
+      # @schema
+      # -- Image pull policy.
+      pullPolicy: IfNotPresent
+    service:
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- Annotations of the lk-jwt-service Service (8080).
+      annotations: {}
+    # @schema
+    # type: integer
+    # minimum: 0
+    # @schema
+    # -- Seconds lk-jwt-service gets to stop. It has no SIGTERM handler: a 5 s `preStop` sleep lets the endpoints drop the pod first, then the image's stop signal (SIGKILL) ends it.
+    terminationGracePeriodSeconds: 10
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    # -- Resources of the lk-jwt-service container. A scheduling floor, not a sizing.
+    resources:
+      # @schema
+      # type: object
+      # additionalProperties: true
+      # @schema
+      limits:
+        memory: 64Mi
+      # @schema
+      # type: object
+      # additionalProperties: true
+      # @schema
+      requests:
+        cpu: 10m
+        memory: 16Mi
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    # -- Startup probe (`GET /healthz`).
+    startupProbe:
+      failureThreshold: 30
+      periodSeconds: 2
+      timeoutSeconds: 2
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    # -- Readiness probe (`GET /healthz`).
+    readinessProbe:
+      failureThreshold: 3
+      periodSeconds: 10
+      timeoutSeconds: 2
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    # -- Liveness probe (`GET /healthz`).
+    livenessProbe:
+      failureThreshold: 3
+      periodSeconds: 10
+      timeoutSeconds: 2
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    # -- Affinity of the lk-jwt-service pod.
+    affinity: {}
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Tolerations of the lk-jwt-service pod.
+    tolerations: []
+    # -- Priority class name of the lk-jwt-service pod.
+    priorityClassName: ""
+
 # -- Old ControllerRevisions to keep.
 revisionHistoryLimit: 3
 
@@ -722,6 +1086,30 @@ networkPolicy:
     # @schema
     # -- NetworkPolicyPeer list allowed to reach the Cinny port. Empty: any source (browsers reach it through your ingress controller or gateway).
     from: []
+  livekit:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach LiveKit's HTTP and WebSocket port (7880). Empty: any source (clients through your ingress controller or gateway, lk-jwt-service). Media (7881/tcp, 7882/udp) is open to any source. Does not apply with `livekit.rtc.mode: hostNetwork`.
+    from: []
+    jwt:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- NetworkPolicyPeer list allowed to reach lk-jwt-service (8080). Empty: any source.
+      from: []
+    metrics:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- NetworkPolicyPeer list allowed to scrape LiveKit's metrics port (6789). Empty: any source.
+      from: []
   egress:
     # -- Restrict egress (DNS, internet peers for federation, push and URL previews, `extraEgress`).
     enabled: false

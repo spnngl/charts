@@ -1,0 +1,8 @@
+values:
+  serverName: example.com
+  livekit:
+    enabled: true
+    existingSecret:
+      name: lk-keys
+expect:
+  error: livekit.host is required

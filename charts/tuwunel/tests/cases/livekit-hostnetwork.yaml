@@ -1,0 +1,15 @@
+values:
+  serverName: example.com
+  livekit:
+    enabled: true
+    host: calls.example.com
+    existingSecret:
+      name: lk-keys
+    rtc:
+      mode: hostNetwork
+    config:
+      rtc:
+        use_external_ip: true
+  networkPolicy:
+    egress:
+      enabled: true

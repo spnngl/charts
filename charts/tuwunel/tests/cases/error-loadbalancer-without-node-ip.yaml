@@ -1,0 +1,11 @@
+values:
+  serverName: example.com
+  livekit:
+    enabled: true
+    host: calls.example.com
+    existingSecret:
+      name: lk-keys
+    rtc:
+      mode: LoadBalancer
+expect:
+  error: livekit.config.rtc.node_ip or livekit.config.rtc.use_external_ip is required

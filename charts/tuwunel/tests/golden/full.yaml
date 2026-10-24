@@ -55,6 +55,78 @@ spec:
   policyTypes:
     - Ingress
 ---
+# Source: tuwunel/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/component: livekit
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-livekit
+  namespace: tuwunel
+spec:
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+      ports:
+      - port: 7880
+        protocol: TCP
+    - ports:
+      - port: 7881
+        protocol: TCP
+      - port: 7882
+        protocol: UDP
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+      ports:
+      - port: 6789
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: livekit
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: ts
+  policyTypes:
+    - Ingress
+---
+# Source: tuwunel/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/component: lk-jwt
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-lk-jwt
+  namespace: tuwunel
+spec:
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+      ports:
+      - port: 8080
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: lk-jwt
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: ts
+  policyTypes:
+    - Ingress
+---
 # Source: tuwunel/templates/cinny-pdb.yaml
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -141,6 +213,7 @@ data:
     enable = false
     [global.well_known]
     client = "https://matrix.example.com"
+    livekit_url = "https://calls.example.com"
     server = "matrix.example.com:443"
     support_page = "https://example.com/support"
 kind: ConfigMap
@@ -153,6 +226,32 @@ metadata:
     app.kubernetes.io/version: "0.0.0"
     helm.sh/chart: tuwunel-0.0.0
   name: tuwunel-ts
+  namespace: tuwunel
+---
+# Source: tuwunel/templates/livekit-configmap.yaml
+apiVersion: v1
+data:
+  config.yaml: |
+    key_file: /etc/livekit/keys/livekit.yaml
+    port: 7880
+    prometheus:
+      port: 6789
+    room:
+      auto_create: false
+    rtc:
+      tcp_port: 7881
+      udp_port: 7882
+      use_external_ip: true
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: livekit
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-livekit
   namespace: tuwunel
 ---
 # Source: tuwunel/templates/cinny-service.yaml
@@ -178,6 +277,87 @@ spec:
       targetPort: http
   selector:
     app.kubernetes.io/component: cinny
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/name: ts
+  type: ClusterIP
+---
+# Source: tuwunel/templates/livekit-service-metrics.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/component: livekit
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-livekit-metrics
+  namespace: tuwunel
+spec:
+  ports:
+    - name: metrics
+      port: 6789
+      protocol: TCP
+      targetPort: metrics
+  selector:
+    app.kubernetes.io/component: livekit
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/name: ts
+  type: ClusterIP
+---
+# Source: tuwunel/templates/livekit-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/component: livekit
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-livekit
+  namespace: tuwunel
+spec:
+  ports:
+    - name: http
+      port: 7880
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/component: livekit
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/name: ts
+  type: ClusterIP
+---
+# Source: tuwunel/templates/lk-jwt-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/component: lk-jwt
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-lk-jwt
+  namespace: tuwunel
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/component: lk-jwt
     app.kubernetes.io/instance: tuwunel
     app.kubernetes.io/name: ts
   type: ClusterIP
@@ -363,6 +543,310 @@ spec:
             name: tuwunel-ts-cinny
           name: config
 ---
+# Source: tuwunel/templates/livekit-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "LiveKit runs one replica: without Redis two pods split the sessions."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "Recreate: two LiveKit pods would split the sessions, and host modes collide on a node."
+  labels:
+    app.kubernetes.io/component: livekit
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-livekit
+  namespace: tuwunel
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: livekit
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: ts
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        a: b
+        checksum/config: 9fff0bed21075eee245c7deb16ffa2965411050cbb806180e45d7e93ec0ac41c
+      labels:
+        app.kubernetes.io/component: livekit
+        app.kubernetes.io/instance: tuwunel
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: ts
+        app.kubernetes.io/version: 0.0.0
+        c: d
+        helm.sh/chart: tuwunel-0.0.0
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: disk
+                operator: In
+                values:
+                - ssd
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: livekit
+                  resource: limits.memory
+          image: "ghcr.io/spnngl/images/livekit:1.13.9"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            tcpSocket:
+              port: http
+            timeoutSeconds: 2
+          name: livekit
+          ports:
+            - containerPort: 7880
+              name: http
+              protocol: TCP
+            - containerPort: 7881
+              hostPort: 7881
+              name: rtc-tcp
+              protocol: TCP
+            - containerPort: 7882
+              hostPort: 7882
+              name: rtc-udp
+              protocol: UDP
+            - containerPort: 6789
+              name: metrics
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/livekit/config.yaml
+              name: config
+              readOnly: true
+              subPath: config.yaml
+            - mountPath: /etc/livekit/keys
+              name: keys
+              readOnly: true
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: true
+      imagePullSecrets:
+        - name: regcred
+      nodeSelector:
+        kubernetes.io/os: linux
+        role: edge
+      priorityClassName: low
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: tuwunel-ts
+      terminationGracePeriodSeconds: 300
+      tolerations:
+        - key: edge
+          operator: Exists
+      volumes:
+        - configMap:
+            name: tuwunel-ts-livekit
+          name: config
+        - name: keys
+          secret:
+            defaultMode: 288
+            items:
+              - key: livekit.yaml
+                path: livekit.yaml
+            secretName: ts-livekit
+---
+# Source: tuwunel/templates/lk-jwt-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "lk-jwt-service is stateless but has no use for more replicas: the SFU is a single node."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/component: lk-jwt
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-lk-jwt
+  namespace: tuwunel
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: lk-jwt
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: ts
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        a: b
+      labels:
+        app.kubernetes.io/component: lk-jwt
+        app.kubernetes.io/instance: tuwunel
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: ts
+        app.kubernetes.io/version: 0.0.0
+        c: d
+        helm.sh/chart: tuwunel-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            - name: LIVEKIT_FULL_ACCESS_HOMESERVERS
+              value: "example.com"
+            - name: LIVEKIT_KEY_FILE
+              value: "/etc/lk-jwt/keys/livekit.yaml"
+            - name: LIVEKIT_URL
+              value: "wss://calls.example.com"
+          image: "ghcr.io/spnngl/images/lk-jwt-service:0.8.0"
+          imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          name: lk-jwt
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/lk-jwt/keys
+              name: keys
+              readOnly: true
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: true
+      imagePullSecrets:
+        - name: regcred
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: low
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: tuwunel-ts
+      terminationGracePeriodSeconds: 10
+      tolerations:
+        - key: k
+          operator: Exists
+      volumes:
+        - name: keys
+          secret:
+            defaultMode: 288
+            items:
+              - key: livekit.yaml
+                path: livekit.yaml
+            secretName: ts-livekit
+---
 # Source: tuwunel/templates/statefulset.yaml
 apiVersion: apps/v1
 kind: StatefulSet
@@ -394,7 +878,7 @@ spec:
     metadata:
       annotations:
         a: b
-        checksum/config: bfad37ef634d46c4f5f137cd6cd56d19355559874cbd825a17bb82df88ed58c2
+        checksum/config: c855be54e429aa5532ca822b7e54a4873cbb9e461b5e076c2fd835f08cffc9e3
       labels:
         app.kubernetes.io/component: homeserver
         app.kubernetes.io/instance: tuwunel
@@ -615,6 +1099,68 @@ spec:
       - example.com
       secretName: matrix-tls
 ---
+# Source: tuwunel/templates/livekit-ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/component: livekit
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: 0.0.0
+    c: d
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-livekit
+  namespace: tuwunel
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "calls.example.com"
+      http:
+        paths:
+          - backend:
+              service:
+                name: tuwunel-ts-lk-jwt
+                port:
+                  name: http
+            path: /delegate_delayed_leave
+            pathType: Prefix
+          - backend:
+              service:
+                name: tuwunel-ts-lk-jwt
+                port:
+                  name: http
+            path: /get_token
+            pathType: Prefix
+          - backend:
+              service:
+                name: tuwunel-ts-lk-jwt
+                port:
+                  name: http
+            path: /healthz
+            pathType: Prefix
+          - backend:
+              service:
+                name: tuwunel-ts-lk-jwt
+                port:
+                  name: http
+            path: /sfu/get
+            pathType: Prefix
+          - backend:
+              service:
+                name: tuwunel-ts-livekit
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+      - calls.example.com
+      secretName: calls-tls
+---
 # Source: tuwunel/templates/cinny-httproute.yaml
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -707,6 +1253,82 @@ spec:
         - path:
             type: PathPrefix
             value: /.well-known/matrix
+---
+# Source: tuwunel/templates/livekit-httproute.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/component: livekit
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: 0.0.0
+    c: d
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-livekit
+  namespace: tuwunel
+spec:
+  hostnames:
+    - "calls.example.com"
+  parentRefs:
+    - name: gateway
+      namespace: gateway
+  rules:
+    - backendRefs:
+        - name: tuwunel-ts-lk-jwt
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /delegate_delayed_leave
+        - path:
+            type: PathPrefix
+            value: /get_token
+        - path:
+            type: PathPrefix
+            value: /healthz
+        - path:
+            type: PathPrefix
+            value: /sfu/get
+    - backendRefs:
+        - name: tuwunel-ts-livekit
+          port: 7880
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
+# Source: tuwunel/templates/livekit-servicemonitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app.kubernetes.io/component: livekit
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: tuwunel-0.0.0
+    release: prom
+  name: tuwunel-ts-livekit
+  namespace: tuwunel
+spec:
+  endpoints:
+    - interval: 30s
+      path: /metrics
+      port: metrics
+      scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+      - tuwunel
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: livekit
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: ts
 ---
 # Source: tuwunel/templates/cinny-vpa.yaml
 apiVersion: autoscaling.k8s.io/v1

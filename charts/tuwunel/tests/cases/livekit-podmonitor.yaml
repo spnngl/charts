@@ -1,0 +1,21 @@
+values:
+  serverName: example.com
+  livekit:
+    enabled: true
+    host: calls.example.com
+    existingSecret:
+      name: lk-keys
+    metrics:
+      enabled: true
+      podMonitor:
+        enabled: true
+        labels:
+          release: prom
+        interval: 30s
+  networkPolicy:
+    livekit:
+      metrics:
+        from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring

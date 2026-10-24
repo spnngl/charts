@@ -1,0 +1,22 @@
+{{- if .Values.livekit.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- with .Values.livekit.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "tuwunel.labels" (dict "ctx" . "component" "livekit") | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}-livekit
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: http
+      port: 7880
+      protocol: TCP
+      targetPort: http
+  selector:
+    {{- include "tuwunel.selectorLabels" (dict "ctx" . "component" "livekit") | nindent 4 }}
+  type: ClusterIP
+{{- end }}
