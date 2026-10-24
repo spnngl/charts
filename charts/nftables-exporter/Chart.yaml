@@ -3,9 +3,9 @@ apiVersion: v2
 name: nftables-exporter
 description: Prometheus exporter for the nftables ruleset of every node (counters, chains, rules), running as a hardened DaemonSet
 type: application
-version: 0.1.1
+version: 0.1.2
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/nftables-exporter
-appVersion: "0.4.5"
+appVersion: "0.5.2"
 kubeVersion: ">=1.33.0-0"
 home: https://github.com/metal-stack/nftables-exporter
 icon: https://avatars.githubusercontent.com/u/58738008?s=200
@@ -28,7 +28,7 @@ annotations:
   # nftables-exporter.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: nftables-exporter
-      image: ghcr.io/spnngl/images/nftables-exporter:0.4.5@sha256:041c2f10d854ec5a331dedb9cfe95b0800e9383e9ef1cb1ff8421dbb299daf0c
+      image: ghcr.io/spnngl/images/nftables-exporter:0.5.2@sha256:7334dab782723e7c9987df561167bddc509715fe942295568bc5fa229a59f914
   artifacthub.io/links: |-
     - name: Upstream repository
       url: https://github.com/metal-stack/nftables-exporter
