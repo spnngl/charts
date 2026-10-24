@@ -1,0 +1,6 @@
+values:
+  metrics:
+    podMonitor:
+      enabled: true
+      labels:
+        release: kube-prometheus-stack

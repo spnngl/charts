@@ -1,0 +1,8 @@
+values:
+  metrics:
+    podMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+      disabled: [ArtifactHubCollectionErrors]
+      collectionStaleSeconds: 7200

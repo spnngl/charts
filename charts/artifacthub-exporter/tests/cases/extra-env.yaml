@@ -1,0 +1,4 @@
+values:
+  extraEnv:
+    - name: HTTPS_PROXY
+      value: http://proxy.example.com:3128

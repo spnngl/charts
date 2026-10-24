@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: ARTIFACTHUB_API_KEY_SECRET
+      value: x
+expect:
+  error: extraEnv

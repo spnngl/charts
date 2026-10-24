@@ -1,0 +1,5 @@
+values:
+  artifacthub:
+    orgs: ["a,b"]
+expect:
+  error: orgs

@@ -1,0 +1,77 @@
+values:
+  metrics:
+    serviceMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+# Defaults: downFor 5m, collectionStaleSeconds 3600, collectionErrorsFor 1h.
+# Collections every 15m. promtool starts the clock at 0.
+ruleTests:
+  evaluation_interval: 1m
+  tests:
+    - name: down fires after downFor, not while a target is up
+      interval: 1m
+      input_series:
+        - series: up{job="artifacthub-exporter-metrics", namespace="artifacthub-exporter", pod="a"}
+          values: 1x10 0x10
+      alert_rule_test:
+        - {eval_time: 10m, alertname: ArtifactHubExporterDown, exp_alerts: []}
+        - {eval_time: 14m, alertname: ArtifactHubExporterDown, exp_alerts: []}
+        - eval_time: 16m
+          alertname: ArtifactHubExporterDown
+          exp_alerts:
+            - exp_labels: {severity: critical, job: artifacthub-exporter-metrics, namespace: artifacthub-exporter}
+              exp_annotations:
+                summary: artifacthub-exporter is down.
+                description: "No artifacthub-exporter target of artifacthub-exporter/artifacthub-exporter has been up for 5m (pod not running or not scraped; also fires when replicaCount is 0)."
+    - name: down fires when no target exists
+      interval: 1m
+      input_series:
+        - series: up{job="other", namespace="artifacthub-exporter", pod="b"}
+          values: 1x10
+      alert_rule_test:
+        - {eval_time: 4m, alertname: ArtifactHubExporterDown, exp_alerts: []}
+        - eval_time: 6m
+          alertname: ArtifactHubExporterDown
+          exp_alerts:
+            - exp_labels: {severity: critical, job: artifacthub-exporter-metrics, namespace: artifacthub-exporter}
+              exp_annotations:
+                summary: artifacthub-exporter is down.
+                description: "No artifacthub-exporter target of artifacthub-exporter/artifacthub-exporter has been up for 5m (pod not running or not scraped; also fires when replicaCount is 0)."
+    - name: stale fires past collectionStaleSeconds
+      interval: 1m
+      input_series:
+        - series: artifacthub_collection_last_success_timestamp_seconds{job="artifacthub-exporter-metrics", namespace="artifacthub-exporter", pod="a", target="hub"}
+          values: "0x70"
+      alert_rule_test:
+        - {eval_time: 60m, alertname: ArtifactHubCollectionStale, exp_alerts: []}
+        - eval_time: 61m
+          alertname: ArtifactHubCollectionStale
+          exp_alerts:
+            - exp_labels: {severity: warning, job: artifacthub-exporter-metrics, namespace: artifacthub-exporter, pod: a, target: hub}
+              exp_annotations:
+                summary: An Artifact Hub target is not collected any more.
+                description: "artifacthub-exporter on artifacthub-exporter/a has not collected hub for more than 3600 seconds: its metrics are stale. Check the logs (Artifact Hub down, rate limited, or a target that no longer exists)."
+    - name: a single failed collection does not fire errors
+      interval: 1m
+      input_series:
+        - series: artifacthub_collection_errors_total{job="artifacthub-exporter-metrics", namespace="artifacthub-exporter", pod="a", target="hub"}
+          values: 0x15 1x120
+      alert_rule_test:
+        - {eval_time: 74m, alertname: ArtifactHubCollectionErrors, exp_alerts: []}
+        - {eval_time: 76m, alertname: ArtifactHubCollectionErrors, exp_alerts: []}
+        - {eval_time: 120m, alertname: ArtifactHubCollectionErrors, exp_alerts: []}
+    - name: failing every collection fires errors after collectionErrorsFor
+      interval: 15m
+      input_series:
+        - series: artifacthub_collection_errors_total{job="artifacthub-exporter-metrics", namespace="artifacthub-exporter", pod="a", target="hub"}
+          values: 0+1x10
+      alert_rule_test:
+        - {eval_time: 70m, alertname: ArtifactHubCollectionErrors, exp_alerts: []}
+        - eval_time: 80m
+          alertname: ArtifactHubCollectionErrors
+          exp_alerts:
+            - exp_labels: {severity: warning, namespace: artifacthub-exporter, pod: a, target: hub}
+              exp_annotations:
+                summary: An Artifact Hub target keeps failing.
+                description: "artifacthub-exporter on artifacthub-exporter/a failed to collect hub in every 1h window for 1h. Check the logs."

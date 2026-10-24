@@ -1,0 +1,55 @@
+values:
+  image:
+    tag: 0.0.9
+  hostUsers: true
+  artifacthub:
+    orgs: [artifacthub]
+    packages: [helm/artifact-hub/artifact-hub]
+    hubStats: true
+    url: https://hub.example.com
+    collectInterval: 1h30m
+    apiKey:
+      existingSecret:
+        name: artifacthub-api-key
+  minReadySeconds: 30
+  metrics:
+    serviceMonitor:
+      enabled: true
+      labels:
+        release: kube-prometheus-stack
+      interval: 60s
+    prometheusRule:
+      enabled: true
+      labels:
+        release: kube-prometheus-stack
+      collectionStaleSeconds: 7200
+      collectionErrorsFor: 2h
+      downFor: 10m
+  networkPolicy:
+    metrics:
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+    egress:
+      enabled: true
+      extraEgress:
+        - ports:
+            - port: 3128
+              protocol: TCP
+  verticalPodAutoscaler:
+    enabled: true
+  podAnnotations:
+    example.com/note: hello
+  podLabels:
+    example.com/team: platform
+  priorityClassName: system-cluster-critical
+  extraVolumes:
+    - name: scratch
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: scratch
+      mountPath: /tmp
+  extraEnv:
+    - name: HTTPS_PROXY
+      value: http://proxy.example.com:3128

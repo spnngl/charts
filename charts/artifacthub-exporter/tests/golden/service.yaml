@@ -1,0 +1,183 @@
+---
+# Source: artifacthub-exporter/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: artifacthub-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: artifacthub-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: artifacthub-exporter-0.0.0
+  name: artifacthub-exporter
+  namespace: artifacthub-exporter
+spec:
+  ingress:
+    - ports:
+      - port: 8080
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: artifacthub-exporter
+      app.kubernetes.io/name: artifacthub-exporter
+  policyTypes:
+    - Ingress
+---
+# Source: artifacthub-exporter/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: artifacthub-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: artifacthub-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: artifacthub-exporter-0.0.0
+  name: artifacthub-exporter
+  namespace: artifacthub-exporter
+---
+# Source: artifacthub-exporter/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    example.com/note: hello
+  labels:
+    app.kubernetes.io/instance: artifacthub-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: artifacthub-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: artifacthub-exporter-0.0.0
+  name: artifacthub-exporter-metrics
+  namespace: artifacthub-exporter
+spec:
+  ports:
+    - name: http-metrics
+      port: 8080
+      protocol: TCP
+      targetPort: http-metrics
+  selector:
+    app.kubernetes.io/instance: artifacthub-exporter
+    app.kubernetes.io/name: artifacthub-exporter
+  type: ClusterIP
+---
+# Source: artifacthub-exporter/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "A single exporter on purpose: each replica polls Artifact Hub on its own, against the same rate limit, and exports duplicate series."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/instance: artifacthub-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: artifacthub-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: artifacthub-exporter-0.0.0
+  name: artifacthub-exporter
+  namespace: artifacthub-exporter
+spec:
+  minReadySeconds: 10
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: artifacthub-exporter
+      app.kubernetes.io/name: artifacthub-exporter
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: artifacthub-exporter
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: artifacthub-exporter
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: artifacthub-exporter-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            - name: ARTIFACTHUB_HUB_STATS
+              value: "true"
+            - name: ARTIFACTHUB_URL
+              value: "https://artifacthub.io"
+            - name: COLLECT_INTERVAL
+              value: "15m"
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+            - name: WEB_ADDR
+              value: ":8080"
+            - name: WEB_PATH
+              value: /metrics
+          image: "ghcr.io/spnngl/images/artifacthub-exporter:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: http-metrics
+            periodSeconds: 10
+          name: artifacthub-exporter
+          ports:
+            - containerPort: 8080
+              name: http-metrics
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 1
+            httpGet:
+              path: /
+              port: http-metrics
+            periodSeconds: 10
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /
+              port: http-metrics
+            periodSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: artifacthub-exporter
+      terminationGracePeriodSeconds: 30

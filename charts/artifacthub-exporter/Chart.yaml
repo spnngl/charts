@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: artifacthub-exporter
+description: Prometheus exporter for Artifact Hub package and repository metrics (stars, versions, views, vulnerabilities, tracking status) running as a hardened Deployment
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/artifacthub-exporter
+appVersion: "0.1.0"
+kubeVersion: ">=1.33.0-0"
+home: https://github.com/spnngl/artifacthub-exporter
+icon: https://avatars.githubusercontent.com/u/62354979?s=200
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/spnngl/artifacthub-exporter
+  - https://github.com/spnngl/images/tree/main/containers/artifacthub-exporter
+keywords:
+  - artifacthub
+  - helm
+  - packages
+  - exporter
+  - prometheus
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: Apache-2.0
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # artifacthub-exporter.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: artifacthub-exporter
+      image: ghcr.io/spnngl/images/artifacthub-exporter:0.1.0@sha256:2f3dca8a8e4a2f30be704b11976d786049e367b05c758c307fa236a8ce87f269
+  artifacthub.io/links: |-
+    - name: Upstream repository
+      url: https://github.com/spnngl/artifacthub-exporter
+    - name: Image build
+      url: https://github.com/spnngl/images/tree/main/containers/artifacthub-exporter
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/artifacthub-exporter
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

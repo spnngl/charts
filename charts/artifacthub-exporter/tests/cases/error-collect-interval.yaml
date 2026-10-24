@@ -1,0 +1,5 @@
+values:
+  artifacthub:
+    collectInterval: 4m
+expect:
+  error: collectInterval

@@ -1,0 +1,52 @@
+{{- if .Values.metrics.prometheusRule.enabled }}
+{{- $m := .Values.metrics.prometheusRule }}
+{{- $fullname := include "artifacthub-exporter.fullname" . }}
+{{- /* job label set by the Prometheus Operator: Service name (ServiceMonitor) or <namespace>/<name> (PodMonitor). */}}
+{{- $job := "" }}
+{{- if .Values.metrics.serviceMonitor.enabled }}
+{{- $job = include "artifacthub-exporter.metricsServiceName" . }}
+{{- else }}
+{{- $job = printf "%s/%s" .Release.Namespace $fullname }}
+{{- end }}
+{{- $sel := printf "job=%q, namespace=%q" $job .Release.Namespace }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    {{- toYaml (merge (include "artifacthub-exporter.labels" . | fromYaml) (deepCopy $m.labels)) | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: {{ $fullname }}
+      rules:
+        {{- if not (has "ArtifactHubExporterDown" $m.disabled) }}
+        - alert: ArtifactHubExporterDown
+          annotations:
+            description: {{ printf "No artifacthub-exporter target of %s/%s has been up for %s (pod not running or not scraped; also fires when replicaCount is 0)." .Release.Namespace $fullname $m.downFor | quote }}
+            summary: artifacthub-exporter is down.
+          expr: {{ printf "absent(up{%s}) or max by (job, namespace) (up{%s}) < 1" $sel $sel | quote }}
+          for: {{ $m.downFor }}
+          labels:
+            severity: critical
+        {{- end }}
+        {{- if not (has "ArtifactHubCollectionStale" $m.disabled) }}
+        - alert: ArtifactHubCollectionStale
+          annotations:
+            description: {{ printf "artifacthub-exporter on %s has not collected %s for more than %v seconds: its metrics are stale. Check the logs (Artifact Hub down, rate limited, or a target that no longer exists)." "{{ $labels.namespace }}/{{ $labels.pod }}" "{{ $labels.target }}" (int $m.collectionStaleSeconds) | quote }}
+            summary: An Artifact Hub target is not collected any more.
+          expr: {{ printf "time() - artifacthub_collection_last_success_timestamp_seconds{%s} > %d" $sel (int $m.collectionStaleSeconds) | quote }}
+          labels:
+            severity: warning
+        {{- end }}
+        {{- if not (has "ArtifactHubCollectionErrors" $m.disabled) }}
+        - alert: ArtifactHubCollectionErrors
+          annotations:
+            description: {{ printf "artifacthub-exporter on %s failed to collect %s in every %s window for %s. Check the logs." "{{ $labels.namespace }}/{{ $labels.pod }}" "{{ $labels.target }}" $m.collectionErrorsFor $m.collectionErrorsFor | quote }}
+            summary: An Artifact Hub target keeps failing.
+          expr: {{ printf "sum by (namespace, pod, target) (increase(artifacthub_collection_errors_total{%s}[%s])) > 0" $sel $m.collectionErrorsFor | quote }}
+          for: {{ $m.collectionErrorsFor }}
+          labels:
+            severity: warning
+        {{- end }}
+{{- end }}
