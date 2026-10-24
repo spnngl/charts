@@ -149,7 +149,8 @@ CRDs live in `templates/`, not `crds/`, so `helm upgrade` updates them.
   drift of either.
 - Tests: `tooling/charttest` renders each `tests/cases/<case>.yaml`, compares
   it with `tests/golden/<case>.yaml` (or with the expected error), then runs
-  kubeconform and kube-linter on it. Renders pin `version`, `appVersion` and
+  kubeconform and kube-linter on it, `promtool check rules` on its
+  PrometheusRules and `promtool test rules` with the case's `ruleTests`. Renders pin `version`, `appVersion` and
   the image digest, so Renovate updates leave goldens unchanged. `pr.yml`
   also runs kubeconform and kube-linter on the default values, and
   `ct install` with `ci/*-values.yaml`.

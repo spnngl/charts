@@ -4,8 +4,12 @@
 # A chart opts in with `charts/<name>/tests/cases/<case>.yaml`:
 #   values: {...}                  # passed to `helm template`
 #   expect: {error: "<substring>"} # optional: the render must fail with it
+#   ruleTests: {...}               # optional: promtool unit tests, without `rule_files`
 # A passing case is rendered, compared with `tests/golden/<case>.yaml`,
-# schema-checked (kubeconform) and linted (kube-linter, repo config).
+# schema-checked (kubeconform) and linted (kube-linter, repo config). Its
+# PrometheusRules are checked with `promtool check rules`, then run against
+# `ruleTests` (`promtool test rules`, job and namespace labels as rendered).
+# Quote series values YAML reads as numbers: `values: "0x70"`, not hex 112.
 #
 #   nu tooling/charttest/mod.nu run cloudflared
 #   nu tooling/charttest/mod.nu run --all --update   # rewrite golden files
@@ -79,6 +83,28 @@ def check-render [rendered: record, golden: path, update: bool]: nothing -> noth
   run-checked "kube-linter" { $out | ^kube-linter lint --config ($REPO_ROOT | path join ".kube-linter.yaml") - } | ignore
 }
 
+# Check the PrometheusRules of a render with promtool, then run `rule_tests`
+# (a promtool test file without `rule_files`) against them.
+def check-rules [out: string, rule_tests: oneof<record, nothing>]: nothing -> nothing {
+  let groups = ($out | from yaml --multiple list | where {|doc| $doc.kind? == "PrometheusRule" } | each {|doc| $doc.spec.groups } | flatten)
+  if ($groups | is-empty) {
+    if $rule_tests != null { error make {msg: "the case has ruleTests but renders no PrometheusRule"} }
+    return
+  }
+  let tmp = (mktemp -d --tmpdir)
+  try {
+    # JSON is YAML, and nushell's `to yaml` leaves some strings unquoted (see `render`).
+    let rules = ($tmp | path join "rules.json")
+    {groups: $groups} | to json | save -f $rules
+    run-checked "promtool check rules" { ^promtool check rules $rules } | ignore
+    if $rule_tests != null {
+      let tests = ($tmp | path join "tests.json")
+      $rule_tests | merge {rule_files: [$rules]} | to json | save -f $tests
+      run-checked "promtool test rules" { ^promtool test rules $tests } | ignore
+    }
+  } finally { rm -rf $tmp }
+}
+
 # Run every case of one chart; returns one result per case.
 def run-chart [chart_dir: path, update: bool]: nothing -> list<record<name: string, ok: bool, error: string>> {
   let tmp = (mktemp -d --tmpdir)
@@ -90,7 +116,10 @@ def run-chart [chart_dir: path, update: bool]: nothing -> list<record<name: stri
       let result = (try {
         let rendered = (render $pinned $case.values)
         match ($case.expect?.error?) {
-          null => { check-render $rendered ($chart_dir | path join "tests" "golden" $"($name).yaml") $update }
+          null => {
+            check-render $rendered ($chart_dir | path join "tests" "golden" $"($name).yaml") $update
+            check-rules $rendered.stdout ($case.ruleTests?)
+          }
           $expected => { check-error $rendered $expected }
         }
         {ok: true, error: ""}
