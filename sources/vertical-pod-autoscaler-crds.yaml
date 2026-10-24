@@ -4,6 +4,7 @@ description: CustomResourceDefinitions for the Kubernetes Vertical Pod Autoscale
 upstream:
   repo: https://github.com/kubernetes/autoscaler
   homepage: https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler
+  icon: https://user-images.githubusercontent.com/29163931/284109366-14e9484c-5def-4fa1-a8da-4f23b49c2cce.png
   license: Apache-2.0
 version:
   # Monorepo: also tags cluster-autoscaler-*, addon-resizer-* and
