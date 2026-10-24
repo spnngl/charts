@@ -4,10 +4,12 @@ apiVersion: v2
 name: orc-crds
 description: CustomResourceDefinitions for the OpenStack Resource Controller (ORC)
 type: application
-version: 2.6.3
+version: 2.6.4
 appVersion: 2.6.0
 kubeVersion: ">=1.25.0-0"
 home: https://k-orc.cloud/
+icon: >-
+  https://raw.githubusercontent.com/k-orc/openstack-resource-controller/refs/heads/main/logos/orc-logo-color.svg
 sources:
 - https://github.com/spnngl/charts
 - https://github.com/k-orc/openstack-resource-controller
