@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+  - name: MP_WEBROOT
+    value: mail
+expect:
+  error: extraEnv

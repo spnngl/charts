@@ -1,0 +1,9 @@
+values:
+  service:
+    http:
+      port: 80
+    smtp:
+      type: LoadBalancer
+      port: 25
+      annotations:
+        a: b

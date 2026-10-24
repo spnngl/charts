@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+  - name: MP_UI_AUTH_FILE
+    value: /x
+expect:
+  error: extraEnv

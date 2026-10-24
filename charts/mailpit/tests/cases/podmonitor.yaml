@@ -1,0 +1,12 @@
+values:
+  metrics:
+    podMonitor:
+      enabled: true
+      labels:
+        release: prom
+      interval: 30s
+      scrapeTimeout: 10s
+    prometheusRule:
+      enabled: true
+      disabled:
+      - MailpitSMTPRejected

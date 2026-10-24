@@ -1,0 +1,45 @@
+{{- $fullname := include "mailpit.fullname" . }}
+{{- $webroot := include "mailpit.webroot" . }}
+{{- $proto := ternary "https" "http" (not (empty .Values.secrets.uiTls.name)) }}
+{{ $fullname }} runs one Mailpit instance (Deployment, short downtime on every upgrade).
+
+SMTP, for the applications under test:
+
+  {{ $fullname }}-smtp.{{ .Release.Namespace }}.svc:{{ .Values.service.smtp.port }}
+{{- if .Values.secrets.pop3Auth.name }}
+
+POP3:
+
+  {{ $fullname }}-smtp.{{ .Release.Namespace }}.svc:{{ .Values.service.smtp.pop3Port }}
+{{- end }}
+
+Web UI and API:
+{{- if .Values.ingress.enabled }}
+{{- $tlsHosts := list }}
+{{- range .Values.ingress.tls }}{{ $tlsHosts = concat $tlsHosts (.hosts | default list) }}{{ end }}
+{{- range .Values.ingress.hosts }}
+  {{ ternary "https" "http" (has . $tlsHosts) }}://{{ . }}{{ $webroot }}
+{{- end }}
+{{- end }}
+{{- if .Values.httpRoute.enabled }}
+{{- range .Values.httpRoute.hostnames }}
+  {{ . }}{{ $webroot }} (scheme set by the Gateway listener)
+{{- end }}
+{{- end }}
+
+  kubectl -n {{ .Release.Namespace }} port-forward service/{{ $fullname }} {{ .Values.service.http.port }}:{{ .Values.service.http.port }}
+  then open {{ $proto }}://localhost:{{ .Values.service.http.port }}{{ $webroot }}
+{{- if not .Values.secrets.uiAuth.name }}
+
+secrets.uiAuth is empty: anyone reaching the web UI or the API reads every message.
+{{- end }}
+{{- if not .Values.persistence.enabled }}
+
+persistence.enabled is false: messages live in an emptyDir and are lost with the pod.
+{{- end }}
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: the pod runs in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) cannot start it; set
+hostUsers=true to use host users.
+{{- end }}

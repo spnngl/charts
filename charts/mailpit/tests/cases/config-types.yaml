@@ -1,0 +1,7 @@
+values:
+  config:
+    MP_MAX_MESSAGES: 5000
+    MP_SMTP_REQUIRE_STARTTLS: false
+    MP_LABEL: Staging
+    MP_DISABLE_WAL: true
+    TZ: Europe/Paris

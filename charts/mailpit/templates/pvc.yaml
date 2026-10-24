@@ -1,0 +1,23 @@
+{{- with .Values.persistence }}
+{{- if and .enabled (not .existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    {{- /* Kept on uninstall: a reinstall with the same release name adopts it. */}}
+    {{- toYaml (merge (dict "helm.sh/resource-policy" "keep") (deepCopy .annotations)) | nindent 4 }}
+  labels:
+    {{- toYaml (merge (include "mailpit.labels" $ | fromYaml) (deepCopy .labels)) | nindent 4 }}
+  name: {{ include "mailpit.fullname" $ }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  accessModes:
+    {{- toYaml .accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .size }}
+  {{- with .storageClassName }}
+  storageClassName: {{ . }}
+  {{- end }}
+{{- end }}
+{{- end }}

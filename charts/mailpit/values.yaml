@@ -1,0 +1,717 @@
+# yaml-language-server: $schema=values.schema.json
+# @schema.root
+# title: mailpit values
+# allOf:
+#   # a ServiceMonitor and a PodMonitor would scrape the pod twice
+#   - not:
+#       required: [metrics]
+#       properties:
+#         metrics:
+#           required: [serviceMonitor, podMonitor]
+#           properties:
+#             serviceMonitor:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+#             podMonitor:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+#   # the alert rules select the `job` label set by the ServiceMonitor or PodMonitor
+#   - if:
+#       required: [metrics]
+#       properties:
+#         metrics:
+#           required: [prometheusRule]
+#           properties:
+#             prometheusRule:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+#     then:
+#       properties:
+#         metrics:
+#           anyOf:
+#             - required: [serviceMonitor]
+#               properties:
+#                 serviceMonitor:
+#                   required: [enabled]
+#                   properties:
+#                     enabled:
+#                       const: true
+#             - required: [podMonitor]
+#               properties:
+#                 podMonitor:
+#                   required: [enabled]
+#                   properties:
+#                     enabled:
+#                       const: true
+# @schema.root
+# -- Override the chart name used in resource names and labels.
+nameOverride: ""
+# -- Override the full resource name (default `<release>-<chart>`).
+fullnameOverride: ""
+
+image:
+  # -- Image repository.
+  repository: ghcr.io/spnngl/images/mailpit
+  # -- Image tag. Empty: the tag and digest recorded for `image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.
+  tag: ""
+  # @schema
+  # type: string
+  # pattern: "^(sha256:[a-f0-9]{64})?$"
+  # @schema
+  # -- Image digest, only valid together with `image.tag`.
+  digest: ""
+  # @schema
+  # type: string
+  # enum: [Always, IfNotPresent, Never]
+  # @schema
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+# @schema
+# -- Image pull secrets (list of `{name: <secret>}`).
+imagePullSecrets: []
+
+# @schema
+# type: object
+# additionalProperties:
+#   anyOf:
+#     - type: string
+#     - type: integer
+#     - type: boolean
+# propertyNames:
+#   pattern: "^(MP_[A-Z0-9_]+|TZ)$"
+#   not:
+#     enum: [MP_UI_BIND_ADDR, MP_SMTP_BIND_ADDR, MP_POP3_BIND_ADDR, MP_ENABLE_PROMETHEUS, MP_UI_AUTH_FILE, MP_SMTP_AUTH_FILE, MP_SEND_API_AUTH_FILE, MP_POP3_AUTH_FILE, MP_UI_TLS_CERT, MP_UI_TLS_KEY, MP_SMTP_TLS_CERT, MP_SMTP_TLS_KEY, MP_POP3_TLS_CERT, MP_POP3_TLS_KEY, MP_SMTP_RELAY_CONFIG, MP_SMTP_FORWARD_CONFIG, MP_DATABASE, MP_DATA_FILE, MP_UI_SSL_CERT, MP_UI_SSL_KEY, MP_SMTP_SSL_CERT, MP_SMTP_SSL_KEY, MP_UI_AUTH, MP_SMTP_AUTH, MP_SEND_API_AUTH, MP_POP3_AUTH, MP_SMTP_RELAY_PASSWORD, MP_SMTP_RELAY_SECRET, MP_SMTP_FORWARD_PASSWORD, MP_SMTP_FORWARD_SECRET]
+# @schema
+# -- Mailpit settings as upstream environment variables (`MP_*` and `TZ`), set as container `env`. A key left out keeps the upstream default. Chart-owned variables, inline secrets and deprecated aliases are schema errors: see [Settings](#settings).
+config: {}
+
+secrets:
+  uiAuth:
+    # -- Existing Secret holding an htpasswd file for the web UI and the API (`MP_UI_AUTH_FILE`). Empty: the UI and the API are open to anyone reaching the HTTP port.
+    name: ""
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the htpasswd file in the Secret.
+    key: htpasswd
+  smtpAuth:
+    # -- Existing Secret holding an htpasswd file for SMTP authentication (`MP_SMTP_AUTH_FILE`). Needs `secrets.smtpTls` or `config.MP_SMTP_AUTH_ALLOW_INSECURE: true`. Empty: SMTP accepts mail without authentication.
+    name: ""
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the htpasswd file in the Secret.
+    key: htpasswd
+  sendApiAuth:
+    # -- Existing Secret holding an htpasswd file for the send API (`MP_SEND_API_AUTH_FILE`). Empty: the send API uses the web UI credentials.
+    name: ""
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the htpasswd file in the Secret.
+    key: htpasswd
+  pop3Auth:
+    # -- Existing Secret holding an htpasswd file for POP3 (`MP_POP3_AUTH_FILE`). Turns the POP3 server on (port 1110, on the SMTP Service).
+    name: ""
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the htpasswd file in the Secret.
+    key: htpasswd
+  uiTls:
+    # -- Existing `kubernetes.io/tls` Secret (`tls.crt`, `tls.key`) to serve the web UI and the API over HTTPS (`MP_UI_TLS_CERT`, `MP_UI_TLS_KEY`). The probes and the `helm test` pod switch to HTTPS; an Ingress or HTTPRoute then needs backend TLS (see [Access](#access)).
+    name: ""
+  smtpTls:
+    # -- Existing `kubernetes.io/tls` Secret (`tls.crt`, `tls.key`) for SMTP STARTTLS (`MP_SMTP_TLS_CERT`, `MP_SMTP_TLS_KEY`). `config.MP_SMTP_REQUIRE_STARTTLS` or `MP_SMTP_REQUIRE_TLS` enforce it.
+    name: ""
+  pop3Tls:
+    # -- Existing `kubernetes.io/tls` Secret (`tls.crt`, `tls.key`) for POP3 over TLS (`MP_POP3_TLS_CERT`, `MP_POP3_TLS_KEY`). Needs `secrets.pop3Auth`.
+    name: ""
+  relayConfig:
+    # -- Existing Secret holding an SMTP relay configuration file (`MP_SMTP_RELAY_CONFIG`, YAML with the relay host and credentials). Relaying also needs `config.MP_SMTP_RELAY_ALL` or `MP_SMTP_RELAY_MATCHING`, and an egress rule when `networkPolicy.egress.enabled`.
+    name: ""
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the configuration file in the Secret.
+    key: relay.yaml
+  forwardConfig:
+    # -- Existing Secret holding an SMTP forward configuration file (`MP_SMTP_FORWARD_CONFIG`, YAML with the forward host, credentials and recipients). Needs an egress rule when `networkPolicy.egress.enabled`.
+    name: ""
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the configuration file in the Secret.
+    key: forward.yaml
+
+persistence:
+  # -- Keep messages on a PersistentVolumeClaim. `false`: `/data` is an emptyDir and messages last as long as the pod.
+  enabled: false
+  # -- Existing PVC to use (`enabled: true`). Empty: the chart creates `<fullname>`, kept on uninstall (`helm.sh/resource-policy: keep`).
+  existingClaim: ""
+  # -- StorageClass of the chart PVC (empty: cluster default).
+  storageClassName: ""
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   enum: [ReadWriteOnce, ReadWriteOncePod, ReadWriteMany]
+  # @schema
+  # -- Access modes of the chart PVC.
+  accessModes:
+    - ReadWriteOnce
+  # -- Requested size of the chart PVC.
+  size: 1Gi
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Chart PVC annotations.
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Chart PVC labels.
+  labels: {}
+  emptyDir:
+    # -- Size limit of the emptyDir (`enabled: false`). Past it the kubelet evicts the pod, messages included. Empty: none.
+    sizeLimit: ""
+
+service:
+  http:
+    # @schema
+    # type: string
+    # enum: [ClusterIP, LoadBalancer, NodePort]
+    # @schema
+    # -- Type of the web UI and API Service (`<fullname>`).
+    type: ClusterIP
+    # @schema
+    # type: integer
+    # minimum: 1
+    # maximum: 65535
+    # @schema
+    # -- Web UI and API port (the container listens on 8025).
+    port: 8025
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Service annotations.
+    annotations: {}
+  smtp:
+    # @schema
+    # type: string
+    # enum: [ClusterIP, LoadBalancer, NodePort]
+    # @schema
+    # -- Type of the SMTP Service (`<fullname>-smtp`, also carries POP3 when `secrets.pop3Auth` is set).
+    type: ClusterIP
+    # @schema
+    # type: integer
+    # minimum: 1
+    # maximum: 65535
+    # @schema
+    # -- SMTP port (the container listens on 1025).
+    port: 1025
+    # @schema
+    # type: integer
+    # minimum: 1
+    # maximum: 65535
+    # @schema
+    # -- POP3 port (the container listens on 1110).
+    pop3Port: 1110
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Service annotations.
+    annotations: {}
+
+ingress:
+  # -- Create an Ingress for the web UI and the API (path `config.MP_WEBROOT`, default `/`). Read [Access](#access) first.
+  enabled: false
+  # -- Ingress class name (empty: cluster default).
+  className: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Ingress annotations.
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra Ingress labels.
+  labels: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   minLength: 1
+  # @schema
+  # -- Host names. Required when enabled.
+  hosts: []
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Ingress TLS blocks (`secretName`, `hosts`).
+  tls: []
+
+httpRoute:
+  # -- Create a Gateway API HTTPRoute for the web UI and the API (path prefix `config.MP_WEBROOT`, default `/`). Read [Access](#access) first.
+  enabled: false
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- HTTPRoute annotations.
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra HTTPRoute labels.
+  labels: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Gateways (`parentRefs`). Required when enabled.
+  parentRefs: []
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   minLength: 1
+  # @schema
+  # -- Host names (empty: any host of the Gateway listener).
+  hostnames: []
+
+# @schema
+# type: integer
+# enum: [0, 1]
+# @schema
+# -- Replicas: `1`, or `0` to stop Mailpit. One SQLite database has one writer, so one replica holds the whole inbox.
+replicaCount: 1
+# -- Old ReplicaSets to keep.
+revisionHistoryLimit: 3
+
+serviceAccount:
+  # -- Create the ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false).
+  name: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- ServiceAccount annotations.
+  annotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Pod annotations.
+podAnnotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Extra pod labels.
+podLabels: {}
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Pod security context. Overrides are merged onto these defaults. `fsGroup` makes the volume writable by the image user.
+podSecurityContext:
+  fsGroup: 65532
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Container security context. Overrides are merged onto these defaults.
+securityContext:
+  allowPrivilegeEscalation: false
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: boolean
+# @schema
+# -- `false` runs the pod in a user namespace, `true` with host users. Node requirements: see [User namespaces](#user-namespaces).
+hostUsers: false
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Resources. Sizing: see [Resources and autoscaling](#resources-and-autoscaling). No CPU limit on purpose. With a memory limit, `GOMEMLIMIT` follows it.
+resources:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  limits:
+    memory: 256Mi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  requests:
+    cpu: 10m
+    memory: 32Mi
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- DNS config.
+dnsConfig:
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  #   additionalProperties: true
+  # @schema
+  # -- DNS options (fewer search-list lookups for relay, forward and webhook hosts).
+  options:
+    - name: ndots
+      value: "2"
+
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Startup probe (`GET <webroot>readyz`: answers once the database is open and migrated).
+startupProbe:
+  failureThreshold: 30
+  periodSeconds: 2
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Readiness probe (`GET <webroot>readyz`).
+readinessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Liveness probe (`GET <webroot>livez`: process alive only).
+livenessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Node selector.
+nodeSelector:
+  kubernetes.io/os: linux
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Tolerations.
+tolerations: []
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Affinity.
+affinity: {}
+# -- Priority class name.
+priorityClassName: ""
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volumes (for example a ConfigMap for `config.MP_TAGS_CONFIG`).
+extraVolumes: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volume mounts for the mailpit container.
+extraVolumeMounts: []
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+#       minLength: 1
+#       not:
+#         enum: [GOMEMLIMIT, MP_WEBROOT, MP_UI_BIND_ADDR, MP_SMTP_BIND_ADDR, MP_POP3_BIND_ADDR, MP_ENABLE_PROMETHEUS, MP_UI_AUTH_FILE, MP_SMTP_AUTH_FILE, MP_SEND_API_AUTH_FILE, MP_POP3_AUTH_FILE, MP_UI_TLS_CERT, MP_UI_TLS_KEY, MP_SMTP_TLS_CERT, MP_SMTP_TLS_KEY, MP_POP3_TLS_CERT, MP_POP3_TLS_KEY, MP_SMTP_RELAY_CONFIG, MP_SMTP_FORWARD_CONFIG, MP_DATABASE, MP_DATA_FILE, MP_UI_SSL_CERT, MP_UI_SSL_KEY, MP_SMTP_SSL_CERT, MP_SMTP_SSL_KEY]
+# @schema
+# -- Extra environment variables (`EnvVar` list), applied over `config`. Allowed names: see [Settings](#settings).
+extraEnv: []
+# @schema
+# type: array
+# items:
+#   type: string
+#   minLength: 1
+# @schema
+# -- Extra `mailpit` command-line flags (see `mailpit help`). A flag overrides every variable, chart-owned ones included: prefer `config`.
+extraArgs: []
+
+metrics:
+  # -- Serve Prometheus metrics on port 9090 of the pod (`/metrics`, without authentication). `serviceMonitor` and `podMonitor` turn it on too.
+  enabled: false
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor and the ClusterIP Service it scrapes (`<fullname>-metrics`). Exclusive with `podMonitor`.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels (for example `release: kube-prometheus-stack`).
+    labels: {}
+    # -- Scrape interval (empty: Prometheus default).
+    interval: ""
+    # -- Scrape timeout (empty: Prometheus default).
+    scrapeTimeout: ""
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Relabelings.
+    relabelings: []
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Metric relabelings.
+    metricRelabelings: []
+  podMonitor:
+    # -- Create a Prometheus Operator PodMonitor. Exclusive with `serviceMonitor`.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels.
+    labels: {}
+    # -- Scrape interval (empty: Prometheus default).
+    interval: ""
+    # -- Scrape timeout (empty: Prometheus default).
+    scrapeTimeout: ""
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Relabelings.
+    relabelings: []
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Metric relabelings.
+    metricRelabelings: []
+  prometheusRule:
+    # -- Create a Prometheus Operator PrometheusRule (alerts `MailpitDown`, `MailpitSMTPRejected`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels (for example `release: kube-prometheus-stack`).
+    labels: {}
+    # @schema
+    # type: array
+    # uniqueItems: true
+    # maxItems: 1
+    # items:
+    #   type: string
+    #   enum: [MailpitDown, MailpitSMTPRejected]
+    # @schema
+    # -- Alerts to leave out, at most one (to drop both, disable `prometheusRule`).
+    disabled: []
+    # @schema
+    # type: string
+    # pattern: "^[0-9]+[smh]$"
+    # @schema
+    # -- How long the target may be down or absent before `MailpitDown` fires.
+    downFor: 5m
+    # @schema
+    # type: string
+    # pattern: "^[0-9]+[smh]$"
+    # @schema
+    # -- Window in which a rejected message fires `MailpitSMTPRejected`.
+    rejectedWindow: 15m
+
+networkPolicy:
+  # -- Create a NetworkPolicy (ingress: HTTP, SMTP, and POP3 and metrics when on).
+  enabled: true
+  http:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach the web UI and API port (your ingress controller or Gateway, the `helm test` pod). Empty: any source.
+    from: []
+  smtp:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach the SMTP port (the applications under test). Empty: any source.
+    from: []
+  pop3:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach the POP3 port (`secrets.pop3Auth` set). Empty: any source.
+    from: []
+  metrics:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach the metrics port (your Prometheus). Empty: any source.
+    from: []
+  egress:
+    # -- Restrict egress to DNS and `extraEgress`.
+    enabled: false
+    dns:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels.
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Extra `NetworkPolicyEgressRule`s (relay and forward SMTP servers, webhook URL).
+    extraEgress: []
+
+verticalPodAutoscaler:
+  # -- Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).
+  enabled: false
+  # @schema
+  # type: string
+  # enum: ["Off", Initial, Recreate, InPlaceOrRecreate]
+  # @schema
+  # -- VPA update mode.
+  updateMode: "Off"
+  # @schema
+  # type: string
+  # @schema
+  # -- Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`.
+  recommender: ""
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   enum: [cpu, memory]
+  # @schema
+  # -- Resources VPA controls.
+  controlledResources:
+    - cpu
+    - memory
+  # @schema
+  # type: string
+  # enum: [RequestsAndLimits, RequestsOnly]
+  # @schema
+  # -- Whether VPA also scales limits.
+  controlledValues: RequestsAndLimits
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Lower bound of recommendations (for example `{cpu: 10m, memory: 32Mi}`).
+  minAllowed: {}
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Upper bound of recommendations.
+  maxAllowed: {}

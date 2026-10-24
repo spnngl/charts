@@ -1,0 +1,11 @@
+values:
+  metrics:
+    serviceMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+      disabled:
+      - MailpitDown
+      - MailpitSMTPRejected
+expect:
+  error: disabled

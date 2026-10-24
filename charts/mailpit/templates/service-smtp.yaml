@@ -1,0 +1,31 @@
+{{- $svc := .Values.service.smtp }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- $annotations := deepCopy $svc.annotations }}
+  {{- if ne $svc.type "ClusterIP" }}
+  {{- $annotations = merge $annotations (dict "ignore-check.kube-linter.io/exposed-services" "service.smtp.type is the user's choice.") }}
+  {{- end }}
+  {{- with $annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "mailpit.labels" . | nindent 4 }}
+  name: {{ include "mailpit.fullname" . }}-smtp
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: smtp
+      port: {{ $svc.port }}
+      protocol: TCP
+      targetPort: smtp
+    {{- if .Values.secrets.pop3Auth.name }}
+    - name: pop3
+      port: {{ $svc.pop3Port }}
+      protocol: TCP
+      targetPort: pop3
+    {{- end }}
+  selector:
+    {{- include "mailpit.selectorLabels" . | nindent 4 }}
+  type: {{ $svc.type }}

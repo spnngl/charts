@@ -1,0 +1,62 @@
+values:
+  metrics:
+    serviceMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+# Defaults: downFor 5m, rejectedWindow 15m. promtool starts the clock at 0.
+ruleTests:
+  evaluation_interval: 1m
+  tests:
+    - name: down fires after downFor, not while a target is up
+      interval: 1m
+      input_series:
+        - series: up{job="mailpit-metrics", namespace="mailpit", pod="a"}
+          values: 1x10 0x10
+      alert_rule_test:
+        - {eval_time: 10m, alertname: MailpitDown, exp_alerts: []}
+        - {eval_time: 14m, alertname: MailpitDown, exp_alerts: []}
+        - eval_time: 16m
+          alertname: MailpitDown
+          exp_alerts:
+            - exp_labels: {severity: warning, job: mailpit-metrics, namespace: mailpit}
+              exp_annotations:
+                summary: Mailpit is down.
+                description: "mailpit/mailpit has been down or absent from the scrape targets for 5m: the pod is crashing, not running, or scaled to 0."
+    - name: down fires when no target exists
+      interval: 1m
+      input_series:
+        - series: up{job="other", namespace="mailpit", pod="b"}
+          values: 1x10
+      alert_rule_test:
+        - {eval_time: 4m, alertname: MailpitDown, exp_alerts: []}
+        - eval_time: 6m
+          alertname: MailpitDown
+          exp_alerts:
+            - exp_labels: {severity: warning, job: mailpit-metrics, namespace: mailpit}
+              exp_annotations:
+                summary: Mailpit is down.
+                description: "mailpit/mailpit has been down or absent from the scrape targets for 5m: the pod is crashing, not running, or scaled to 0."
+    - name: rejected fires on a rejection and clears after rejectedWindow
+      interval: 1m
+      input_series:
+        - series: mailpit_smtp_rejected_total{job="mailpit-metrics", namespace="mailpit", pod="a"}
+          values: 0x10 1x30
+      alert_rule_test:
+        - {eval_time: 10m, alertname: MailpitSMTPRejected, exp_alerts: []}
+        - eval_time: 12m
+          alertname: MailpitSMTPRejected
+          exp_alerts:
+            - exp_labels: {severity: warning, job: mailpit-metrics, namespace: mailpit}
+              exp_annotations:
+                summary: Mailpit rejects SMTP messages.
+                description: "mailpit/mailpit rejected SMTP messages in the last 15m: unparsable messages, or recipients outside MP_SMTP_ALLOWED_RECIPIENTS."
+        - {eval_time: 30m, alertname: MailpitSMTPRejected, exp_alerts: []}
+    - name: rejected stays silent on a steady counter (restart resets included)
+      interval: 1m
+      input_series:
+        - series: mailpit_smtp_rejected_total{job="mailpit-metrics", namespace="mailpit", pod="a"}
+          values: 3x10 0x20
+      alert_rule_test:
+        - {eval_time: 10m, alertname: MailpitSMTPRejected, exp_alerts: []}
+        - {eval_time: 20m, alertname: MailpitSMTPRejected, exp_alerts: []}

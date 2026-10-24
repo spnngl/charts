@@ -1,0 +1,6 @@
+values:
+  persistence:
+    accessModes:
+    - ReadOnlyMany
+expect:
+  error: accessModes

@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: mailpit
+description: Mailpit, an email and SMTP testing tool with a web UI and an API, as a hardened single-replica Deployment
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/mailpit
+appVersion: "1.31.6"
+kubeVersion: ">=1.33.0-0"
+home: https://mailpit.axllent.org
+icon: https://raw.githubusercontent.com/axllent/mailpit/v1.31.6/server/ui/mailpit.svg
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/axllent/mailpit
+  - https://github.com/spnngl/images
+keywords:
+  - mailpit
+  - smtp
+  - email
+  - testing
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: MIT
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # mailpit.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: mailpit
+      image: ghcr.io/spnngl/images/mailpit:1.31.6@sha256:60b6b0c85ab9e65658a641144339a76617f37b97e5cc05f6417d311c38c62b65
+  artifacthub.io/links: |-
+    - name: Upstream project
+      url: https://mailpit.axllent.org
+    - name: Upstream repository
+      url: https://github.com/axllent/mailpit
+    - name: Images repository
+      url: https://github.com/spnngl/images
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/mailpit
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

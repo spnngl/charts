@@ -1,0 +1,6 @@
+values:
+  image:
+    tag: v1
+    digest: sha256:abc
+expect:
+  error: digest

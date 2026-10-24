@@ -1,0 +1,55 @@
+{{- if gt (int .Values.replicaCount) 0 }}
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    ignore-check.kube-linter.io/no-liveness-probe: "One-shot hook pod that exits within seconds."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-readiness-probe: "One-shot hook pod that exits within seconds."
+    ignore-check.kube-linter.io/non-isolated-pod: "Short-lived test pod that only dials the web UI Service."
+    ignore-check.kube-linter.io/restart-policy: "One-shot hook pod: Never is the intended policy."
+  labels:
+    {{- toYaml (merge (dict "app.kubernetes.io/component" "test" "app.kubernetes.io/name" (printf "%s-test" (include "mailpit.name" .))) (include "mailpit.labels" . | fromYaml)) | nindent 4 }}
+  name: {{ include "mailpit.fullname" . }}-test-readyz
+  namespace: {{ .Release.Namespace }}
+spec:
+  automountServiceAccountToken: false
+  containers:
+    - args:
+        - readyz
+        - --listen
+        - {{ printf "%s.%s.svc:%d" (include "mailpit.fullname" .) .Release.Namespace (int .Values.service.http.port) | quote }}
+        - --webroot
+        - {{ include "mailpit.webroot" . | quote }}
+        {{- if .Values.secrets.uiTls.name }}
+        - --https
+        {{- end }}
+        # The Service can lag the pod's readiness by a few seconds: poll, bounded.
+        - --wait
+        - --timeout
+        - 50s
+      image: {{ include "mailpit.image" . | quote }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      name: readyz
+      resources:
+        {{- toYaml .Values.resources | nindent 8 }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+  dnsConfig:
+    {{- toYaml .Values.dnsConfig | nindent 4 }}
+  enableServiceLinks: false
+  hostUsers: {{ .Values.hostUsers }}
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  restartPolicy: Never
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+{{- end }}

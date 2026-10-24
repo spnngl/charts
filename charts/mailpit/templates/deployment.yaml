@@ -1,0 +1,160 @@
+{{- include "mailpit.validate" . }}
+{{- $fullname := include "mailpit.fullname" . }}
+{{- $mounts := fromYamlArray (include "mailpit.secretMounts" .) }}
+{{- $webroot := include "mailpit.webroot" . }}
+{{- $scheme := ternary "HTTPS" "HTTP" (not (empty .Values.secrets.uiTls.name)) }}
+{{- $ready := dict "httpGet" (dict "path" (printf "%sreadyz" $webroot) "port" "http" "scheme" $scheme) }}
+{{- $alive := dict "httpGet" (dict "path" (printf "%slivez" $webroot) "port" "http" "scheme" $scheme) }}
+{{- /* GOMEMLIMIT, then the Mailpit variables minus those extraEnv overrides, then extraEnv (the schema keeps GOMEMLIMIT and chart-owned names out of it). */}}
+{{- $env := list }}
+{{- if dig "limits" "memory" "" .Values.resources }}
+{{- $env = append $env (dict "name" "GOMEMLIMIT" "valueFrom" (dict "resourceFieldRef" (dict "resource" "limits.memory"))) }}
+{{- end }}
+{{- $extra := list }}
+{{- range .Values.extraEnv }}{{ $extra = append $extra .name }}{{ end }}
+{{- range $name, $value := include "mailpit.config" . | fromYaml }}
+{{- if not (has $name $extra) }}
+{{- $env = append $env (dict "name" $name "value" $value) }}
+{{- end }}
+{{- end }}
+{{- $env = concat $env .Values.extraEnv }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: messages live in one SQLite database with a single writer."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "Recreate on purpose: a surge pod would open the same database next to the first instance."
+    {{- if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: isolation is the user's choice."
+    {{- end }}
+  labels:
+    {{- include "mailpit.labels" . | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "mailpit.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- toYaml (merge (include "mailpit.labels" . | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        -
+          {{- with .Values.extraArgs }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: {{ include "mailpit.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            {{- toYaml (merge $alive (deepCopy .Values.livenessProbe)) | nindent 12 }}
+          name: mailpit
+          ports:
+            - containerPort: 8025
+              name: http
+              protocol: TCP
+            - containerPort: 1025
+              name: smtp
+              protocol: TCP
+            {{- if .Values.secrets.pop3Auth.name }}
+            - containerPort: 1110
+              name: pop3
+              protocol: TCP
+            {{- end }}
+            {{- if include "mailpit.metrics" . }}
+            - containerPort: 9090
+              name: metrics
+              protocol: TCP
+            {{- end }}
+          readinessProbe:
+            {{- toYaml (merge (deepCopy $ready) (deepCopy .Values.readinessProbe)) | nindent 12 }}
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- toYaml (merge (deepCopy $ready) (deepCopy .Values.startupProbe)) | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /data
+              name: data
+            {{- range $mounts }}
+            - mountPath: {{ .dir }}
+              name: {{ .volume }}
+              readOnly: true
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      enableServiceLinks: false
+      hostUsers: {{ .Values.hostUsers }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "mailpit.serviceAccountName" . }}
+      # Upstream closes the database within a second of SIGTERM.
+      terminationGracePeriodSeconds: 10
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        {{- with .Values.persistence }}
+        {{- if .enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .existingClaim | default $fullname }}
+        {{- else if .emptyDir.sizeLimit }}
+        - emptyDir:
+            sizeLimit: {{ .emptyDir.sizeLimit }}
+          name: data
+        {{- else }}
+        - emptyDir: {}
+          name: data
+        {{- end }}
+        {{- end }}
+        {{- range $mounts }}
+        - name: {{ .volume }}
+          secret:
+            defaultMode: 288
+            secretName: {{ .secret }}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}

@@ -1,0 +1,17 @@
+values:
+  extraArgs:
+  - --verbose
+  extraEnv:
+  - name: TZ
+    value: UTC
+  extraVolumes:
+  - name: tags
+    configMap:
+      name: tags
+  extraVolumeMounts:
+  - name: tags
+    mountPath: /etc/mailpit/tags
+    readOnly: true
+  config:
+    TZ: Europe/Paris
+    MP_LABEL: Test

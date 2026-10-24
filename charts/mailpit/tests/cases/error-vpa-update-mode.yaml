@@ -1,0 +1,6 @@
+values:
+  verticalPodAutoscaler:
+    enabled: true
+    updateMode: Auto
+expect:
+  error: updateMode

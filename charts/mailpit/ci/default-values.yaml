@@ -1,0 +1,6 @@
+# ct install: Mailpit needs no backend, the pod starts on an emptyDir and the
+# helm test pod polls readyz through the Service.
+# kind inside a CI runner cannot create user namespaces.
+hostUsers: true
+metrics:
+  enabled: true

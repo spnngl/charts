@@ -1,0 +1,1229 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "not": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "podMonitor": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              },
+              "serviceMonitor": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "serviceMonitor",
+              "podMonitor"
+            ]
+          }
+        },
+        "required": [
+          "metrics"
+        ]
+      },
+      "required": []
+    },
+    {
+      "if": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "prometheusRule": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "prometheusRule"
+            ]
+          }
+        },
+        "required": [
+          "metrics"
+        ]
+      },
+      "required": [],
+      "then": {
+        "properties": {
+          "metrics": {
+            "anyOf": [
+              {
+                "properties": {
+                  "serviceMonitor": {
+                    "properties": {
+                      "enabled": {
+                        "const": true,
+                        "required": []
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  }
+                },
+                "required": [
+                  "serviceMonitor"
+                ]
+              },
+              {
+                "properties": {
+                  "podMonitor": {
+                    "properties": {
+                      "enabled": {
+                        "const": true,
+                        "required": []
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  }
+                },
+                "required": [
+                  "podMonitor"
+                ]
+              }
+            ],
+            "required": []
+          }
+        },
+        "required": []
+      }
+    }
+  ],
+  "properties": {
+    "affinity": {
+      "additionalProperties": true,
+      "description": "Affinity.",
+      "required": [],
+      "type": "object"
+    },
+    "config": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "boolean"
+          }
+        ]
+      },
+      "description": "Mailpit settings as upstream environment variables (`MP_*` and `TZ`), set as container `env`. A key left out keeps the upstream default. Chart-owned variables, inline secrets and deprecated aliases are schema errors: see [Settings](#settings).",
+      "propertyNames": {
+        "not": {
+          "enum": [
+            "MP_UI_BIND_ADDR",
+            "MP_SMTP_BIND_ADDR",
+            "MP_POP3_BIND_ADDR",
+            "MP_ENABLE_PROMETHEUS",
+            "MP_UI_AUTH_FILE",
+            "MP_SMTP_AUTH_FILE",
+            "MP_SEND_API_AUTH_FILE",
+            "MP_POP3_AUTH_FILE",
+            "MP_UI_TLS_CERT",
+            "MP_UI_TLS_KEY",
+            "MP_SMTP_TLS_CERT",
+            "MP_SMTP_TLS_KEY",
+            "MP_POP3_TLS_CERT",
+            "MP_POP3_TLS_KEY",
+            "MP_SMTP_RELAY_CONFIG",
+            "MP_SMTP_FORWARD_CONFIG",
+            "MP_DATABASE",
+            "MP_DATA_FILE",
+            "MP_UI_SSL_CERT",
+            "MP_UI_SSL_KEY",
+            "MP_SMTP_SSL_CERT",
+            "MP_SMTP_SSL_KEY",
+            "MP_UI_AUTH",
+            "MP_SMTP_AUTH",
+            "MP_SEND_API_AUTH",
+            "MP_POP3_AUTH",
+            "MP_SMTP_RELAY_PASSWORD",
+            "MP_SMTP_RELAY_SECRET",
+            "MP_SMTP_FORWARD_PASSWORD",
+            "MP_SMTP_FORWARD_SECRET"
+          ],
+          "required": []
+        },
+        "pattern": "^(MP_[A-Z0-9_]+|TZ)$",
+        "required": []
+      },
+      "required": [],
+      "type": "object"
+    },
+    "dnsConfig": {
+      "additionalProperties": true,
+      "description": "DNS config.",
+      "properties": {
+        "options": {
+          "description": "DNS options (fewer search-list lookups for relay, forward and webhook hosts).",
+          "items": {
+            "additionalProperties": true,
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "extraArgs": {
+      "description": "Extra `mailpit` command-line flags (see `mailpit help`). A flag overrides every variable, chart-owned ones included: prefer `config`.",
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "extraEnv": {
+      "description": "Extra environment variables (`EnvVar` list), applied over `config`. Allowed names: see [Settings](#settings).",
+      "items": {
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "not": {
+              "enum": [
+                "GOMEMLIMIT",
+                "MP_WEBROOT",
+                "MP_UI_BIND_ADDR",
+                "MP_SMTP_BIND_ADDR",
+                "MP_POP3_BIND_ADDR",
+                "MP_ENABLE_PROMETHEUS",
+                "MP_UI_AUTH_FILE",
+                "MP_SMTP_AUTH_FILE",
+                "MP_SEND_API_AUTH_FILE",
+                "MP_POP3_AUTH_FILE",
+                "MP_UI_TLS_CERT",
+                "MP_UI_TLS_KEY",
+                "MP_SMTP_TLS_CERT",
+                "MP_SMTP_TLS_KEY",
+                "MP_POP3_TLS_CERT",
+                "MP_POP3_TLS_KEY",
+                "MP_SMTP_RELAY_CONFIG",
+                "MP_SMTP_FORWARD_CONFIG",
+                "MP_DATABASE",
+                "MP_DATA_FILE",
+                "MP_UI_SSL_CERT",
+                "MP_UI_SSL_KEY",
+                "MP_SMTP_SSL_CERT",
+                "MP_SMTP_SSL_KEY"
+              ],
+              "required": []
+            },
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumeMounts": {
+      "description": "Extra volume mounts for the mailpit container.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumes": {
+      "description": "Extra volumes (for example a ConfigMap for `config.MP_TAGS_CONFIG`).",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "fullnameOverride": {
+      "description": "Override the full resource name (default `\u003crelease\u003e-\u003cchart\u003e`).",
+      "type": "string"
+    },
+    "global": {
+      "description": "Global values are values that can be accessed from any chart or subchart by exactly the same name.",
+      "required": [],
+      "type": "object"
+    },
+    "hostUsers": {
+      "description": "`false` runs the pod in a user namespace, `true` with host users. Node requirements: see [User namespaces](#user-namespaces).",
+      "type": "boolean"
+    },
+    "httpRoute": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "HTTPRoute annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "enabled": {
+          "description": "Create a Gateway API HTTPRoute for the web UI and the API (path prefix `config.MP_WEBROOT`, default `/`). Read [Access](#access) first.",
+          "type": "boolean"
+        },
+        "hostnames": {
+          "description": "Host names (empty: any host of the Gateway listener).",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Extra HTTPRoute labels.",
+          "required": [],
+          "type": "object"
+        },
+        "parentRefs": {
+          "description": "Gateways (`parentRefs`). Required when enabled.",
+          "items": {
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "image": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "description": "Image digest, only valid together with `image.tag`.",
+          "pattern": "^(sha256:[a-f0-9]{64})?$",
+          "type": "string"
+        },
+        "pullPolicy": {
+          "description": "Image pull policy.",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ],
+          "type": "string"
+        },
+        "repository": {
+          "description": "Image repository.",
+          "type": "string"
+        },
+        "tag": {
+          "description": "Image tag. Empty: the tag and digest recorded for `image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "imagePullSecrets": {
+      "description": "Image pull secrets (list of `{name: \u003csecret\u003e}`).",
+      "items": {
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "ingress": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Ingress annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "className": {
+          "description": "Ingress class name (empty: cluster default).",
+          "type": "string"
+        },
+        "enabled": {
+          "description": "Create an Ingress for the web UI and the API (path `config.MP_WEBROOT`, default `/`). Read [Access](#access) first.",
+          "type": "boolean"
+        },
+        "hosts": {
+          "description": "Host names. Required when enabled.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Extra Ingress labels.",
+          "required": [],
+          "type": "object"
+        },
+        "tls": {
+          "description": "Ingress TLS blocks (`secretName`, `hosts`).",
+          "items": {
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "livenessProbe": {
+      "additionalProperties": true,
+      "description": "Liveness probe (`GET \u003cwebroot\u003elivez`: process alive only).",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "metrics": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Serve Prometheus metrics on port 9090 of the pod (`/metrics`, without authentication). `serviceMonitor` and `podMonitor` turn it on too.",
+          "type": "boolean"
+        },
+        "podMonitor": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Create a Prometheus Operator PodMonitor. Exclusive with `serviceMonitor`.",
+              "type": "boolean"
+            },
+            "interval": {
+              "description": "Scrape interval (empty: Prometheus default).",
+              "type": "string"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels.",
+              "required": [],
+              "type": "object"
+            },
+            "metricRelabelings": {
+              "description": "Metric relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "relabelings": {
+              "description": "Relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "scrapeTimeout": {
+              "description": "Scrape timeout (empty: Prometheus default).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "prometheusRule": {
+          "additionalProperties": false,
+          "properties": {
+            "disabled": {
+              "description": "Alerts to leave out, at most one (to drop both, disable `prometheusRule`).",
+              "items": {
+                "enum": [
+                  "MailpitDown",
+                  "MailpitSMTPRejected"
+                ],
+                "type": "string"
+              },
+              "maxItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "downFor": {
+              "description": "How long the target may be down or absent before `MailpitDown` fires.",
+              "pattern": "^[0-9]+[smh]$",
+              "type": "string"
+            },
+            "enabled": {
+              "description": "Create a Prometheus Operator PrometheusRule (alerts `MailpitDown`, `MailpitSMTPRejected`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.",
+              "type": "boolean"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels (for example `release: kube-prometheus-stack`).",
+              "required": [],
+              "type": "object"
+            },
+            "rejectedWindow": {
+              "description": "Window in which a rejected message fires `MailpitSMTPRejected`.",
+              "pattern": "^[0-9]+[smh]$",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "serviceMonitor": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Create a Prometheus Operator ServiceMonitor and the ClusterIP Service it scrapes (`\u003cfullname\u003e-metrics`). Exclusive with `podMonitor`.",
+              "type": "boolean"
+            },
+            "interval": {
+              "description": "Scrape interval (empty: Prometheus default).",
+              "type": "string"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels (for example `release: kube-prometheus-stack`).",
+              "required": [],
+              "type": "object"
+            },
+            "metricRelabelings": {
+              "description": "Metric relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "relabelings": {
+              "description": "Relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "scrapeTimeout": {
+              "description": "Scrape timeout (empty: Prometheus default).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "nameOverride": {
+      "description": "yaml-language-server: $schema=values.schema.json\nOverride the chart name used in resource names and labels.",
+      "type": "string"
+    },
+    "networkPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "egress": {
+          "additionalProperties": false,
+          "properties": {
+            "dns": {
+              "additionalProperties": false,
+              "properties": {
+                "to": {
+                  "description": "DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Restrict egress to DNS and `extraEgress`.",
+              "type": "boolean"
+            },
+            "extraEgress": {
+              "description": "Extra `NetworkPolicyEgressRule`s (relay and forward SMTP servers, webhook URL).",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "enabled": {
+          "description": "Create a NetworkPolicy (ingress: HTTP, SMTP, and POP3 and metrics when on).",
+          "type": "boolean"
+        },
+        "http": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to reach the web UI and API port (your ingress controller or Gateway, the `helm test` pod). Empty: any source.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "metrics": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to reach the metrics port (your Prometheus). Empty: any source.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "pop3": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to reach the POP3 port (`secrets.pop3Auth` set). Empty: any source.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "smtp": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to reach the SMTP port (the applications under test). Empty: any source.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "nodeSelector": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Node selector.",
+      "properties": {
+        "kubernetes.io/os": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "persistence": {
+      "additionalProperties": false,
+      "properties": {
+        "accessModes": {
+          "description": "Access modes of the chart PVC.",
+          "items": {
+            "enum": [
+              "ReadWriteOnce",
+              "ReadWriteOncePod",
+              "ReadWriteMany"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Chart PVC annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "emptyDir": {
+          "additionalProperties": false,
+          "properties": {
+            "sizeLimit": {
+              "description": "Size limit of the emptyDir (`enabled: false`). Past it the kubelet evicts the pod, messages included. Empty: none.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "enabled": {
+          "description": "Keep messages on a PersistentVolumeClaim. `false`: `/data` is an emptyDir and messages last as long as the pod.",
+          "type": "boolean"
+        },
+        "existingClaim": {
+          "description": "Existing PVC to use (`enabled: true`). Empty: the chart creates `\u003cfullname\u003e`, kept on uninstall (`helm.sh/resource-policy: keep`).",
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Chart PVC labels.",
+          "required": [],
+          "type": "object"
+        },
+        "size": {
+          "description": "Requested size of the chart PVC.",
+          "type": "string"
+        },
+        "storageClassName": {
+          "description": "StorageClass of the chart PVC (empty: cluster default).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "podAnnotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Pod annotations.",
+      "required": [],
+      "type": "object"
+    },
+    "podLabels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Extra pod labels.",
+      "required": [],
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "additionalProperties": true,
+      "description": "Pod security context. Overrides are merged onto these defaults. `fsGroup` makes the volume writable by the image user.",
+      "properties": {
+        "fsGroup": {
+          "type": "integer"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "priorityClassName": {
+      "description": "Priority class name.",
+      "type": "string"
+    },
+    "readinessProbe": {
+      "additionalProperties": true,
+      "description": "Readiness probe (`GET \u003cwebroot\u003ereadyz`).",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "replicaCount": {
+      "description": "Replicas: `1`, or `0` to stop Mailpit. One SQLite database has one writer, so one replica holds the whole inbox.",
+      "enum": [
+        0,
+        1
+      ],
+      "type": "integer"
+    },
+    "resources": {
+      "additionalProperties": true,
+      "description": "Resources. Sizing: see [Resources and autoscaling](#resources-and-autoscaling). No CPU limit on purpose. With a memory limit, `GOMEMLIMIT` follows it.",
+      "properties": {
+        "limits": {
+          "additionalProperties": true,
+          "properties": {
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "requests": {
+          "additionalProperties": true,
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "revisionHistoryLimit": {
+      "description": "Old ReplicaSets to keep.",
+      "type": "integer"
+    },
+    "secrets": {
+      "additionalProperties": false,
+      "properties": {
+        "forwardConfig": {
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "description": "Key of the configuration file in the Secret.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "name": {
+              "description": "Existing Secret holding an SMTP forward configuration file (`MP_SMTP_FORWARD_CONFIG`, YAML with the forward host, credentials and recipients). Needs an egress rule when `networkPolicy.egress.enabled`.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "pop3Auth": {
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "description": "Key of the htpasswd file in the Secret.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "name": {
+              "description": "Existing Secret holding an htpasswd file for POP3 (`MP_POP3_AUTH_FILE`). Turns the POP3 server on (port 1110, on the SMTP Service).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "pop3Tls": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "description": "Existing `kubernetes.io/tls` Secret (`tls.crt`, `tls.key`) for POP3 over TLS (`MP_POP3_TLS_CERT`, `MP_POP3_TLS_KEY`). Needs `secrets.pop3Auth`.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "relayConfig": {
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "description": "Key of the configuration file in the Secret.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "name": {
+              "description": "Existing Secret holding an SMTP relay configuration file (`MP_SMTP_RELAY_CONFIG`, YAML with the relay host and credentials). Relaying also needs `config.MP_SMTP_RELAY_ALL` or `MP_SMTP_RELAY_MATCHING`, and an egress rule when `networkPolicy.egress.enabled`.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "sendApiAuth": {
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "description": "Key of the htpasswd file in the Secret.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "name": {
+              "description": "Existing Secret holding an htpasswd file for the send API (`MP_SEND_API_AUTH_FILE`). Empty: the send API uses the web UI credentials.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "smtpAuth": {
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "description": "Key of the htpasswd file in the Secret.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "name": {
+              "description": "Existing Secret holding an htpasswd file for SMTP authentication (`MP_SMTP_AUTH_FILE`). Needs `secrets.smtpTls` or `config.MP_SMTP_AUTH_ALLOW_INSECURE: true`. Empty: SMTP accepts mail without authentication.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "smtpTls": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "description": "Existing `kubernetes.io/tls` Secret (`tls.crt`, `tls.key`) for SMTP STARTTLS (`MP_SMTP_TLS_CERT`, `MP_SMTP_TLS_KEY`). `config.MP_SMTP_REQUIRE_STARTTLS` or `MP_SMTP_REQUIRE_TLS` enforce it.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "uiAuth": {
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "description": "Key of the htpasswd file in the Secret.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "name": {
+              "description": "Existing Secret holding an htpasswd file for the web UI and the API (`MP_UI_AUTH_FILE`). Empty: the UI and the API are open to anyone reaching the HTTP port.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "uiTls": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "description": "Existing `kubernetes.io/tls` Secret (`tls.crt`, `tls.key`) to serve the web UI and the API over HTTPS (`MP_UI_TLS_CERT`, `MP_UI_TLS_KEY`). The probes and the `helm test` pod switch to HTTPS; an Ingress or HTTPRoute then needs backend TLS (see [Access](#access)).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "securityContext": {
+      "additionalProperties": true,
+      "description": "Container security context. Overrides are merged onto these defaults.",
+      "properties": {
+        "allowPrivilegeEscalation": {
+          "type": "boolean"
+        },
+        "capabilities": {
+          "additionalProperties": true,
+          "properties": {
+            "drop": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ],
+                "required": []
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "privileged": {
+          "type": "boolean"
+        },
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "service": {
+      "additionalProperties": false,
+      "properties": {
+        "http": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Service annotations.",
+              "required": [],
+              "type": "object"
+            },
+            "port": {
+              "description": "Web UI and API port (the container listens on 8025).",
+              "maximum": 65535,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": {
+              "description": "Type of the web UI and API Service (`\u003cfullname\u003e`).",
+              "enum": [
+                "ClusterIP",
+                "LoadBalancer",
+                "NodePort"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "smtp": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Service annotations.",
+              "required": [],
+              "type": "object"
+            },
+            "pop3Port": {
+              "description": "POP3 port (the container listens on 1110).",
+              "maximum": 65535,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "port": {
+              "description": "SMTP port (the container listens on 1025).",
+              "maximum": 65535,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": {
+              "description": "Type of the SMTP Service (`\u003cfullname\u003e-smtp`, also carries POP3 when `secrets.pop3Auth` is set).",
+              "enum": [
+                "ClusterIP",
+                "LoadBalancer",
+                "NodePort"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "serviceAccount": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "ServiceAccount annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "create": {
+          "description": "Create the ServiceAccount.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "ServiceAccount name. Empty: `\u003cfullname\u003e` (or `default` when `create` is false).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "startupProbe": {
+      "additionalProperties": true,
+      "description": "Startup probe (`GET \u003cwebroot\u003ereadyz`: answers once the database is open and migrated).",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "tolerations": {
+      "description": "Tolerations.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "verticalPodAutoscaler": {
+      "additionalProperties": false,
+      "properties": {
+        "controlledResources": {
+          "description": "Resources VPA controls.",
+          "items": {
+            "enum": [
+              "cpu",
+              "memory"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "controlledValues": {
+          "description": "Whether VPA also scales limits.",
+          "enum": [
+            "RequestsAndLimits",
+            "RequestsOnly"
+          ],
+          "type": "string"
+        },
+        "enabled": {
+          "description": "Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).",
+          "type": "boolean"
+        },
+        "maxAllowed": {
+          "additionalProperties": true,
+          "description": "Upper bound of recommendations.",
+          "required": [],
+          "type": "object"
+        },
+        "minAllowed": {
+          "additionalProperties": true,
+          "description": "Lower bound of recommendations (for example `{cpu: 10m, memory: 32Mi}`).",
+          "required": [],
+          "type": "object"
+        },
+        "recommender": {
+          "description": "Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`.",
+          "type": "string"
+        },
+        "updateMode": {
+          "description": "VPA update mode.",
+          "enum": [
+            "Off",
+            "Initial",
+            "Recreate",
+            "InPlaceOrRecreate"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    }
+  },
+  "required": [],
+  "title": "mailpit values",
+  "type": "object"
+}

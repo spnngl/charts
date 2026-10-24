@@ -1,0 +1,9 @@
+values:
+  persistence:
+    enabled: true
+    storageClassName: fast
+    size: 5Gi
+    annotations:
+      a: b
+    labels:
+      c: d
