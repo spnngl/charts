@@ -4,6 +4,7 @@ description: CustomResourceDefinitions for the OpenStack Resource Controller (OR
 upstream:
   repo: https://github.com/k-orc/openstack-resource-controller
   homepage: https://k-orc.cloud/
+  icon: https://raw.githubusercontent.com/k-orc/openstack-resource-controller/refs/heads/main/logos/orc-logo-color.svg
   license: Apache-2.0
 version:
   tagPattern: '^v(\d+\.\d+\.\d+)$'
