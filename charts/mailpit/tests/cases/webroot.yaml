@@ -1,0 +1,11 @@
+values:
+  config:
+    MP_WEBROOT: mail
+  ingress:
+    enabled: true
+    hosts:
+    - mail.example.com
+  httpRoute:
+    enabled: true
+    parentRefs:
+    - name: gw

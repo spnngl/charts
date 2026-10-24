@@ -1,0 +1,8 @@
+values:
+  metrics:
+    serviceMonitor:
+      enabled: true
+    podMonitor:
+      enabled: true
+expect:
+  error: "'not' failed"

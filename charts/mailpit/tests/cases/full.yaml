@@ -1,0 +1,103 @@
+values:
+  nameOverride: mail
+  imagePullSecrets:
+  - name: regcred
+  config:
+    MP_MAX_MESSAGES: 1000
+    MP_SMTP_REQUIRE_STARTTLS: true
+    MP_SMTP_RELAY_ALL: true
+    MP_WEBROOT: /mailpit/
+  secrets:
+    uiAuth:
+      name: ui-htpasswd
+    smtpAuth:
+      name: smtp-htpasswd
+    sendApiAuth:
+      name: api-htpasswd
+    pop3Auth:
+      name: pop3-htpasswd
+    smtpTls:
+      name: smtp-tls
+    pop3Tls:
+      name: pop3-tls
+    relayConfig:
+      name: relay
+    forwardConfig:
+      name: forward
+  persistence:
+    enabled: true
+    size: 10Gi
+  service:
+    smtp:
+      type: LoadBalancer
+      annotations:
+        a: b
+  serviceAccount:
+    annotations:
+      a: b
+  podAnnotations:
+    a: b
+  podLabels:
+    c: d
+  priorityClassName: low
+  tolerations:
+  - key: k
+    operator: Exists
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: disk
+            operator: In
+            values:
+            - ssd
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+    - mail.example.com
+    tls:
+    - secretName: mail-tls
+      hosts:
+      - mail.example.com
+  httpRoute:
+    enabled: true
+    parentRefs:
+    - name: gw
+    hostnames:
+    - mail.example.com
+  extraArgs:
+  - --verbose
+  extraEnv:
+  - name: TZ
+    value: UTC
+  metrics:
+    serviceMonitor:
+      enabled: true
+      labels:
+        release: prom
+    prometheusRule:
+      enabled: true
+  networkPolicy:
+    http:
+      from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+    egress:
+      enabled: true
+      extraEgress:
+      - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+        ports:
+        - port: 587
+          protocol: TCP
+  verticalPodAutoscaler:
+    enabled: true
+    minAllowed:
+      cpu: 10m
+      memory: 32Mi
+    maxAllowed:
+      memory: 1Gi

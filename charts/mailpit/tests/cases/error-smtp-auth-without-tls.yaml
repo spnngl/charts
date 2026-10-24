@@ -1,0 +1,6 @@
+values:
+  secrets:
+    smtpAuth:
+      name: smtp-htpasswd
+expect:
+  error: secrets.smtpAuth requires secrets.smtpTls

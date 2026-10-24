@@ -1,0 +1,41 @@
+{{- if .Values.metrics.prometheusRule.enabled }}
+{{- $m := .Values.metrics.prometheusRule }}
+{{- $fullname := include "mailpit.fullname" . }}
+{{- /* job label set by the Prometheus Operator: Service name (ServiceMonitor) or <namespace>/<name> (PodMonitor). */}}
+{{- $job := printf "%s-metrics" $fullname }}
+{{- if not .Values.metrics.serviceMonitor.enabled }}
+{{- $job = printf "%s/%s" .Release.Namespace $fullname }}
+{{- end }}
+{{- $sel := printf "job=%q, namespace=%q" $job .Release.Namespace }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    {{- toYaml (merge (include "mailpit.labels" . | fromYaml) (deepCopy $m.labels)) | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: {{ $fullname }}
+      rules:
+        {{- if not (has "MailpitDown" $m.disabled) }}
+        - alert: MailpitDown
+          annotations:
+            description: {{ printf "%s/%s has been down or absent from the scrape targets for %s: the pod is crashing, not running, or scaled to 0." .Release.Namespace $fullname $m.downFor | quote }}
+            summary: Mailpit is down.
+          {{- /* absent(): no pod (scaled to 0, unschedulable) leaves no target, hence no up series. */}}
+          expr: {{ printf "absent(up{%s}) or max by (job, namespace) (up{%s}) < 1" $sel $sel | quote }}
+          for: {{ $m.downFor }}
+          labels:
+            severity: warning
+        {{- end }}
+        {{- if not (has "MailpitSMTPRejected" $m.disabled) }}
+        - alert: MailpitSMTPRejected
+          annotations:
+            description: {{ printf "%s/%s rejected SMTP messages in the last %s: unparsable messages, or recipients outside MP_SMTP_ALLOWED_RECIPIENTS." .Release.Namespace $fullname $m.rejectedWindow | quote }}
+            summary: Mailpit rejects SMTP messages.
+          expr: {{ printf "sum by (job, namespace) (increase(mailpit_smtp_rejected_total{%s}[%s])) > 0" $sel $m.rejectedWindow | quote }}
+          labels:
+            severity: warning
+        {{- end }}
+{{- end }}

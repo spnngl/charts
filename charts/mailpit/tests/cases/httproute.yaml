@@ -1,0 +1,8 @@
+values:
+  httpRoute:
+    enabled: true
+    parentRefs:
+    - name: gw
+      namespace: gateway
+    hostnames:
+    - mail.example.com

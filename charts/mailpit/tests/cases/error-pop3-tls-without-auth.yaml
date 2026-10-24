@@ -1,0 +1,6 @@
+values:
+  secrets:
+    pop3Tls:
+      name: pop3-tls
+expect:
+  error: secrets.pop3Tls requires secrets.pop3Auth

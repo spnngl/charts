@@ -1,0 +1,6 @@
+# ct install with a chart PVC (kind default StorageClass).
+# kind inside a CI runner cannot create user namespaces.
+hostUsers: true
+persistence:
+  enabled: true
+  size: 100Mi

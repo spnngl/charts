@@ -1,0 +1,5 @@
+values:
+  config:
+    FOO: bar
+expect:
+  error: invalid propertyName 'FOO'

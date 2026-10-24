@@ -1,0 +1,6 @@
+values:
+  secrets:
+    smtpAuth:
+      name: smtp-htpasswd
+  config:
+    MP_SMTP_AUTH_ALLOW_INSECURE: true

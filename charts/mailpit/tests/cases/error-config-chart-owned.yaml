@@ -1,0 +1,5 @@
+values:
+  config:
+    MP_UI_BIND_ADDR: 0.0.0.0:80
+expect:
+  error: invalid propertyName 'MP_UI_BIND_ADDR'

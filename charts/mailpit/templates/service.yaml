@@ -1,0 +1,25 @@
+{{- $svc := .Values.service.http }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- $annotations := deepCopy $svc.annotations }}
+  {{- if ne $svc.type "ClusterIP" }}
+  {{- $annotations = merge $annotations (dict "ignore-check.kube-linter.io/exposed-services" "service.http.type is the user's choice.") }}
+  {{- end }}
+  {{- with $annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "mailpit.labels" . | nindent 4 }}
+  name: {{ include "mailpit.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: http
+      port: {{ $svc.port }}
+      protocol: TCP
+      targetPort: http
+  selector:
+    {{- include "mailpit.selectorLabels" . | nindent 4 }}
+  type: {{ $svc.type }}

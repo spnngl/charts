@@ -1,0 +1,281 @@
+---
+# Source: mailpit/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: mailpit
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mailpit
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mailpit-0.0.0
+  name: mailpit
+  namespace: mailpit
+spec:
+  ingress:
+    - ports:
+      - port: 8025
+        protocol: TCP
+    - ports:
+      - port: 1025
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: mailpit
+      app.kubernetes.io/name: mailpit
+  policyTypes:
+    - Ingress
+---
+# Source: mailpit/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: mailpit
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mailpit
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mailpit-0.0.0
+  name: mailpit
+  namespace: mailpit
+---
+# Source: mailpit/templates/service-smtp.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: mailpit
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mailpit
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mailpit-0.0.0
+  name: mailpit-smtp
+  namespace: mailpit
+spec:
+  ports:
+    - name: smtp
+      port: 1025
+      protocol: TCP
+      targetPort: smtp
+  selector:
+    app.kubernetes.io/instance: mailpit
+    app.kubernetes.io/name: mailpit
+  type: ClusterIP
+---
+# Source: mailpit/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: mailpit
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mailpit
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mailpit-0.0.0
+  name: mailpit
+  namespace: mailpit
+spec:
+  ports:
+    - name: http
+      port: 8025
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: mailpit
+    app.kubernetes.io/name: mailpit
+  type: ClusterIP
+---
+# Source: mailpit/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: messages live in one SQLite database with a single writer."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "Recreate on purpose: a surge pod would open the same database next to the first instance."
+  labels:
+    app.kubernetes.io/instance: mailpit
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mailpit
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mailpit-0.0.0
+  name: mailpit
+  namespace: mailpit
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: mailpit
+      app.kubernetes.io/name: mailpit
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: mailpit
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: mailpit
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: mailpit-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        -
+          env:
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+          image: "ghcr.io/spnngl/images/mailpit:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /livez
+              port: http
+              scheme: HTTP
+            periodSeconds: 10
+          name: mailpit
+          ports:
+            - containerPort: 8025
+              name: http
+              protocol: TCP
+            - containerPort: 1025
+              name: smtp
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /readyz
+              port: http
+              scheme: HTTP
+            periodSeconds: 10
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /readyz
+              port: http
+              scheme: HTTP
+            periodSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /data
+              name: data
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: mailpit
+      # Upstream closes the database within a second of SIGTERM.
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - emptyDir:
+            sizeLimit: 2Gi
+          name: data
+---
+# Source: mailpit/templates/tests/test-readyz.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    ignore-check.kube-linter.io/no-liveness-probe: "One-shot hook pod that exits within seconds."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-readiness-probe: "One-shot hook pod that exits within seconds."
+    ignore-check.kube-linter.io/non-isolated-pod: "Short-lived test pod that only dials the web UI Service."
+    ignore-check.kube-linter.io/restart-policy: "One-shot hook pod: Never is the intended policy."
+  labels:
+    app.kubernetes.io/component: test
+    app.kubernetes.io/instance: mailpit
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mailpit-test
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: mailpit-0.0.0
+  name: mailpit-test-readyz
+  namespace: mailpit
+spec:
+  automountServiceAccountToken: false
+  containers:
+    - args:
+        - readyz
+        - --listen
+        - "mailpit.mailpit.svc:8025"
+        - --webroot
+        - "/"
+        # The Service can lag the pod's readiness by a few seconds: poll, bounded.
+        - --wait
+        - --timeout
+        - 50s
+      image: "ghcr.io/spnngl/images/mailpit:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      imagePullPolicy: IfNotPresent
+      name: readyz
+      resources:
+        limits:
+          memory: 256Mi
+        requests:
+          cpu: 10m
+          memory: 32Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        privileged: false
+        readOnlyRootFilesystem: true
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+  dnsConfig:
+    options:
+    - name: ndots
+      value: "2"
+  enableServiceLinks: false
+  hostUsers: false
+  nodeSelector:
+    kubernetes.io/os: linux
+  restartPolicy: Never
+  securityContext:
+    fsGroup: 65532
+    runAsGroup: 65532
+    runAsNonRoot: true
+    runAsUser: 65532
+    seccompProfile:
+      type: RuntimeDefault
