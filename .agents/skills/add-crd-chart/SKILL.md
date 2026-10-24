@@ -68,7 +68,9 @@ repo URL, optionally a version to pin. Output: `sources/<name>-crds.yaml`,
    ```
 
    Add a short comment on the source explaining why that path (future you
-   will thank you when upstream moves it). Use `conflictsWith:` only when two
+   will thank you when upstream moves it). If the project was renamed (old
+   repo redirects), add `upstream.formerly` (name, repo, optional `keywords`
+   and upstream `chart`). Use `conflictsWith:` only when two
    of our charts define the same CRD names (e.g. channels).
 
 4. **Generate and validate**:

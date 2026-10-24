@@ -22,7 +22,8 @@ export const PATCH_OPS = ["add" "replace" "remove"]
 # `sources/schema.json` mirrors these (tests/run.nu checks it).
 export const MANIFEST_KEYS = {
   root: [name description upstream version sources conflictsWith transform]
-  upstream: [repo homepage icon license]
+  upstream: [repo homepage icon license formerly]
+  formerly: [name repo keywords chart]
   version: [tagPattern allow current]
   transform: [include exclude patches stripDocs]
   patch: [op path value reason]

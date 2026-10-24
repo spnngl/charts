@@ -73,6 +73,7 @@ export def "emit chart-record" [chart: record]: nothing -> record {
       {name: "Upstream project", url: $manifest.upstream.homepage}
       {name: "Upstream repository", url: $manifest.upstream.repo}
     ]
+    | append ($manifest.upstream.formerly | each {|f| {name: $"Former upstream repository \(($f.name)\)", url: $f.repo} })
     | append (source-paths $manifest | where kind != "release-asset" | each {|p| {name: $"Upstream CRD source \(($p.path)\)", url: (upstream-tree-url $manifest $resolved.tag $p.path)} })
     | append [
       {name: "Chart source", url: $"($REPO_URL)/tree/main/charts/($manifest.name)"}
@@ -97,7 +98,7 @@ export def "emit chart-record" [chart: record]: nothing -> record {
     home: $manifest.upstream.homepage
     ...(if $manifest.upstream.icon != null { {icon: $manifest.upstream.icon} } else { {} })
     sources: [$REPO_URL $manifest.upstream.repo]
-    keywords: ["crds" ($manifest.name | str replace -r '-crds$' '')]
+    keywords: (["crds" ($manifest.name | str replace -r '-crds$' '')] | append ($manifest.upstream.formerly | get keywords | flatten) | uniq)
     maintainers: [{name: $OWNER, url: $"https://github.com/($OWNER)"}]
     annotations: $annotations
   }
@@ -174,6 +175,24 @@ def crd-table [crds: list<record>]: nothing -> list<string> {
   ] | append $rows
 }
 
+# README note for one upstream.formerly entry: the former name, the CRD API groups, upstream's own chart.
+def formerly-note [former: record, crds: list<record>]: nothing -> list<string> {
+  let groups = ($crds | get spec.group | uniq | each {|g| $"`($g)`" })
+  let label = (if ($groups | length) == 1 { "API group" } else { "API groups" })
+  [
+    $"> **Formerly [($former.name)]\(($former.repo)\).** CRD ($label): ($groups | str join ', ')."
+    ...(if $former.chart != null {
+      [
+        $"> Upstream's own CRD chart, `($former.chart)`, keeps the former name; to switch from it,"
+        "> see [Already have these CRDs?]\(#already-have-these-crds\). Then do **not** `helm uninstall` the old"
+        "> release: it would delete the CRDs and every custom resource. Delete only its release record:"
+        "> `kubectl delete secret -n <old-namespace> -l owner=helm,name=<old-release>`."
+      ]
+    } else { [] })
+    ""
+  ]
+}
+
 # README text for a chart. `--oversized` swaps in the SQL-driver install instructions.
 export def "emit readme" [
   chart: record
@@ -198,6 +217,7 @@ export def "emit readme" [
     ""
     $"($manifest.description)."
     ""
+    ...($manifest.upstream.formerly | each {|f| formerly-note $f $crds } | flatten)
     $"CRDs are copied (if $manifest.transform.stripDocs { '' } else { 'verbatim ' })from [($slug)]\(($manifest.upstream.repo)\)"
     $"at tag [`($resolved.tag)`]\(($manifest.upstream.repo)/tree/($resolved.tag)\) \(commit `($resolved.sha)`\),"
     $"path\(s\) ($paths), and rendered as regular Helm templates so that"
