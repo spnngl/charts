@@ -76,6 +76,7 @@ the workload `metadata.annotations` (not the pod template):
 - Goldens show version and appVersion `0.0.0` and an all-zero digest: the
   runner pins them, so bumps never touch goldens.
 - kubeconform fetches CRD schemas; `CHARTTEST_OFFLINE=1` skips it.
+- `ruleTests` series values: quote `"0x70"` (YAML reads `0x70` as hex 112).
 
 ## CI (ct, kind, Helm)
 

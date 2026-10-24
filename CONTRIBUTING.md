@@ -62,8 +62,9 @@ generic; per-upstream quirks belong in the manifest (`include`, `exclude`,
 - Provide `README.md.gotmpl` and run `helm-docs`; CI checks the README is current.
 - Add `ci/*-values.yaml` scenarios for `ct install`; add `templates/tests/` for `helm test`.
 - Add render tests when the chart has logic: `tests/cases/<case>.yaml` (values, optional
-  expected error) and golden output, run by `nu tooling/charttest/mod.nu run <name>`
-  (`--update` rewrites golden files; `CHARTTEST_OFFLINE=1` skips kubeconform).
+  expected error, optional promtool `ruleTests`) and golden output, run by
+  `nu tooling/charttest/mod.nu run <name>` (needs `promtool`; `--update` rewrites golden
+  files; `CHARTTEST_OFFLINE=1` skips kubeconform).
 - Bump `version` in `Chart.yaml` on every change (`ct lint` enforces it).
 - Set `sources[0]` to `https://github.com/spnngl/charts` so GHCR links the package to this repo.
 

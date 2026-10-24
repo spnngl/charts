@@ -131,6 +131,10 @@ Standard list plus `/tests/` (anchored), `README.md.gotmpl`, `PLAN*.md`.
 
 - `tests/cases/<case>.yaml`: `values: {...}`, optional
   `expect: {error: "<stderr substring>"}`; failing cases `error-*.yaml`.
+- A PrometheusRule gets `ruleTests:` in a case rendering it: a promtool
+  test file without `rule_files` (example:
+  `charts/artifacthub-exporter/tests/cases/prometheusrule-servicemonitor.yaml`).
+  Test each alert firing and not firing at its thresholds.
 - Minimum cases: defaults, each mode, `full` (all optional objects), each
   rendering toggle, each guard, each schema rule, unknown top-level key.
 - `ci/<mode>-values.yaml` per mode, commented; `replicaCount: 0` when the
