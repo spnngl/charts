@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=./schema.json
+name: cloudnative-pg-crds
+description: CustomResourceDefinitions for CloudNativePG (PostgreSQL clusters, backups, poolers, databases, publications, subscriptions, image catalogs)
+upstream:
+  repo: https://github.com/cloudnative-pg/cloudnative-pg
+  homepage: https://cloudnative-pg.io
+  # The logo lives in the org's artwork repo, not in the operator repo.
+  icon: https://raw.githubusercontent.com/cloudnative-pg/artwork/refs/heads/main/icon/color/cloudnativepg-icon-color.svg
+  license: Apache-2.0
+version:
+  # Pre-releases (-rc) are excluded by the pattern.
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v1.30.1
+sources:
+  # controller-gen output. config/crd/kustomization.yaml only lists these
+  # files (its webhook/cainjection patches are unused), so read them as files.
+  - kind: git-path
+    path: config/crd/bases
+transform:
+  include: []
+  exclude: []
+  patches: []
