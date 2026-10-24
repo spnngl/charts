@@ -1,0 +1,36 @@
+{{- if and .Values.livekit.enabled .Values.livekit.httpRoute.enabled }}
+{{- $fullname := include "tuwunel.fullname" . }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  {{- with .Values.livekit.httpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- toYaml (merge (include "tuwunel.labels" (dict "ctx" . "component" "livekit") | fromYaml) (deepCopy .Values.livekit.httpRoute.labels)) | nindent 4 }}
+  name: {{ $fullname }}-livekit
+  namespace: {{ .Release.Namespace }}
+spec:
+  hostnames:
+    - {{ .Values.livekit.host | quote }}
+  parentRefs:
+    {{- toYaml .Values.livekit.httpRoute.parentRefs | nindent 4 }}
+  rules:
+    - backendRefs:
+        - name: {{ $fullname }}-lk-jwt
+          port: 8080
+      matches:
+        {{- range (include "tuwunel.jwtPaths" . | fromYamlArray) }}
+        - path:
+            type: PathPrefix
+            value: {{ . }}
+        {{- end }}
+    - backendRefs:
+        - name: {{ $fullname }}-livekit
+          port: 7880
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+{{- end }}

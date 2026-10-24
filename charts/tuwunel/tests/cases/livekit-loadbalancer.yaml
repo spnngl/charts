@@ -1,0 +1,29 @@
+values:
+  serverName: example.com
+  livekit:
+    enabled: true
+    host: calls.example.com
+    existingSecret:
+      name: lk-keys
+    rtc:
+      mode: LoadBalancer
+      service:
+        annotations:
+          a: b
+        externalTrafficPolicy: Local
+        loadBalancerClass: example.com/lb
+    config:
+      rtc:
+        node_ip: 203.0.113.10
+        use_external_ip: false
+  networkPolicy:
+    livekit:
+      from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+      jwt:
+        from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx

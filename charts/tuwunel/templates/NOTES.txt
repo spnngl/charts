@@ -27,6 +27,15 @@ existingSecret.name, and open registration with the token:
   config.allow_registration: true
 
 Register with that token, then close registration again (or keep the token).
+{{- if .Values.livekit.enabled }}
+
+Calls: LiveKit and lk-jwt-service answer on https://{{ .Values.livekit.host }}.
+{{- if eq .Values.livekit.rtc.mode "LoadBalancer" }}
+Point {{ .Values.livekit.host }}'s media at the load balancer of service/{{ include "tuwunel.fullname" . }}-livekit-rtc (7881/tcp, 7882/udp).
+{{- else }}
+Media is published on the node running LiveKit (7881/tcp, 7882/udp, {{ .Values.livekit.rtc.mode }}): open both ports to the internet on that node.
+{{- end }}
+{{- end }}
 {{- if not .Values.hostUsers }}
 
 hostUsers is false: the pod runs in a user namespace. Nodes without support

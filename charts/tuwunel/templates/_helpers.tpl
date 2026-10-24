@@ -181,6 +181,11 @@ over the delegation defaults.
 {{- with include "tuwunel.wellKnownHost" . }}
 {{- $_ := set $defaults "well_known" (dict "client" (printf "https://%s" .) "server" (printf "%s:443" .)) }}
 {{- end }}
+{{- if .Values.livekit.enabled }}
+{{- $wellKnown := get $defaults "well_known" | default dict }}
+{{- $_ := set $wellKnown "livekit_url" (printf "https://%s" .Values.livekit.host) }}
+{{- $_ := set $defaults "well_known" $wellKnown }}
+{{- end }}
 {{- include "tuwunel.toml" (merge $owned (deepCopy .Values.config) $defaults) }}
 {{- end }}
 
@@ -234,6 +239,33 @@ always rendered.
 {{- if .enabled }}
 {{- include "tuwunel.validateImage" (dict "key" "cinny.image" "image" .image) }}
 {{- include "tuwunel.validateExposure" (dict "key" "cinny." "ingress" .ingress "httpRoute" .httpRoute) }}
+{{- end }}
+{{- end }}
+{{- with .Values.livekit }}
+{{- if .enabled }}
+{{- if not .host }}
+{{- fail "livekit.host is required when livekit.enabled is true: the public host of LiveKit and lk-jwt-service (for example calls.example.com)" }}
+{{- end }}
+{{- if not .existingSecret.name }}
+{{- fail "livekit.existingSecret.name is required when livekit.enabled is true: a Secret holding the LiveKit API key and secret as '<key>: <secret>'" }}
+{{- end }}
+{{- if hasKey (get $.Values.config "well_known" | default dict) "livekit_url" }}
+{{- fail "config.well_known.livekit_url is set by the chart from livekit.host while livekit.enabled is true: remove it" }}
+{{- end }}
+{{- include "tuwunel.validateImage" (dict "key" "livekit.image" "image" .image) }}
+{{- include "tuwunel.validateImage" (dict "key" "livekit.jwt.image" "image" .jwt.image) }}
+{{- if and .httpRoute.enabled (not .httpRoute.parentRefs) }}
+{{- fail "livekit.httpRoute.parentRefs is required when livekit.httpRoute.enabled is true" }}
+{{- end }}
+{{- if and (eq .rtc.mode "LoadBalancer") (not (or (dig "rtc" "node_ip" "" .config) (dig "rtc" "use_external_ip" false .config))) }}
+{{- fail "livekit.config.rtc.node_ip or livekit.config.rtc.use_external_ip is required when livekit.rtc.mode is LoadBalancer: LiveKit must advertise the address of the load balancer" }}
+{{- end }}
+{{- if and .metrics.serviceMonitor.enabled .metrics.podMonitor.enabled }}
+{{- fail "livekit.metrics.serviceMonitor and livekit.metrics.podMonitor are exclusive: both would scrape LiveKit twice" }}
+{{- end }}
+{{- if and (or .metrics.service.enabled .metrics.serviceMonitor.enabled .metrics.podMonitor.enabled) (not .metrics.enabled) }}
+{{- fail "livekit.metrics.service, livekit.metrics.serviceMonitor and livekit.metrics.podMonitor need livekit.metrics.enabled" }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}
@@ -293,4 +325,35 @@ no custom homeservers).
 {{- define "tuwunel.cinnyConfig" -}}
 {{- $defaults := dict "allowCustomHomeservers" false "defaultHomeserver" 0 "homeserverList" (list .Values.serverName) }}
 {{- merge (deepCopy .Values.cinny.config) $defaults | toPrettyJson }}
+{{- end }}
+
+{{/*
+LiveKit config.yaml: the chart-owned keys win over livekit.config.
+*/}}
+{{- define "tuwunel.livekitConfig" -}}
+{{- $l := .Values.livekit }}
+{{- $owned := dict "key_file" (printf "/etc/livekit/keys/%s" $l.existingSecret.key) "port" 7880 "rtc" (dict "tcp_port" 7881 "udp_port" 7882) }}
+{{- if $l.metrics.enabled }}
+{{- $_ := set $owned "prometheus" (dict "port" 6789) }}
+{{- end }}
+{{- merge $owned (deepCopy $l.config) | toYaml }}
+{{- end }}
+
+{{/*
+"true" when the metrics Service is rendered.
+*/}}
+{{- define "tuwunel.livekitMetricsService" -}}
+{{- with .Values.livekit.metrics }}
+{{- if and .enabled (or .service.enabled .serviceMonitor.enabled) }}true{{ end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Paths served by lk-jwt-service (a YAML list), the rest of the host is LiveKit's.
+*/}}
+{{- define "tuwunel.jwtPaths" -}}
+- /delegate_delayed_leave
+- /get_token
+- /healthz
+- /sfu/get
 {{- end }}

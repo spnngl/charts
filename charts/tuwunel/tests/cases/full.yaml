@@ -162,7 +162,95 @@ values:
       updateMode: Initial
       maxAllowed:
         memory: 128Mi
+  livekit:
+    enabled: true
+    host: calls.example.com
+    existingSecret:
+      name: ts-livekit
+      key: livekit.yaml
+    image:
+      tag: 1.13.9
+    config:
+      room:
+        auto_create: false
+      rtc:
+        use_external_ip: true
+    service:
+      annotations:
+        a: b
+    ingress:
+      enabled: true
+      className: nginx
+      annotations:
+        a: b
+      labels:
+        c: d
+      tls:
+      - secretName: calls-tls
+        hosts:
+        - calls.example.com
+    httpRoute:
+      enabled: true
+      annotations:
+        a: b
+      labels:
+        c: d
+      parentRefs:
+      - name: gateway
+        namespace: gateway
+    terminationGracePeriodSeconds: 300
+    nodeSelector:
+      role: edge
+    tolerations:
+    - key: edge
+      operator: Exists
+    priorityClassName: low
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: disk
+              operator: In
+              values:
+              - ssd
+    metrics:
+      enabled: true
+      service:
+        annotations:
+          a: b
+      serviceMonitor:
+        enabled: true
+        labels:
+          release: prom
+        interval: 30s
+        scrapeTimeout: 10s
+    jwt:
+      image:
+        tag: 0.8.0
+      service:
+        annotations:
+          a: b
+      priorityClassName: low
+      tolerations:
+      - key: k
+        operator: Exists
   networkPolicy:
+    livekit:
+      from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+      jwt:
+        from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      metrics:
+        from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
     cinny:
       from:
       - namespaceSelector:

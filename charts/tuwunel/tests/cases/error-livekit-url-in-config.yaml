@@ -1,0 +1,12 @@
+values:
+  serverName: example.com
+  config:
+    well_known:
+      livekit_url: https://x.example.com
+  livekit:
+    enabled: true
+    host: calls.example.com
+    existingSecret:
+      name: lk-keys
+expect:
+  error: config.well_known.livekit_url is set by the chart

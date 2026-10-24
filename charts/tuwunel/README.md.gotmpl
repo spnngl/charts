@@ -136,6 +136,92 @@ Ingress and HTTPRoute serve `/`, so give them a host of their own.
 The image sends no security headers on purpose: Cinny frames Element Call from
 its own origin. Add them at your ingress or gateway if you want them.
 
+## Calls
+
+`livekit.enabled: true` adds the MatrixRTC stack behind Element Call and Element
+X calls: [LiveKit](https://github.com/livekit/livekit), the media server (SFU),
+and [lk-jwt-service](https://github.com/element-hq/lk-jwt-service), which checks a
+Matrix user and hands out a LiveKit token. Each runs in a Deployment of its own,
+apart from the homeserver. LiveKit runs one replica (without Redis two pods split
+the sessions) and a rollout waits up to 10 minutes
+(`livekit.terminationGracePeriodSeconds`) for calls to end. Out of scope: TURN,
+Redis and multi-node LiveKit, lk-jwt-service appservice mode (it logs a warning:
+without it, room membership is not verified, which suits a single full-access
+homeserver).
+
+One host serves both, `livekit.host`: `/sfu/get`, `/get_token`,
+`/delegate_delayed_leave` and `/healthz` go to lk-jwt-service, everything else
+(`/`, a WebSocket) to LiveKit. The chart derives the rest: the homeserver
+advertises `https://<host>` (`well_known.livekit_url`, answered from
+`/_matrix/client/unstable/org.matrix.msc4143/rtc/transports`; with
+`config.well_known.client` set, which `ingress.wellKnown` does, also from
+`.well-known/matrix/client`), lk-jwt-service connects to `wss://<host>` and accepts
+users of `serverName`.
+
+Create the Secret first: one file, `<api key>: <api secret>` (a secret of 32
+characters or more), shared by both pods (mode `0440`). The chart never creates it,
+and a rotation needs a restart of both pods.
+
+```sh
+kubectl -n matrix create secret generic livekit-keys \
+  --from-literal=keys.yaml="lk-$(openssl rand -hex 4): $(openssl rand -hex 24)"
+```
+
+```yaml
+livekit:
+  enabled: true
+  host: calls.example.com
+  existingSecret:
+    name: livekit-keys
+  ingress:
+    enabled: true
+```
+
+`livekit.config` is LiveKit's `config.yaml` (`config-sample.yaml` upstream). The
+chart owns `port`, `rtc.tcp_port`, `rtc.udp_port`, `key_file` and
+`prometheus.port`.
+
+lk-jwt-service validates each token against `https://<serverName>` from inside the
+cluster: when `serverName` differs from the homeserver host, that name must resolve
+from the pod and reach the Ingress (delegation, see [Delegation](#delegation)).
+
+### Media
+
+Media is fixed on 7881/tcp (ICE over TCP) and 7882/udp (every call, multiplexed).
+`livekit.rtc.mode` says how it reaches the pod:
+
+| Mode                 | Media reaches the pod via                      | Advertised address (unless `rtc.node_ip` or `rtc.use_external_ip` is set)  |
+| -------------------- | ---------------------------------------------- | -------------------------------------------------------------------------- |
+| `hostPort` (default) | `hostPort` 7881/tcp and 7882/udp               | the node's IP (`NODE_IP`)                                                  |
+| `hostNetwork`        | the node's interfaces                          | what LiveKit finds on them                                                 |
+| `LoadBalancer`       | a Service of its own, `<fullname>-livekit-rtc` | **must be set**: `config.rtc.node_ip` or `config.rtc.use_external_ip`      |
+
+- Both host modes need a namespace that allows privileged pods (Pod Security
+  `baseline` and `restricted` refuse `hostPort`), a node with a public IP (pin it
+  with `livekit.nodeSelector`) and 7881/tcp + 7882/udp open to the internet on it.
+  `hostPort` needs the CNI `portmap` plugin, UDP included, and keeps the pod network
+  (NetworkPolicy and `hostUsers: false` apply). `hostNetwork` has neither:
+  LiveKit's API (7880) and metrics (6789) listen on the node's IP, and NetworkPolicy
+  does not apply. LiveKit binds every address of the node: on a node with many
+  interfaces (or duplicate addresses, as on kind) it can fail with `address already
+  in use`: restrict it with `config.rtc.interfaces.includes`.
+- `hostPort` advertises the node's InternalIP: on a cloud node behind NAT, set
+  `config.rtc.use_external_ip: true` (STUN) or `config.rtc.node_ip`.
+- `LoadBalancer` keeps the `restricted` standard, but one Service with TCP and UDP
+  needs mixed-protocol support from the provider; otherwise use a host mode.
+  `livekit.rtc.service` sets its annotations, `externalTrafficPolicy` and
+  `loadBalancerClass`.
+- Without TURN, clients behind strict firewalls reach LiveKit only over 7881/tcp.
+- ingress-nginx closes idle WebSockets after 60 s: raise `proxy-read-timeout` and
+  `proxy-send-timeout` on the LiveKit Ingress.
+
+### Metrics
+
+`livekit.metrics.enabled` serves Prometheus metrics on 6789 and names the port
+`metrics`. `livekit.metrics.service`, `livekit.metrics.serviceMonitor` and
+`livekit.metrics.podMonitor` (the last two are exclusive) render a Service and
+Prometheus Operator objects. No alert rules yet.
+
 ## Storage
 
 `/var/lib/tuwunel` (database and uploaded media) takes one of four types in
@@ -177,7 +263,7 @@ separately. A repository on the same volume does not survive its loss: point
 The default image of each component is pinned by the digest recorded in the
 `artifacthub.io/images` annotation of `Chart.yaml` (Renovate updates tag and
 digest together); the homeserver follows `appVersion`. Setting `image.tag` (or
-`cinny.image.tag`) drops that digest; add `image.digest` to pin the tag again (a
+`cinny.image.tag`, `livekit.image.tag`, `livekit.jwt.image.tag`) drops that digest; add `image.digest` to pin the tag again (a
 digest without a tag is an error).
 
 The images are signed keyless with cosign (GitHub Actions OIDC). Verify a digest with:
@@ -211,13 +297,17 @@ mounts (NFS, SMB) and `hostPath` ownership need it too.
 
 - The NetworkPolicies (`networkPolicy.enabled`, on by default), one per
   component, allow only the component's port. Restrict the sources with
-  `networkPolicy.homeserver.from` and `networkPolicy.cinny.from`; empty means
-  any source: clients, other homeservers (federation) and your ingress
-  controller can be anywhere.
+  `networkPolicy.homeserver.from`, `networkPolicy.cinny.from`,
+  `networkPolicy.livekit.from` (7880), `networkPolicy.livekit.jwt.from` and
+  `networkPolicy.livekit.metrics.from`; empty means any source: clients, other
+  homeservers (federation) and your ingress controller can be anywhere. LiveKit's
+  media ports are open to any source. `hostNetwork` pods get no policy.
 - `networkPolicy.egress.enabled` (off by default) allows DNS, `peers.to` (the
   internet except private, CGNAT and link-local ranges: federation, push
-  gateways, URL previews) and `extraEgress` for the homeserver. Cinny gets no
-  egress at all: it only serves files. A server on your LAN needs an
+  gateways, URL previews) and `extraEgress` for the homeserver. lk-jwt-service and
+  LiveKit follow the same rules (lk-jwt-service reaches the homeserver and LiveKit
+  through their public addresses: add an `extraEgress` rule if those sit on a
+  private range). Cinny gets no egress at all: it only serves files. A server on your LAN needs an
   `except` entry removed, or an `extraEgress` rule.
 
 ## Autoscaling and resources
@@ -230,7 +320,9 @@ Kubernetes 1.33+). A recommender started with another `--recommender-name`
 than `default` ignores the VPA unless `verticalPodAutoscaler.recommender`
 names it. The default requests (`100m` CPU, `256Mi` memory) are scheduling
 floors, not a sizing: memory grows with the number of rooms and the cache, so
-measure then tune. Cinny's (`10m`, `16Mi`, limit `64Mi`) are floors too.
+measure then tune. Cinny's (`10m`, `16Mi`, limit `64Mi`), LiveKit's
+(`100m`, `128Mi`, limit `512Mi`; `GOMEMLIMIT` follows the limit) and
+lk-jwt-service's (`10m`, `16Mi`, limit `64Mi`) are floors too.
 
 ## Compatibility
 

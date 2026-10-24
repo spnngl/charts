@@ -1,0 +1,31 @@
+{{- if and .Values.livekit.enabled (eq .Values.livekit.rtc.mode "LoadBalancer") }}
+{{- $s := .Values.livekit.rtc.service }}
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    {{- toYaml (merge (deepCopy $s.annotations) (dict "ignore-check.kube-linter.io/exposed-services" "livekit.rtc.mode is LoadBalancer: media must reach LiveKit from the internet.")) | nindent 4 }}
+  labels:
+    {{- include "tuwunel.labels" (dict "ctx" . "component" "livekit") | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}-livekit-rtc
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- with $s.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ . }}
+  {{- end }}
+  {{- with $s.loadBalancerClass }}
+  loadBalancerClass: {{ . }}
+  {{- end }}
+  ports:
+    - name: rtc-tcp
+      port: 7881
+      protocol: TCP
+      targetPort: rtc-tcp
+    - name: rtc-udp
+      port: 7882
+      protocol: UDP
+      targetPort: rtc-udp
+  selector:
+    {{- include "tuwunel.selectorLabels" (dict "ctx" . "component" "livekit") | nindent 4 }}
+  type: LoadBalancer
+{{- end }}

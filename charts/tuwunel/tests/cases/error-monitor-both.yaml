@@ -1,0 +1,15 @@
+values:
+  serverName: example.com
+  livekit:
+    enabled: true
+    host: calls.example.com
+    existingSecret:
+      name: lk-keys
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+      podMonitor:
+        enabled: true
+expect:
+  error: livekit.metrics.serviceMonitor and livekit.metrics.podMonitor are exclusive

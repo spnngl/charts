@@ -1,0 +1,22 @@
+{{- if .Values.livekit.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- with .Values.livekit.jwt.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "tuwunel.labels" (dict "ctx" . "component" "lk-jwt") | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}-lk-jwt
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+  selector:
+    {{- include "tuwunel.selectorLabels" (dict "ctx" . "component" "lk-jwt") | nindent 4 }}
+  type: ClusterIP
+{{- end }}

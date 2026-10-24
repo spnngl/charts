@@ -1,0 +1,632 @@
+---
+# Source: tuwunel/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel
+  namespace: tuwunel
+spec:
+  ingress:
+    - ports:
+      - port: 8008
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: homeserver
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: tuwunel
+  policyTypes:
+    - Ingress
+---
+# Source: tuwunel/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/component: livekit
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-livekit
+  namespace: tuwunel
+spec:
+  ingress:
+    - ports:
+      - port: 7880
+        protocol: TCP
+    - ports:
+      - port: 7881
+        protocol: TCP
+      - port: 7882
+        protocol: UDP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: livekit
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: tuwunel
+  policyTypes:
+    - Ingress
+---
+# Source: tuwunel/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/component: lk-jwt
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-lk-jwt
+  namespace: tuwunel
+spec:
+  ingress:
+    - ports:
+      - port: 8080
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: lk-jwt
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: tuwunel
+  policyTypes:
+    - Ingress
+---
+# Source: tuwunel/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel
+  namespace: tuwunel
+---
+# Source: tuwunel/templates/configmap.yaml
+apiVersion: v1
+data:
+  tuwunel.toml: |
+    [global]
+    address = "0.0.0.0"
+    database_path = "/var/lib/tuwunel"
+    port = 8008
+    server_name = "example.com"
+    [global.well_known]
+    livekit_url = "https://calls.example.com"
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel
+  namespace: tuwunel
+---
+# Source: tuwunel/templates/livekit-configmap.yaml
+apiVersion: v1
+data:
+  config.yaml: |
+    key_file: /etc/livekit/keys/keys.yaml
+    port: 7880
+    rtc:
+      tcp_port: 7881
+      udp_port: 7882
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: livekit
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-livekit
+  namespace: tuwunel
+---
+# Source: tuwunel/templates/livekit-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: livekit
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-livekit
+  namespace: tuwunel
+spec:
+  ports:
+    - name: http
+      port: 7880
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/component: livekit
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/name: tuwunel
+  type: ClusterIP
+---
+# Source: tuwunel/templates/lk-jwt-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: lk-jwt
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-lk-jwt
+  namespace: tuwunel
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/component: lk-jwt
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/name: tuwunel
+  type: ClusterIP
+---
+# Source: tuwunel/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel
+  namespace: tuwunel
+spec:
+  ports:
+    - name: http
+      port: 8008
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/name: tuwunel
+  type: ClusterIP
+---
+# Source: tuwunel/templates/livekit-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "LiveKit runs one replica: without Redis two pods split the sessions."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "Recreate: two LiveKit pods would split the sessions, and host modes collide on a node."
+  labels:
+    app.kubernetes.io/component: livekit
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-livekit
+  namespace: tuwunel
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: livekit
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: tuwunel
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        checksum/config: 1c0c3e95de08bd6102bab97750a54c97d6c029c1d5c57b79336482433241af8f
+      labels:
+        app.kubernetes.io/component: livekit
+        app.kubernetes.io/instance: tuwunel
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: tuwunel
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: tuwunel-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: livekit
+                  resource: limits.memory
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          image: "ghcr.io/spnngl/images/livekit:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            tcpSocket:
+              port: http
+            timeoutSeconds: 2
+          name: livekit
+          ports:
+            - containerPort: 7880
+              name: http
+              protocol: TCP
+            - containerPort: 7881
+              hostPort: 7881
+              name: rtc-tcp
+              protocol: TCP
+            - containerPort: 7882
+              hostPort: 7882
+              name: rtc-udp
+              protocol: UDP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/livekit/config.yaml
+              name: config
+              readOnly: true
+              subPath: config.yaml
+            - mountPath: /etc/livekit/keys
+              name: keys
+              readOnly: true
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: tuwunel
+      terminationGracePeriodSeconds: 600
+      volumes:
+        - configMap:
+            name: tuwunel-livekit
+          name: config
+        - name: keys
+          secret:
+            defaultMode: 288
+            items:
+              - key: keys.yaml
+                path: keys.yaml
+            secretName: lk-keys
+---
+# Source: tuwunel/templates/lk-jwt-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "lk-jwt-service is stateless but has no use for more replicas: the SFU is a single node."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/component: lk-jwt
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-lk-jwt
+  namespace: tuwunel
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: lk-jwt
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: tuwunel
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: lk-jwt
+        app.kubernetes.io/instance: tuwunel
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: tuwunel
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: tuwunel-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            - name: LIVEKIT_FULL_ACCESS_HOMESERVERS
+              value: "example.com"
+            - name: LIVEKIT_KEY_FILE
+              value: "/etc/lk-jwt/keys/keys.yaml"
+            - name: LIVEKIT_URL
+              value: "wss://calls.example.com"
+          image: "ghcr.io/spnngl/images/lk-jwt-service:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          name: lk-jwt
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/lk-jwt/keys
+              name: keys
+              readOnly: true
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: tuwunel
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: keys
+          secret:
+            defaultMode: 288
+            items:
+              - key: keys.yaml
+                path: keys.yaml
+            secretName: lk-keys
+---
+# Source: tuwunel/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: tuwunel is the single writer of its embedded database."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: tuwunel
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel
+  namespace: tuwunel
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: homeserver
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: tuwunel
+  template:
+    metadata:
+      annotations:
+        checksum/config: c81a8a79e528c652ab30efa5a316a87b5aff0d85a171cf825cb72f824cc54876
+      labels:
+        app.kubernetes.io/component: homeserver
+        app.kubernetes.io/instance: tuwunel
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: tuwunel
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: tuwunel-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - args: []
+          env:
+            - name: TUWUNEL_CONFIG
+              value: /etc/tuwunel/tuwunel.toml
+          image: "ghcr.io/spnngl/images/tuwunel:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            exec:
+              command:
+              - /usr/bin/tuwunel
+              - --health-check
+            failureThreshold: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+          name: tuwunel
+          ports:
+            - containerPort: 8008
+              name: http
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - /usr/bin/tuwunel
+              - --health-check
+            failureThreshold: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            exec:
+              command:
+              - /usr/bin/tuwunel
+              - --health-check
+            failureThreshold: 180
+            periodSeconds: 10
+            timeoutSeconds: 5
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /var/lib/tuwunel
+              name: data
+            - mountPath: /etc/tuwunel/tuwunel.toml
+              name: config
+              readOnly: true
+              subPath: tuwunel.toml
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: tuwunel
+      terminationGracePeriodSeconds: 1800
+      volumes:
+        - configMap:
+            name: tuwunel
+          name: config
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi

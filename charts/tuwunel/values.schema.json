@@ -624,6 +624,624 @@
       "required": [],
       "type": "object"
     },
+    "livekit": {
+      "additionalProperties": false,
+      "description": "MatrixRTC calls: a LiveKit SFU and lk-jwt-service, which hands out LiveKit\ntokens to Matrix users. Two Deployments of their own, apart from the homeserver.",
+      "properties": {
+        "affinity": {
+          "additionalProperties": true,
+          "description": "Affinity of the LiveKit pod.",
+          "required": [],
+          "type": "object"
+        },
+        "config": {
+          "additionalProperties": true,
+          "description": "LiveKit settings (`config.yaml`, see `config-sample.yaml` upstream), rendered into a ConfigMap. Chart-owned keys (`port`, `rtc.tcp_port`, `rtc.udp_port`, `key_file`, `prometheus.port`) are rejected. Keys go through `existingSecret`, never here. TURN, Redis and multi-node are out of scope.",
+          "properties": {
+            "prometheus": {
+              "propertyNames": {
+                "not": {
+                  "enum": [
+                    "port"
+                  ],
+                  "required": []
+                },
+                "required": []
+              },
+              "required": [],
+              "type": "object"
+            },
+            "rtc": {
+              "propertyNames": {
+                "not": {
+                  "enum": [
+                    "tcp_port",
+                    "udp_port"
+                  ],
+                  "required": []
+                },
+                "required": []
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "propertyNames": {
+            "not": {
+              "enum": [
+                "port",
+                "key_file"
+              ],
+              "required": []
+            },
+            "required": []
+          },
+          "required": [],
+          "type": "object"
+        },
+        "enabled": {
+          "description": "Deploy LiveKit and lk-jwt-service (calls for Element Call and Element X). Needs `host` and `existingSecret.name`.",
+          "type": "boolean"
+        },
+        "existingSecret": {
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "description": "Key of the Secret: a file holding one line, `\u003capi key\u003e: \u003capi secret\u003e` (a secret of 32 characters or more).",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name of a Secret holding the LiveKit API key and secret, shared by LiveKit and lk-jwt-service. Required when enabled. The chart never creates it.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "host": {
+          "description": "Public host of LiveKit and lk-jwt-service (one host for both, `calls.example.com`). Required when enabled. Clients get `https://\u003chost\u003e` from the homeserver (`well_known.livekit_url`), lk-jwt-service gets `wss://\u003chost\u003e`.",
+          "type": "string"
+        },
+        "httpRoute": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "HTTPRoute annotations.",
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Create a Gateway API HTTPRoute on `livekit.host`: the lk-jwt-service paths go to lk-jwt-service, `/` to LiveKit (WebSocket).",
+              "type": "boolean"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra HTTPRoute labels.",
+              "required": [],
+              "type": "object"
+            },
+            "parentRefs": {
+              "description": "Gateways (`parentRefs`). Required when enabled.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "image": {
+          "additionalProperties": false,
+          "properties": {
+            "digest": {
+              "description": "Image digest, only valid together with `livekit.image.tag`.",
+              "pattern": "^(sha256:[a-f0-9]{64})?$",
+              "type": "string"
+            },
+            "pullPolicy": {
+              "description": "Image pull policy.",
+              "enum": [
+                "Always",
+                "IfNotPresent",
+                "Never"
+              ],
+              "type": "string"
+            },
+            "repository": {
+              "description": "Image repository.",
+              "type": "string"
+            },
+            "tag": {
+              "description": "Image tag. Empty: the tag and digest recorded for `livekit.image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `livekit.image.digest` to pin it.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "ingress": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Ingress annotations.",
+              "required": [],
+              "type": "object"
+            },
+            "className": {
+              "description": "Ingress class name (empty: cluster default).",
+              "type": "string"
+            },
+            "enabled": {
+              "description": "Create an Ingress on `livekit.host`: the lk-jwt-service paths go to lk-jwt-service, `/` to LiveKit (WebSocket).",
+              "type": "boolean"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra Ingress labels.",
+              "required": [],
+              "type": "object"
+            },
+            "tls": {
+              "description": "Ingress TLS blocks (`secretName`, `hosts`).",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "jwt": {
+          "additionalProperties": false,
+          "properties": {
+            "affinity": {
+              "additionalProperties": true,
+              "description": "Affinity of the lk-jwt-service pod.",
+              "required": [],
+              "type": "object"
+            },
+            "image": {
+              "additionalProperties": false,
+              "properties": {
+                "digest": {
+                  "description": "Image digest, only valid together with `livekit.jwt.image.tag`.",
+                  "pattern": "^(sha256:[a-f0-9]{64})?$",
+                  "type": "string"
+                },
+                "pullPolicy": {
+                  "description": "Image pull policy.",
+                  "enum": [
+                    "Always",
+                    "IfNotPresent",
+                    "Never"
+                  ],
+                  "type": "string"
+                },
+                "repository": {
+                  "description": "Image repository.",
+                  "type": "string"
+                },
+                "tag": {
+                  "description": "Image tag. Empty: the tag and digest recorded for `livekit.jwt.image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `livekit.jwt.image.digest` to pin it.",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "livenessProbe": {
+              "additionalProperties": true,
+              "description": "Liveness probe (`GET /healthz`).",
+              "properties": {
+                "failureThreshold": {
+                  "type": "integer"
+                },
+                "periodSeconds": {
+                  "type": "integer"
+                },
+                "timeoutSeconds": {
+                  "type": "integer"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "priorityClassName": {
+              "description": "Priority class name of the lk-jwt-service pod.",
+              "type": "string"
+            },
+            "readinessProbe": {
+              "additionalProperties": true,
+              "description": "Readiness probe (`GET /healthz`).",
+              "properties": {
+                "failureThreshold": {
+                  "type": "integer"
+                },
+                "periodSeconds": {
+                  "type": "integer"
+                },
+                "timeoutSeconds": {
+                  "type": "integer"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "resources": {
+              "additionalProperties": true,
+              "description": "Resources of the lk-jwt-service container. A scheduling floor, not a sizing.",
+              "properties": {
+                "limits": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "memory": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [],
+                  "type": "object"
+                },
+                "requests": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "cpu": {
+                      "type": "string"
+                    },
+                    "memory": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [],
+                  "type": "object"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "service": {
+              "additionalProperties": false,
+              "properties": {
+                "annotations": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Annotations of the lk-jwt-service Service (8080).",
+                  "required": [],
+                  "type": "object"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "startupProbe": {
+              "additionalProperties": true,
+              "description": "Startup probe (`GET /healthz`).",
+              "properties": {
+                "failureThreshold": {
+                  "type": "integer"
+                },
+                "periodSeconds": {
+                  "type": "integer"
+                },
+                "timeoutSeconds": {
+                  "type": "integer"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "terminationGracePeriodSeconds": {
+              "description": "Seconds lk-jwt-service gets to stop. It has no SIGTERM handler: a 5 s `preStop` sleep lets the endpoints drop the pod first, then the image's stop signal (SIGKILL) ends it.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "tolerations": {
+              "description": "Tolerations of the lk-jwt-service pod.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "livenessProbe": {
+          "additionalProperties": true,
+          "description": "Liveness probe (TCP on 7880).",
+          "properties": {
+            "failureThreshold": {
+              "type": "integer"
+            },
+            "periodSeconds": {
+              "type": "integer"
+            },
+            "timeoutSeconds": {
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "metrics": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Serve Prometheus metrics (`prometheus.port`, 6789) and name the container port `metrics`. On the node's address with `mode: hostNetwork`.",
+              "type": "boolean"
+            },
+            "podMonitor": {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "description": "Create a Prometheus Operator PodMonitor (no Service needed). Exclusive with `serviceMonitor`.",
+                  "type": "boolean"
+                },
+                "interval": {
+                  "description": "Scrape interval (empty: Prometheus default).",
+                  "type": "string"
+                },
+                "labels": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Extra labels.",
+                  "required": [],
+                  "type": "object"
+                },
+                "metricRelabelings": {
+                  "description": "Metric relabelings.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "relabelings": {
+                  "description": "Relabelings.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "scrapeTimeout": {
+                  "description": "Scrape timeout (empty: Prometheus default).",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "service": {
+              "additionalProperties": false,
+              "properties": {
+                "annotations": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Service annotations.",
+                  "required": [],
+                  "type": "object"
+                },
+                "enabled": {
+                  "description": "Render the metrics Service (also rendered when `serviceMonitor.enabled`).",
+                  "type": "boolean"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "serviceMonitor": {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "description": "Create a Prometheus Operator ServiceMonitor. Exclusive with `podMonitor`.",
+                  "type": "boolean"
+                },
+                "interval": {
+                  "description": "Scrape interval (empty: Prometheus default).",
+                  "type": "string"
+                },
+                "labels": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Extra labels (for example `release: kube-prometheus-stack`).",
+                  "required": [],
+                  "type": "object"
+                },
+                "metricRelabelings": {
+                  "description": "Metric relabelings.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "relabelings": {
+                  "description": "Relabelings.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "scrapeTimeout": {
+                  "description": "Scrape timeout (empty: Prometheus default).",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "nodeSelector": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Node selector of the LiveKit pod, merged over `nodeSelector`. The host modes need the node with the public IP.",
+          "required": [],
+          "type": "object"
+        },
+        "priorityClassName": {
+          "description": "Priority class name of the LiveKit pod.",
+          "type": "string"
+        },
+        "readinessProbe": {
+          "additionalProperties": true,
+          "description": "Readiness probe (`GET /` on 7880).",
+          "properties": {
+            "failureThreshold": {
+              "type": "integer"
+            },
+            "periodSeconds": {
+              "type": "integer"
+            },
+            "timeoutSeconds": {
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "resources": {
+          "additionalProperties": true,
+          "description": "Resources of the livekit container. A scheduling floor, not a sizing. `GOMEMLIMIT` follows `limits.memory`.",
+          "properties": {
+            "limits": {
+              "additionalProperties": true,
+              "properties": {
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "requests": {
+              "additionalProperties": true,
+              "properties": {
+                "cpu": {
+                  "type": "string"
+                },
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "rtc": {
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "description": "How media (7881/tcp, 7882/udp, fixed) reaches the pod. `hostPort`: published on the node, which LiveKit advertises (`NODE_IP`, unless `config.rtc.node_ip` or `config.rtc.use_external_ip` is set). `hostNetwork`: the pod uses the node's network, LiveKit finds the addresses itself. `LoadBalancer`: a Service of its own, needs `config.rtc.node_ip` or `config.rtc.use_external_ip`. Both host modes need a namespace that allows privileged pods and a node with a public IP (`livekit.nodeSelector`).",
+              "enum": [
+                "hostPort",
+                "hostNetwork",
+                "LoadBalancer"
+              ],
+              "type": "string"
+            },
+            "service": {
+              "additionalProperties": false,
+              "properties": {
+                "annotations": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Annotations of the media Service (`mode: LoadBalancer`).",
+                  "required": [],
+                  "type": "object"
+                },
+                "externalTrafficPolicy": {
+                  "description": "`externalTrafficPolicy` of the media Service. Empty: Kubernetes default.",
+                  "type": "string"
+                },
+                "loadBalancerClass": {
+                  "description": "`loadBalancerClass` of the media Service. Empty: cloud provider default.",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "service": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Annotations of the LiveKit Service (HTTP and WebSocket, 7880).",
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "startupProbe": {
+          "additionalProperties": true,
+          "description": "Startup probe (`GET /` on 7880, 406 until the node is ready).",
+          "properties": {
+            "failureThreshold": {
+              "type": "integer"
+            },
+            "periodSeconds": {
+              "type": "integer"
+            },
+            "timeoutSeconds": {
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "terminationGracePeriodSeconds": {
+          "description": "Seconds LiveKit gets to stop: it drains on SIGTERM (no limit) and a second signal forces it. The longest call a rollout waits for.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tolerations": {
+          "description": "Tolerations of the LiveKit pod.",
+          "items": {
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
     "livenessProbe": {
       "additionalProperties": true,
       "description": "Liveness probe (`tuwunel --health-check`).",
@@ -726,6 +1344,51 @@
                 "type": "object"
               },
               "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "livekit": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to reach LiveKit's HTTP and WebSocket port (7880). Empty: any source (clients through your ingress controller or gateway, lk-jwt-service). Media (7881/tcp, 7882/udp) is open to any source. Does not apply with `livekit.rtc.mode: hostNetwork`.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "jwt": {
+              "additionalProperties": false,
+              "properties": {
+                "from": {
+                  "description": "NetworkPolicyPeer list allowed to reach lk-jwt-service (8080). Empty: any source.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "metrics": {
+              "additionalProperties": false,
+              "properties": {
+                "from": {
+                  "description": "NetworkPolicyPeer list allowed to scrape LiveKit's metrics port (6789). Empty: any source.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
             }
           },
           "required": [],
