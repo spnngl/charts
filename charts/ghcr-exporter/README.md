@@ -56,7 +56,7 @@ together, weekly). Setting `image.tag` drops that digest; add `image.digest` to
 pin the tag again (`image.digest` without `image.tag` is an error).
 
 The upstream image is not signed (no cosign signature, no attestations,
-checked on v2.13.66). The digest pin only guarantees that the same bytes are
+checked on v2.13.68). The digest pin only guarantees that the same bytes are
 pulled every time, not who built them.
 
 ## Configuration
