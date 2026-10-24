@@ -1,0 +1,33 @@
+{{- if and .Values.cinny.enabled .Values.cinny.ingress.enabled }}
+{{- $fullname := printf "%s-cinny" (include "tuwunel.fullname" .) }}
+{{- $backend := dict "service" (dict "name" $fullname "port" (dict "name" "http")) }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  {{- with .Values.cinny.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- toYaml (merge (include "tuwunel.labels" (dict "ctx" . "component" "cinny") | fromYaml) (deepCopy .Values.cinny.ingress.labels)) | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- with .Values.cinny.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  rules:
+    {{- range .Values.cinny.ingress.hosts }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          - backend:
+              {{- toYaml $backend | nindent 14 }}
+            path: /
+            pathType: Prefix
+    {{- end }}
+  {{- with .Values.cinny.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

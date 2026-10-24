@@ -8,6 +8,371 @@
       "required": [],
       "type": "object"
     },
+    "cinny": {
+      "additionalProperties": false,
+      "description": "Cinny, a Matrix web client: a stateless Deployment of its own, so a client patch\nnever restarts the homeserver.",
+      "properties": {
+        "affinity": {
+          "additionalProperties": true,
+          "description": "Affinity, merged over the chart default: a preferred pod anti-affinity that spreads the replicas over nodes (set `podAntiAffinity` to replace it).",
+          "required": [],
+          "type": "object"
+        },
+        "config": {
+          "additionalProperties": true,
+          "description": "Cinny `config.json` (homeservers, featured communities, hash router, see `config.json` upstream), merged over the chart defaults: `homeserverList: [\u003cserverName\u003e]`, `defaultHomeserver: 0`, `allowCustomHomeservers: false`. Cinny resolves each entry of `homeserverList` through its `/.well-known/matrix/client`: use `ingress.wellKnown` or `httpRoute.wellKnown` when `serverName` is not the homeserver host. The browser reads the file, so keep secrets out.",
+          "required": [],
+          "type": "object"
+        },
+        "enabled": {
+          "description": "Deploy Cinny.",
+          "type": "boolean"
+        },
+        "httpRoute": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "HTTPRoute annotations.",
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Create a Gateway API HTTPRoute for Cinny (path prefix `/`).",
+              "type": "boolean"
+            },
+            "hostnames": {
+              "description": "Host names (empty: any host of the Gateway listener).",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra HTTPRoute labels.",
+              "required": [],
+              "type": "object"
+            },
+            "parentRefs": {
+              "description": "Gateways (`parentRefs`). Required when enabled.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "image": {
+          "additionalProperties": false,
+          "properties": {
+            "digest": {
+              "description": "Image digest, only valid together with `cinny.image.tag`.",
+              "pattern": "^(sha256:[a-f0-9]{64})?$",
+              "type": "string"
+            },
+            "pullPolicy": {
+              "description": "Image pull policy.",
+              "enum": [
+                "Always",
+                "IfNotPresent",
+                "Never"
+              ],
+              "type": "string"
+            },
+            "repository": {
+              "description": "Image repository.",
+              "type": "string"
+            },
+            "tag": {
+              "description": "Image tag. Empty: the tag and digest recorded for `cinny.image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `cinny.image.digest` to pin it.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "ingress": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Ingress annotations.",
+              "required": [],
+              "type": "object"
+            },
+            "className": {
+              "description": "Ingress class name (empty: cluster default).",
+              "type": "string"
+            },
+            "enabled": {
+              "description": "Create an Ingress for Cinny (path `/`).",
+              "type": "boolean"
+            },
+            "hosts": {
+              "description": "Host names. Required when enabled. Not the homeserver host unless you route paths yourself: both Ingresses serve `/`.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra Ingress labels.",
+              "required": [],
+              "type": "object"
+            },
+            "tls": {
+              "description": "Ingress TLS blocks (`secretName`, `hosts`).",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "livenessProbe": {
+          "additionalProperties": true,
+          "description": "Liveness probe (`GET /health`).",
+          "properties": {
+            "failureThreshold": {
+              "type": "integer"
+            },
+            "periodSeconds": {
+              "type": "integer"
+            },
+            "timeoutSeconds": {
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "minReadySeconds": {
+          "description": "Seconds a new pod must be ready before it counts as available (rolling updates never drop below `replicaCount`).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "podDisruptionBudget": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Create a PodDisruptionBudget (`unhealthyPodEvictionPolicy: AlwaysAllow`).",
+              "type": "boolean"
+            },
+            "maxUnavailable": {
+              "description": "Pods that may be unavailable at once (a number or a percentage).",
+              "required": [],
+              "type": [
+                "integer",
+                "string"
+              ]
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "priorityClassName": {
+          "description": "Priority class name.",
+          "type": "string"
+        },
+        "readinessProbe": {
+          "additionalProperties": true,
+          "description": "Readiness probe (`GET /health`).",
+          "properties": {
+            "failureThreshold": {
+              "type": "integer"
+            },
+            "periodSeconds": {
+              "type": "integer"
+            },
+            "timeoutSeconds": {
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "replicaCount": {
+          "description": "Replicas. Cinny is stateless: two give a rolling update with no gap.",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "resources": {
+          "additionalProperties": true,
+          "description": "Resources of the cinny container. A scheduling floor, not a sizing (VPA in `Off` mode gives recommendations). No CPU limit on purpose.",
+          "properties": {
+            "limits": {
+              "additionalProperties": true,
+              "properties": {
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "requests": {
+              "additionalProperties": true,
+              "properties": {
+                "cpu": {
+                  "type": "string"
+                },
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "service": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Service annotations.",
+              "required": [],
+              "type": "object"
+            },
+            "port": {
+              "description": "Service port (the container listens on 8080).",
+              "maximum": 65535,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": {
+              "description": "Service type.",
+              "enum": [
+                "ClusterIP",
+                "LoadBalancer",
+                "NodePort"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "startupProbe": {
+          "additionalProperties": true,
+          "description": "Startup probe (`GET /health`).",
+          "properties": {
+            "failureThreshold": {
+              "type": "integer"
+            },
+            "periodSeconds": {
+              "type": "integer"
+            },
+            "timeoutSeconds": {
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "terminationGracePeriodSeconds": {
+          "description": "Seconds Cinny gets to stop (the server drains on SIGTERM).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tolerations": {
+          "description": "Tolerations.",
+          "items": {
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "topologySpreadConstraints": {
+          "description": "Topology spread constraints. Empty: the chart spreads the replicas over zones (`topology.kubernetes.io/zone`, `ScheduleAnyway`). A list you set replaces it and needs its own `labelSelector`.",
+          "items": {
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "verticalPodAutoscaler": {
+          "additionalProperties": false,
+          "properties": {
+            "controlledResources": {
+              "description": "Resources VPA controls.",
+              "items": {
+                "enum": [
+                  "cpu",
+                  "memory"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "controlledValues": {
+              "description": "Whether VPA also scales limits.",
+              "enum": [
+                "RequestsAndLimits",
+                "RequestsOnly"
+              ],
+              "type": "string"
+            },
+            "enabled": {
+              "description": "Create a VerticalPodAutoscaler for Cinny (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).",
+              "type": "boolean"
+            },
+            "maxAllowed": {
+              "additionalProperties": true,
+              "description": "Upper bound of recommendations.",
+              "required": [],
+              "type": "object"
+            },
+            "minAllowed": {
+              "additionalProperties": true,
+              "description": "Lower bound of recommendations.",
+              "required": [],
+              "type": "object"
+            },
+            "recommender": {
+              "description": "Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`.",
+              "type": "string"
+            },
+            "updateMode": {
+              "description": "VPA update mode.",
+              "enum": [
+                "Off",
+                "Initial",
+                "Recreate",
+                "InPlaceOrRecreate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
     "config": {
       "additionalProperties": true,
       "description": "tuwunel settings (the `[global]` table of `tuwunel.toml`, see `tuwunel-example.toml` upstream), rendered into a ConfigMap. Nested maps become `[global.\u003ckey\u003e]` tables. Chart-owned keys (`server_name`, `database_path`, `address`, `port`, `unix_socket_path`) are rejected. With `ingress.wellKnown` or `httpRoute.wellKnown` the chart defaults `well_known.client` and `well_known.server`; your values win. Secrets go through `existingSecret` and the `*_file` options, never here.",
@@ -283,6 +648,21 @@
     "networkPolicy": {
       "additionalProperties": false,
       "properties": {
+        "cinny": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to reach the Cinny port. Empty: any source (browsers reach it through your ingress controller or gateway).",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
         "egress": {
           "additionalProperties": false,
           "properties": {

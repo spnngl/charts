@@ -351,6 +351,257 @@ extraVolumes: []
 # -- Extra volume mounts for the tuwunel container.
 extraVolumeMounts: []
 
+# Cinny, a Matrix web client: a stateless Deployment of its own, so a client patch
+# never restarts the homeserver.
+cinny:
+  # -- Deploy Cinny.
+  enabled: false
+  # @schema
+  # type: integer
+  # minimum: 1
+  # @schema
+  # -- Replicas. Cinny is stateless: two give a rolling update with no gap.
+  replicaCount: 2
+  # @schema
+  # type: integer
+  # minimum: 0
+  # @schema
+  # -- Seconds a new pod must be ready before it counts as available (rolling updates never drop below `replicaCount`).
+  minReadySeconds: 10
+  image:
+    # -- Image repository.
+    repository: ghcr.io/spnngl/images/cinny
+    # -- Image tag. Empty: the tag and digest recorded for `cinny.image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `cinny.image.digest` to pin it.
+    tag: ""
+    # @schema
+    # type: string
+    # pattern: "^(sha256:[a-f0-9]{64})?$"
+    # @schema
+    # -- Image digest, only valid together with `cinny.image.tag`.
+    digest: ""
+    # @schema
+    # type: string
+    # enum: [Always, IfNotPresent, Never]
+    # @schema
+    # -- Image pull policy.
+    pullPolicy: IfNotPresent
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Cinny `config.json` (homeservers, featured communities, hash router, see `config.json` upstream), merged over the chart defaults: `homeserverList: [<serverName>]`, `defaultHomeserver: 0`, `allowCustomHomeservers: false`. Cinny resolves each entry of `homeserverList` through its `/.well-known/matrix/client`: use `ingress.wellKnown` or `httpRoute.wellKnown` when `serverName` is not the homeserver host. The browser reads the file, so keep secrets out.
+  config: {}
+  service:
+    # @schema
+    # type: string
+    # enum: [ClusterIP, LoadBalancer, NodePort]
+    # @schema
+    # -- Service type.
+    type: ClusterIP
+    # @schema
+    # type: integer
+    # minimum: 1
+    # maximum: 65535
+    # @schema
+    # -- Service port (the container listens on 8080).
+    port: 8080
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Service annotations.
+    annotations: {}
+  ingress:
+    # -- Create an Ingress for Cinny (path `/`).
+    enabled: false
+    # -- Ingress class name (empty: cluster default).
+    className: ""
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Ingress annotations.
+    annotations: {}
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra Ingress labels.
+    labels: {}
+    # @schema
+    # type: array
+    # items:
+    #   type: string
+    #   minLength: 1
+    # @schema
+    # -- Host names. Required when enabled. Not the homeserver host unless you route paths yourself: both Ingresses serve `/`.
+    hosts: []
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Ingress TLS blocks (`secretName`, `hosts`).
+    tls: []
+  httpRoute:
+    # -- Create a Gateway API HTTPRoute for Cinny (path prefix `/`).
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- HTTPRoute annotations.
+    annotations: {}
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra HTTPRoute labels.
+    labels: {}
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Gateways (`parentRefs`). Required when enabled.
+    parentRefs: []
+    # @schema
+    # type: array
+    # items:
+    #   type: string
+    #   minLength: 1
+    # @schema
+    # -- Host names (empty: any host of the Gateway listener).
+    hostnames: []
+  # @schema
+  # type: integer
+  # minimum: 0
+  # @schema
+  # -- Seconds Cinny gets to stop (the server drains on SIGTERM).
+  terminationGracePeriodSeconds: 30
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Resources of the cinny container. A scheduling floor, not a sizing (VPA in `Off` mode gives recommendations). No CPU limit on purpose.
+  resources:
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    limits:
+      memory: 64Mi
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    requests:
+      cpu: 10m
+      memory: 16Mi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Startup probe (`GET /health`).
+  startupProbe:
+    failureThreshold: 30
+    periodSeconds: 2
+    timeoutSeconds: 2
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Readiness probe (`GET /health`).
+  readinessProbe:
+    failureThreshold: 3
+    periodSeconds: 10
+    timeoutSeconds: 2
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Liveness probe (`GET /health`).
+  livenessProbe:
+    failureThreshold: 3
+    periodSeconds: 10
+    timeoutSeconds: 2
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Affinity, merged over the chart default: a preferred pod anti-affinity that spreads the replicas over nodes (set `podAntiAffinity` to replace it).
+  affinity: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Topology spread constraints. Empty: the chart spreads the replicas over zones (`topology.kubernetes.io/zone`, `ScheduleAnyway`). A list you set replaces it and needs its own `labelSelector`.
+  topologySpreadConstraints: []
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Tolerations.
+  tolerations: []
+  # -- Priority class name.
+  priorityClassName: ""
+  podDisruptionBudget:
+    # -- Create a PodDisruptionBudget (`unhealthyPodEvictionPolicy: AlwaysAllow`).
+    enabled: false
+    # @schema
+    # type: [integer, string]
+    # @schema
+    # -- Pods that may be unavailable at once (a number or a percentage).
+    maxUnavailable: 1
+  verticalPodAutoscaler:
+    # -- Create a VerticalPodAutoscaler for Cinny (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).
+    enabled: false
+    # @schema
+    # type: string
+    # enum: ["Off", Initial, Recreate, InPlaceOrRecreate]
+    # @schema
+    # -- VPA update mode.
+    updateMode: "Off"
+    # @schema
+    # type: string
+    # @schema
+    # -- Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`.
+    recommender: ""
+    # @schema
+    # type: array
+    # items:
+    #   type: string
+    #   enum: [cpu, memory]
+    # @schema
+    # -- Resources VPA controls.
+    controlledResources:
+      - cpu
+      - memory
+    # @schema
+    # type: string
+    # enum: [RequestsAndLimits, RequestsOnly]
+    # @schema
+    # -- Whether VPA also scales limits.
+    controlledValues: RequestsAndLimits
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    # -- Lower bound of recommendations.
+    minAllowed: {}
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    # -- Upper bound of recommendations.
+    maxAllowed: {}
 # -- Old ControllerRevisions to keep.
 revisionHistoryLimit: 3
 
@@ -462,6 +713,14 @@ networkPolicy:
     #   type: object
     # @schema
     # -- NetworkPolicyPeer list allowed to reach the homeserver port. Empty: any source (clients, federation and the ingress controller can be anywhere).
+    from: []
+  cinny:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach the Cinny port. Empty: any source (browsers reach it through your ingress controller or gateway).
     from: []
   egress:
     # -- Restrict egress (DNS, internet peers for federation, push and URL previews, `extraEgress`).

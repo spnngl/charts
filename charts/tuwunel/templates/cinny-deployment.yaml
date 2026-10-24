@@ -1,0 +1,96 @@
+{{- if .Values.cinny.enabled }}
+{{- $c := .Values.cinny }}
+{{- $component := dict "ctx" . "component" "cinny" }}
+{{- $selector := include "tuwunel.selectorLabels" $component | fromYaml }}
+{{- $antiAffinity := dict "podAntiAffinity" (dict "preferredDuringSchedulingIgnoredDuringExecution" (list (dict "podAffinityTerm" (dict "labelSelector" (dict "matchLabels" $selector) "topologyKey" "kubernetes.io/hostname") "weight" 100))) }}
+{{- $spread := $c.topologySpreadConstraints | default (list (dict "labelSelector" (dict "matchLabels" $selector) "maxSkew" 1 "topologyKey" "topology.kubernetes.io/zone" "whenUnsatisfiable" "ScheduleAnyway")) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "Cinny is a stateless static server: two replicas keep a rolling update gap-free."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    {{- if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: isolation is the user's choice."
+    {{- end }}
+  labels:
+    {{- include "tuwunel.labels" $component | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}-cinny
+  namespace: {{ .Release.Namespace }}
+spec:
+  minReadySeconds: {{ $c.minReadySeconds }}
+  replicas: {{ $c.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "tuwunel.selectorLabels" $component | nindent 6 }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        {{- toYaml (merge (dict "checksum/config" (include (print $.Template.BasePath "/cinny-configmap.yaml") . | sha256sum)) (deepCopy .Values.podAnnotations)) | nindent 8 }}
+      labels:
+        {{- toYaml (merge (include "tuwunel.labels" $component | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      affinity:
+        {{- toYaml (merge (deepCopy $c.affinity) $antiAffinity) | nindent 8 }}
+      automountServiceAccountToken: false
+      containers:
+        - image: {{ include "tuwunel.image" (dict "image" $c.image "ctx" $) | quote }}
+          imagePullPolicy: {{ $c.image.pullPolicy }}
+          livenessProbe:
+            {{- toYaml (merge (dict "httpGet" (dict "path" "/health" "port" "http")) (deepCopy $c.livenessProbe)) | nindent 12 }}
+          name: cinny
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            {{- toYaml (merge (dict "httpGet" (dict "path" "/health" "port" "http")) (deepCopy $c.readinessProbe)) | nindent 12 }}
+          resources:
+            {{- toYaml $c.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- toYaml (merge (dict "httpGet" (dict "path" "/health" "port" "http")) (deepCopy $c.startupProbe)) | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /app/config.json
+              name: config
+              readOnly: true
+              subPath: config.json
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      enableServiceLinks: false
+      hostUsers: {{ .Values.hostUsers }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "tuwunel.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ $c.terminationGracePeriodSeconds }}
+      {{- with $c.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      topologySpreadConstraints:
+        {{- toYaml $spread | nindent 8 }}
+      volumes:
+        - configMap:
+            name: {{ include "tuwunel.fullname" . }}-cinny
+          name: config
+{{- end }}

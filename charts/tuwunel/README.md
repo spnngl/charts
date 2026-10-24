@@ -1,6 +1,6 @@
 # tuwunel
 
-Tuwunel Matrix homeserver as a hardened single-replica StatefulSet
+Tuwunel Matrix homeserver as a hardened single-replica StatefulSet, with an optional Cinny web client
 
 Runs [tuwunel](https://tuwunel.chat) ([source](https://github.com/matrix-construct/tuwunel)),
 a Matrix homeserver, as a single-replica StatefulSet. The image is built from
@@ -101,6 +101,41 @@ With `httpRoute.wellKnown`, the chart creates a second HTTPRoute
 host names; the Gateway needs a listener that accepts `serverName`. If
 `serverName` already is one of the hosts, no extra rule is added.
 
+## Cinny
+
+`cinny.enabled: true` adds [Cinny](https://github.com/cinnyapp/cinny), a Matrix
+web client: a stateless static server, in a Deployment of its own (two replicas,
+spread over nodes and zones, rolling updates that never drop below the replica
+count). It is separate from the homeserver so a Cinny update never restarts the
+database.
+
+Cinny runs in the browser and talks to the homeserver from there: the homeserver
+must be reachable at `https://<serverName>` or through delegation (see
+[Delegation](#delegation)), and Cinny needs a host of its own.
+
+```yaml
+serverName: example.com
+ingress:
+  enabled: true
+  wellKnown: true
+  hosts: [matrix.example.com]
+cinny:
+  enabled: true
+  ingress:
+    enabled: true
+    hosts: [chat.example.com]
+```
+
+`cinny.config` is Cinny's `config.json`, merged over the chart defaults
+(`homeserverList: [<serverName>]`, `defaultHomeserver: 0`,
+`allowCustomHomeservers: false`). The browser downloads it: no secrets in it.
+`cinny.ingress`, `cinny.httpRoute`, `cinny.podDisruptionBudget` and
+`cinny.verticalPodAutoscaler` work like their homeserver counterparts; Cinny's
+Ingress and HTTPRoute serve `/`, so give them a host of their own.
+
+The image sends no security headers on purpose: Cinny frames Element Call from
+its own origin. Add them at your ingress or gateway if you want them.
+
 ## Storage
 
 `/var/lib/tuwunel` (database and uploaded media) takes one of four types in
@@ -139,10 +174,11 @@ separately. A repository on the same volume does not survive its loss: point
 
 ## Image
 
-The default image is `appVersion`, pinned by the digest recorded in the
+The default image of each component is pinned by the digest recorded in the
 `artifacthub.io/images` annotation of `Chart.yaml` (Renovate updates tag and
-digest together). Setting `image.tag` drops that digest; add `image.digest` to
-pin the tag again (a digest without a tag is an error).
+digest together); the homeserver follows `appVersion`. Setting `image.tag` (or
+`cinny.image.tag`) drops that digest; add `image.digest` to pin the tag again (a
+digest without a tag is an error).
 
 The images are signed keyless with cosign (GitHub Actions OIDC). Verify a digest with:
 
@@ -173,25 +209,28 @@ mounts (NFS, SMB) and `hostPath` ownership need it too.
 
 ## Network
 
-- The NetworkPolicy (`networkPolicy.enabled`, on by default) allows the
-  homeserver port. Restrict the sources with `networkPolicy.homeserver.from`;
-  empty means any source: clients, other homeservers (federation) and your
-  ingress controller can be anywhere.
+- The NetworkPolicies (`networkPolicy.enabled`, on by default), one per
+  component, allow only the component's port. Restrict the sources with
+  `networkPolicy.homeserver.from` and `networkPolicy.cinny.from`; empty means
+  any source: clients, other homeservers (federation) and your ingress
+  controller can be anywhere.
 - `networkPolicy.egress.enabled` (off by default) allows DNS, `peers.to` (the
   internet except private, CGNAT and link-local ranges: federation, push
-  gateways, URL previews) and `extraEgress`. A server on your LAN needs an
+  gateways, URL previews) and `extraEgress` for the homeserver. Cinny gets no
+  egress at all: it only serves files. A server on your LAN needs an
   `except` entry removed, or an `extraEgress` rule.
 
 ## Autoscaling and resources
 
-There is no HPA and no PodDisruptionBudget (one replica: `maxUnavailable: 1` does
-nothing, `minAvailable: 1` blocks node drains). `verticalPodAutoscaler` supports
+The homeserver has no HPA and no PodDisruptionBudget (one replica:
+`maxUnavailable: 1` does nothing, `minAvailable: 1` blocks node drains). Cinny has
+an opt-in PodDisruptionBudget (`cinny.podDisruptionBudget`) and no HPA. `verticalPodAutoscaler` supports
 `Off`, `Initial`, `Recreate` and `InPlaceOrRecreate` (in-place resize needs
 Kubernetes 1.33+). A recommender started with another `--recommender-name`
 than `default` ignores the VPA unless `verticalPodAutoscaler.recommender`
 names it. The default requests (`100m` CPU, `256Mi` memory) are scheduling
 floors, not a sizing: memory grows with the number of rooms and the cache, so
-measure then tune.
+measure then tune. Cinny's (`10m`, `16Mi`, limit `64Mi`) are floors too.
 
 ## Compatibility
 
@@ -209,6 +248,7 @@ version ahead. Requires Kubernetes 1.33 or later.
 
 * <https://github.com/spnngl/charts>
 * <https://github.com/matrix-construct/tuwunel>
+* <https://github.com/cinnyapp/cinny>
 * <https://github.com/spnngl/images>
 
 ## Requirements
@@ -220,6 +260,46 @@ Kubernetes: `>=1.33.0-0`
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` | Affinity. |
+| cinny.affinity | object | `{}` | Affinity, merged over the chart default: a preferred pod anti-affinity that spreads the replicas over nodes (set `podAntiAffinity` to replace it). |
+| cinny.config | object | `{}` | Cinny `config.json` (homeservers, featured communities, hash router, see `config.json` upstream), merged over the chart defaults: `homeserverList: [<serverName>]`, `defaultHomeserver: 0`, `allowCustomHomeservers: false`. Cinny resolves each entry of `homeserverList` through its `/.well-known/matrix/client`: use `ingress.wellKnown` or `httpRoute.wellKnown` when `serverName` is not the homeserver host. The browser reads the file, so keep secrets out. |
+| cinny.enabled | bool | `false` | Deploy Cinny. |
+| cinny.httpRoute.annotations | object | `{}` | HTTPRoute annotations. |
+| cinny.httpRoute.enabled | bool | `false` | Create a Gateway API HTTPRoute for Cinny (path prefix `/`). |
+| cinny.httpRoute.hostnames | list | `[]` | Host names (empty: any host of the Gateway listener). |
+| cinny.httpRoute.labels | object | `{}` | Extra HTTPRoute labels. |
+| cinny.httpRoute.parentRefs | list | `[]` | Gateways (`parentRefs`). Required when enabled. |
+| cinny.image.digest | string | `""` | Image digest, only valid together with `cinny.image.tag`. |
+| cinny.image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. |
+| cinny.image.repository | string | `"ghcr.io/spnngl/images/cinny"` | Image repository. |
+| cinny.image.tag | string | `""` | Image tag. Empty: the tag and digest recorded for `cinny.image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `cinny.image.digest` to pin it. |
+| cinny.ingress.annotations | object | `{}` | Ingress annotations. |
+| cinny.ingress.className | string | `""` | Ingress class name (empty: cluster default). |
+| cinny.ingress.enabled | bool | `false` | Create an Ingress for Cinny (path `/`). |
+| cinny.ingress.hosts | list | `[]` | Host names. Required when enabled. Not the homeserver host unless you route paths yourself: both Ingresses serve `/`. |
+| cinny.ingress.labels | object | `{}` | Extra Ingress labels. |
+| cinny.ingress.tls | list | `[]` | Ingress TLS blocks (`secretName`, `hosts`). |
+| cinny.livenessProbe | object | `{"failureThreshold":3,"periodSeconds":10,"timeoutSeconds":2}` | Liveness probe (`GET /health`). |
+| cinny.minReadySeconds | int | `10` | Seconds a new pod must be ready before it counts as available (rolling updates never drop below `replicaCount`). |
+| cinny.podDisruptionBudget.enabled | bool | `false` | Create a PodDisruptionBudget (`unhealthyPodEvictionPolicy: AlwaysAllow`). |
+| cinny.podDisruptionBudget.maxUnavailable | int | `1` | Pods that may be unavailable at once (a number or a percentage). |
+| cinny.priorityClassName | string | `""` | Priority class name. |
+| cinny.readinessProbe | object | `{"failureThreshold":3,"periodSeconds":10,"timeoutSeconds":2}` | Readiness probe (`GET /health`). |
+| cinny.replicaCount | int | `2` | Replicas. Cinny is stateless: two give a rolling update with no gap. |
+| cinny.resources | object | `{"limits":{"memory":"64Mi"},"requests":{"cpu":"10m","memory":"16Mi"}}` | Resources of the cinny container. A scheduling floor, not a sizing (VPA in `Off` mode gives recommendations). No CPU limit on purpose. |
+| cinny.service.annotations | object | `{}` | Service annotations. |
+| cinny.service.port | int | `8080` | Service port (the container listens on 8080). |
+| cinny.service.type | string | `"ClusterIP"` | Service type. |
+| cinny.startupProbe | object | `{"failureThreshold":30,"periodSeconds":2,"timeoutSeconds":2}` | Startup probe (`GET /health`). |
+| cinny.terminationGracePeriodSeconds | int | `30` | Seconds Cinny gets to stop (the server drains on SIGTERM). |
+| cinny.tolerations | list | `[]` | Tolerations. |
+| cinny.topologySpreadConstraints | list | `[]` | Topology spread constraints. Empty: the chart spreads the replicas over zones (`topology.kubernetes.io/zone`, `ScheduleAnyway`). A list you set replaces it and needs its own `labelSelector`. |
+| cinny.verticalPodAutoscaler.controlledResources | list | `["cpu","memory"]` | Resources VPA controls. |
+| cinny.verticalPodAutoscaler.controlledValues | string | `"RequestsAndLimits"` | Whether VPA also scales limits. |
+| cinny.verticalPodAutoscaler.enabled | bool | `false` | Create a VerticalPodAutoscaler for Cinny (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart). |
+| cinny.verticalPodAutoscaler.maxAllowed | object | `{}` | Upper bound of recommendations. |
+| cinny.verticalPodAutoscaler.minAllowed | object | `{}` | Lower bound of recommendations. |
+| cinny.verticalPodAutoscaler.recommender | string | `""` | Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`. |
+| cinny.verticalPodAutoscaler.updateMode | string | `"Off"` | VPA update mode. |
 | config | object | `{}` | tuwunel settings (the `[global]` table of `tuwunel.toml`, see `tuwunel-example.toml` upstream), rendered into a ConfigMap. Nested maps become `[global.<key>]` tables. Chart-owned keys (`server_name`, `database_path`, `address`, `port`, `unix_socket_path`) are rejected. With `ingress.wellKnown` or `httpRoute.wellKnown` the chart defaults `well_known.client` and `well_known.server`; your values win. Secrets go through `existingSecret` and the `*_file` options, never here. |
 | dnsConfig | object | `{"options":[{"name":"ndots","value":"2"}]}` | DNS config. |
 | dnsConfig.options | list | `[{"name":"ndots","value":"2"}]` | DNS options (fewer search-list lookups for federation host names). |
@@ -252,6 +332,7 @@ Kubernetes: `>=1.33.0-0`
 | livenessProbe.periodSeconds | int | `10` |  |
 | livenessProbe.timeoutSeconds | int | `5` |  |
 | nameOverride | string | `""` | Override the chart name used in resource names and labels. |
+| networkPolicy.cinny.from | list | `[]` | NetworkPolicyPeer list allowed to reach the Cinny port. Empty: any source (browsers reach it through your ingress controller or gateway). |
 | networkPolicy.egress.dns.to | list | `[{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"kube-system"}},"podSelector":{"matchLabels":{"k8s-app":"kube-dns"}}}]` | DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels. |
 | networkPolicy.egress.enabled | bool | `false` | Restrict egress (DNS, internet peers for federation, push and URL previews, `extraEgress`). |
 | networkPolicy.egress.extraEgress | list | `[]` | Extra `NetworkPolicyEgressRule`s. |

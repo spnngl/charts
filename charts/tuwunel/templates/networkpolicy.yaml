@@ -24,4 +24,31 @@ spec:
     {{- if $np.egress.enabled }}
     - Egress
     {{- end }}
+{{- if .Values.cinny.enabled }}
+{{- $cinny := dict "ports" (list (dict "port" 8080 "protocol" "TCP")) }}
+{{- with $np.cinny.from }}{{ $_ := set $cinny "from" . }}{{ end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    {{- include "tuwunel.labels" (dict "ctx" . "component" "cinny") | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}-cinny
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- if $np.egress.enabled }}
+  {{- /* A static file server reaches nothing: the browser talks to the homeserver. */}}
+  egress: []
+  {{- end }}
+  ingress:
+    {{- toYaml (list $cinny) | nindent 4 }}
+  podSelector:
+    matchLabels:
+      {{- include "tuwunel.selectorLabels" (dict "ctx" . "component" "cinny") | nindent 6 }}
+  policyTypes:
+    - Ingress
+    {{- if $np.egress.enabled }}
+    - Egress
+    {{- end }}
+{{- end }}
 {{- end }}

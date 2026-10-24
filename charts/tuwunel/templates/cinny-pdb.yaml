@@ -1,0 +1,15 @@
+{{- if and .Values.cinny.enabled .Values.cinny.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    {{- include "tuwunel.labels" (dict "ctx" . "component" "cinny") | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}-cinny
+  namespace: {{ .Release.Namespace }}
+spec:
+  maxUnavailable: {{ .Values.cinny.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "tuwunel.selectorLabels" (dict "ctx" . "component" "cinny") | nindent 6 }}
+  unhealthyPodEvictionPolicy: AlwaysAllow
+{{- end }}
