@@ -13,8 +13,10 @@ migration, and a kill during it corrupts the database.
 
 ## Install
 
-`serverName` is required. It is the domain of your user IDs (`@alice:example.com`)
-and **permanent**: changing it later orphans the database.
+Set `serverName` yourself. It is the domain of your user IDs (`@alice:example.com`)
+and **permanent**: changing it later orphans the database. The default,
+`example.com`, is a placeholder that only lets the chart render without values: a
+release left on it serves `@user:example.com`, and an empty value is rejected.
 
 ```sh
 helm install tuwunel oci://ghcr.io/spnngl/charts/tuwunel --version <version> -n matrix --create-namespace \

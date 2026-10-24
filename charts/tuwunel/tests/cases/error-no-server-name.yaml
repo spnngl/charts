@@ -1,3 +1,4 @@
-values: {}
+values:
+  serverName: ""
 expect:
   error: serverName is required

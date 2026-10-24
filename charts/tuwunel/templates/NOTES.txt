@@ -1,6 +1,10 @@
 {{ include "tuwunel.fullname" . }} runs one tuwunel homeserver for {{ .Values.serverName }} (StatefulSet, downtime on every upgrade).
 
 The server name is permanent: changing it later orphans the database.
+{{- if eq .Values.serverName "example.com" }}
+
+WARNING: serverName is still the placeholder example.com. Set your own domain before users register: it cannot be changed afterwards.
+{{- end }}
 
 Reach it:
 {{- if .Values.ingress.enabled }}
