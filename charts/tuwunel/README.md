@@ -13,8 +13,10 @@ migration, and a kill during it corrupts the database.
 
 ## Install
 
-`serverName` is required. It is the domain of your user IDs (`@alice:example.com`)
-and **permanent**: changing it later orphans the database.
+Set `serverName` yourself. It is the domain of your user IDs (`@alice:example.com`)
+and **permanent**: changing it later orphans the database. The default,
+`example.com`, is a placeholder that only lets the chart render without values: a
+release left on it serves `@user:example.com`, and an empty value is rejected.
 
 ```sh
 helm install tuwunel oci://ghcr.io/spnngl/charts/tuwunel --version <version> -n matrix --create-namespace \
@@ -549,7 +551,7 @@ Kubernetes: `>=1.33.0-0`
 | resources | object | `{"limits":{"memory":"1Gi"},"requests":{"cpu":"100m","memory":"256Mi"}}` | Resources of the tuwunel container. A scheduling floor, not a sizing: memory grows with the number of rooms and the cache (measure, then tune; VPA in `Off` mode gives recommendations). No CPU limit on purpose. |
 | revisionHistoryLimit | int | `3` | Old ControllerRevisions to keep. |
 | securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsGroup":65532,"runAsNonRoot":true,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"}}` | Container security context of the tuwunel container. Overrides are merged onto these defaults. |
-| serverName | string | `""` | Matrix server name: the domain of user IDs (`@user:example.com`). Required. Permanent: tuwunel cannot change it after the first start without wiping the database. It need not be the host that serves the homeserver, see `ingress.wellKnown`. |
+| serverName | string | `"example.com"` | Matrix server name: the domain of user IDs (`@user:example.com`). **Set it before the first install**: the default is a placeholder, only there so the chart renders without values. Permanent: tuwunel cannot change it after the first start without wiping the database. An empty value is rejected. It need not be the host that serves the homeserver, see `ingress.wellKnown`. |
 | service.annotations | object | `{}` | Service annotations. |
 | service.port | int | `8008` | Service port (the container listens on 8008). |
 | service.type | string | `"ClusterIP"` | Service type. |

@@ -36,8 +36,8 @@ image:
 # -- Image pull secrets (list of `{name: <secret>}`).
 imagePullSecrets: []
 
-# -- Matrix server name: the domain of user IDs (`@user:example.com`). Required. Permanent: tuwunel cannot change it after the first start without wiping the database. It need not be the host that serves the homeserver, see `ingress.wellKnown`.
-serverName: ""
+# -- Matrix server name: the domain of user IDs (`@user:example.com`). **Set it before the first install**: the default is a placeholder, only there so the chart renders without values. Permanent: tuwunel cannot change it after the first start without wiping the database. An empty value is rejected. It need not be the host that serves the homeserver, see `ingress.wellKnown`.
+serverName: example.com
 
 existingSecret:
   # -- Name of a Secret to mount at `/etc/tuwunel/secrets` (mode 0440), for the `*_file` options: `registration_token_file`, `registration_shared_secret_file`, `turn_secret_file`, `ldap.bind_password_file`, `identity_provider[].client_secret_file`. Each key becomes a file. Empty: nothing mounted. The chart never creates it.
