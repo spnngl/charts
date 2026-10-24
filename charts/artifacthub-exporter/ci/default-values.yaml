@@ -1,0 +1,7 @@
+# ct install: the exporter starts with the default target (the hub totals,
+# one request to artifacthub.io per collection) and needs no credential.
+# User namespaces fail on kind inside GitHub runners.
+hostUsers: true
+metrics:
+  service:
+    enabled: true

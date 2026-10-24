@@ -1,0 +1,5 @@
+values:
+  artifacthub:
+    packages: [bitnami/redis]
+expect:
+  error: packages

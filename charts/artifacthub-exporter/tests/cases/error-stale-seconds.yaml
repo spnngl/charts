@@ -1,0 +1,9 @@
+values:
+  metrics:
+    serviceMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+      collectionStaleSeconds: 60
+expect:
+  error: collectionStaleSeconds

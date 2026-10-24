@@ -1,0 +1,332 @@
+---
+# Source: artifacthub-exporter/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: artifacthub-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: artifacthub-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: artifacthub-exporter-0.0.0
+  name: artifacthub-exporter
+  namespace: artifacthub-exporter
+spec:
+  egress:
+    - ports:
+        - port: 53
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    - ports:
+        - port: 443
+          protocol: TCP
+      to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+        - ipBlock:
+            cidr: ::/0
+    - ports:
+      - port: 3128
+        protocol: TCP
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+      ports:
+      - port: 8080
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: artifacthub-exporter
+      app.kubernetes.io/name: artifacthub-exporter
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Source: artifacthub-exporter/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: artifacthub-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: artifacthub-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: artifacthub-exporter-0.0.0
+  name: artifacthub-exporter
+  namespace: artifacthub-exporter
+---
+# Source: artifacthub-exporter/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: artifacthub-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: artifacthub-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: artifacthub-exporter-0.0.0
+  name: artifacthub-exporter-metrics
+  namespace: artifacthub-exporter
+spec:
+  ports:
+    - name: http-metrics
+      port: 8080
+      protocol: TCP
+      targetPort: http-metrics
+  selector:
+    app.kubernetes.io/instance: artifacthub-exporter
+    app.kubernetes.io/name: artifacthub-exporter
+  type: ClusterIP
+---
+# Source: artifacthub-exporter/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/env-value-from: "The API key Secret is created by the user (artifacthub.apiKey.existingSecret), so it is not in the release."
+    ignore-check.kube-linter.io/minimum-three-replicas: "A single exporter on purpose: each replica polls Artifact Hub on its own, against the same rate limit, and exports duplicate series."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/read-secret-from-env-var: "Upstream reads the API key from its flags or its environment only, with no file option."
+  labels:
+    app.kubernetes.io/instance: artifacthub-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: artifacthub-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: artifacthub-exporter-0.0.0
+  name: artifacthub-exporter
+  namespace: artifacthub-exporter
+spec:
+  minReadySeconds: 30
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: artifacthub-exporter
+      app.kubernetes.io/name: artifacthub-exporter
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        example.com/note: hello
+      labels:
+        app.kubernetes.io/instance: artifacthub-exporter
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: artifacthub-exporter
+        app.kubernetes.io/version: 0.0.0
+        example.com/team: platform
+        helm.sh/chart: artifacthub-exporter-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            - name: ARTIFACTHUB_API_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  key: id
+                  name: artifacthub-api-key
+            - name: ARTIFACTHUB_API_KEY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  key: secret
+                  name: artifacthub-api-key
+            - name: ARTIFACTHUB_HUB_STATS
+              value: "true"
+            - name: ARTIFACTHUB_ORGS
+              value: "artifacthub"
+            - name: ARTIFACTHUB_PACKAGES
+              value: "helm/artifact-hub/artifact-hub"
+            - name: ARTIFACTHUB_URL
+              value: "https://hub.example.com"
+            - name: COLLECT_INTERVAL
+              value: "1h30m"
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+            - name: WEB_ADDR
+              value: ":8080"
+            - name: WEB_PATH
+              value: /metrics
+            - name: HTTPS_PROXY
+              value: http://proxy.example.com:3128
+          image: "ghcr.io/spnngl/images/artifacthub-exporter:0.0.9"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: http-metrics
+            periodSeconds: 10
+          name: artifacthub-exporter
+          ports:
+            - containerPort: 8080
+              name: http-metrics
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 1
+            httpGet:
+              path: /
+              port: http-metrics
+            periodSeconds: 10
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /
+              port: http-metrics
+            periodSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /tmp
+              name: scratch
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-cluster-critical
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: artifacthub-exporter
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - emptyDir: {}
+          name: scratch
+---
+# Source: artifacthub-exporter/templates/prometheusrule.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app.kubernetes.io/instance: artifacthub-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: artifacthub-exporter
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: artifacthub-exporter-0.0.0
+    release: kube-prometheus-stack
+  name: artifacthub-exporter
+  namespace: artifacthub-exporter
+spec:
+  groups:
+    - name: artifacthub-exporter
+      rules:
+        - alert: ArtifactHubExporterDown
+          annotations:
+            description: "No artifacthub-exporter target of artifacthub-exporter/artifacthub-exporter has been up for 10m (pod not running or not scraped; also fires when replicaCount is 0)."
+            summary: artifacthub-exporter is down.
+          expr: "absent(up{job=\"artifacthub-exporter-metrics\", namespace=\"artifacthub-exporter\"}) or max by (job, namespace) (up{job=\"artifacthub-exporter-metrics\", namespace=\"artifacthub-exporter\"}) < 1"
+          for: 10m
+          labels:
+            severity: critical
+        - alert: ArtifactHubCollectionStale
+          annotations:
+            description: "artifacthub-exporter on {{ $labels.namespace }}/{{ $labels.pod }} has not collected {{ $labels.target }} for more than 7200 seconds: its metrics are stale. Check the logs (Artifact Hub down, rate limited, or a target that no longer exists)."
+            summary: An Artifact Hub target is not collected any more.
+          expr: "time() - artifacthub_collection_last_success_timestamp_seconds{job=\"artifacthub-exporter-metrics\", namespace=\"artifacthub-exporter\"} > 7200"
+          labels:
+            severity: warning
+        - alert: ArtifactHubCollectionErrors
+          annotations:
+            description: "artifacthub-exporter on {{ $labels.namespace }}/{{ $labels.pod }} failed to collect {{ $labels.target }} in every 2h window for 2h. Check the logs."
+            summary: An Artifact Hub target keeps failing.
+          expr: "sum by (namespace, pod, target) (increase(artifacthub_collection_errors_total{job=\"artifacthub-exporter-metrics\", namespace=\"artifacthub-exporter\"}[2h])) > 0"
+          for: 2h
+          labels:
+            severity: warning
+---
+# Source: artifacthub-exporter/templates/servicemonitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app.kubernetes.io/instance: artifacthub-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: artifacthub-exporter
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: artifacthub-exporter-0.0.0
+    release: kube-prometheus-stack
+  name: artifacthub-exporter
+  namespace: artifacthub-exporter
+spec:
+  endpoints:
+    - interval: 60s
+      path: /metrics
+      port: http-metrics
+  namespaceSelector:
+    matchNames:
+      - artifacthub-exporter
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: artifacthub-exporter
+      app.kubernetes.io/name: artifacthub-exporter
+---
+# Source: artifacthub-exporter/templates/vpa.yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    app.kubernetes.io/instance: artifacthub-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: artifacthub-exporter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: artifacthub-exporter-0.0.0
+  name: artifacthub-exporter
+  namespace: artifacthub-exporter
+spec:
+  resourcePolicy:
+    containerPolicies:
+      - containerName: artifacthub-exporter
+        controlledResources:
+        - cpu
+        - memory
+        controlledValues: RequestsAndLimits
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: artifacthub-exporter
+  updatePolicy:
+    updateMode: "Off"

@@ -1,0 +1,22 @@
+{{- if include "artifacthub-exporter.metricsService" . }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- with .Values.metrics.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "artifacthub-exporter.labels" . | nindent 4 }}
+  name: {{ include "artifacthub-exporter.metricsServiceName" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: http-metrics
+      port: 8080
+      protocol: TCP
+      targetPort: http-metrics
+  selector:
+    {{- include "artifacthub-exporter.selectorLabels" . | nindent 4 }}
+  type: ClusterIP
+{{- end }}

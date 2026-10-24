@@ -1,0 +1,6 @@
+values:
+  metrics:
+    service:
+      enabled: true
+      annotations:
+        example.com/note: hello

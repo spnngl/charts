@@ -1,0 +1,5 @@
+values:
+  artifacthub:
+    hubStats: false
+expect:
+  error: artifacthub has no target

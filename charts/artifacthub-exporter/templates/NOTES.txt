@@ -1,0 +1,28 @@
+{{- $a := .Values.artifacthub -}}
+{{ include "artifacthub-exporter.fullname" . }} runs {{ .Values.replicaCount }} artifacthub-exporter pod(s), collecting {{ $a.url }} every {{ $a.collectInterval }}.
+{{- if not (or $a.orgs $a.users $a.repositories $a.packages) }}
+
+Only the hub totals are collected (artifacthub.hubStats). Set artifacthub.orgs, users,
+repositories or packages to collect your packages.
+{{- end }}
+{{- with $a.apiKey.existingSecret.name }}
+
+The API key is read from the Secret `{{ . }}` (keys `{{ $a.apiKey.existingSecret.idKey }}` and
+`{{ $a.apiKey.existingSecret.secretKey }}`), which this release does not create, at startup only:
+roll the pod after rotating it.
+
+  kubectl -n {{ $.Release.Namespace }} rollout restart deployment/{{ include "artifacthub-exporter.fullname" $ }}
+{{- end }}
+
+Metrics are served from the last collection and never call Artifact Hub: watch
+artifacthub_collection_last_success_timestamp_seconds, not the pod status.
+
+Check the exporter:
+
+  kubectl -n {{ .Release.Namespace }} get pods -l {{ include "artifacthub-exporter.selectorLabels" . | replace ": " "=" | replace "\n" "," }}
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: pods run in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) cannot start them; set
+hostUsers=true to use host users.
+{{- end }}

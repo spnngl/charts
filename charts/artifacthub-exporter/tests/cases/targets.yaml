@@ -1,0 +1,6 @@
+values:
+  artifacthub:
+    orgs: [artifacthub]
+    users: [someone]
+    repositories: [bitnami]
+    packages: [helm/bitnami/redis, container/spnngl/tuwunel]

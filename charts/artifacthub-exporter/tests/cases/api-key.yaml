@@ -1,0 +1,7 @@
+values:
+  artifacthub:
+    apiKey:
+      existingSecret:
+        name: artifacthub-api-key
+        idKey: key-id
+        secretKey: key-secret

@@ -1,0 +1,4 @@
+values:
+  replicaCount: -1
+expect:
+  error: replicaCount

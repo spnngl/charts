@@ -16,6 +16,7 @@ Two kinds of charts live here:
 
 | Chart | Upstream | Contents |
 |-------|----------|----------|
+| [`artifacthub-exporter`](./charts/artifacthub-exporter) | [spnngl/artifacthub-exporter](https://github.com/spnngl/artifacthub-exporter) | Artifact Hub package and repository metrics exporter Deployment (ServiceMonitor/PodMonitor/PrometheusRule, VPA) |
 | [`cloudflared`](./charts/cloudflared) | [cloudflare/cloudflared](https://github.com/cloudflare/cloudflared) | Cloudflare Tunnel connector Deployment (HPA, VPA, ServiceMonitor/PodMonitor) |
 | [`cryptgeon`](./charts/cryptgeon) | [cupcakearmy/cryptgeon](https://github.com/cupcakearmy/cryptgeon) | Encrypted self-destructing notes Deployment, external Redis (Ingress/HTTPRoute, NetworkPolicy, VPA) |
 | [`ghcr-exporter`](./charts/ghcr-exporter) | [d0ugal/ghcr-exporter](https://github.com/d0ugal/ghcr-exporter) | GHCR package metrics exporter Deployment (ServiceMonitor/PodMonitor/PrometheusRule) |

@@ -1,0 +1,5 @@
+values:
+  artifacthub:
+    url: artifacthub.io
+expect:
+  error: url
