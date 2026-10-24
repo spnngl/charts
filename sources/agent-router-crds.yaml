@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=./schema.json
+name: agent-router-crds
+description: CustomResourceDefinitions for Agent Router, formerly Envoy AI Gateway (AI gateway routes, AI service backends, MCP routes, policies)
+upstream:
+  repo: https://github.com/theagentrouter/agent-router
+  homepage: https://theagentrouter.ai/
+  icon: https://raw.githubusercontent.com/theagentrouter/agent-router/refs/heads/main/site/static/img/brand/favicon.svg
+  license: Apache-2.0
+  # Renamed from envoyproxy/ai-gateway (the old repo redirects here); the CRDs
+  # kept their aigateway.envoyproxy.io API group.
+  formerly:
+    - name: Envoy AI Gateway
+      repo: https://github.com/envoyproxy/ai-gateway
+      keywords: [ai-gateway, envoy-ai-gateway, envoy]
+      chart: oci://docker.io/envoyproxy/ai-gateway-crds-helm
+version:
+  # Pre-releases (-rc) are excluded by the pattern.
+  tagPattern: '^v(\d+\.\d+\.\d+)$'
+  allow: all
+  current: v1.2.0
+sources:
+  # `make apigen` writes controller-gen output straight into upstream's
+  # ai-gateway-crds-helm chart as plain (untemplated) YAML; read it as files.
+  - kind: git-path
+    path: manifests/charts/ai-gateway-crds-helm/templates
+transform:
+  include: []
+  exclude: []
+  patches: []

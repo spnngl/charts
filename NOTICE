@@ -6,6 +6,7 @@ manifests from the following upstream projects. Each chart directory contains
 the upstream LICENSE, a NOTICE stating the pinned tag/commit and the
 modifications made, and attribution in its README.
 
+- agent-router-crds: CRDs from https://github.com/theagentrouter/agent-router (Apache-2.0)
 - agent-substrate-crds: CRDs from https://github.com/agent-substrate/substrate (Apache-2.0)
 - agentgateway-crds: CRDs from https://github.com/agentgateway/agentgateway (Apache-2.0)
 - argo-cd-crds: CRDs from https://github.com/argoproj/argo-cd (Apache-2.0)
