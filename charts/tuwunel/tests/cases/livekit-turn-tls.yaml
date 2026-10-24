@@ -1,0 +1,16 @@
+values:
+  serverName: example.com
+  livekit:
+    enabled: true
+    host: calls.example.com
+    existingSecret:
+      name: lk-keys
+    turn:
+      enabled: true
+      domain: turn.example.com
+      existingSecret:
+        name: turn-tls
+    config:
+      turn:
+        relay_range_start: 50000
+        relay_range_end: 50100

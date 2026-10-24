@@ -260,6 +260,9 @@ always rendered.
 {{- if and (eq .rtc.mode "LoadBalancer") (not (or (dig "rtc" "node_ip" "" .config) (dig "rtc" "use_external_ip" false .config))) }}
 {{- fail "livekit.config.rtc.node_ip or livekit.config.rtc.use_external_ip is required when livekit.rtc.mode is LoadBalancer: LiveKit must advertise the address of the load balancer" }}
 {{- end }}
+{{- if and .turn.enabled .turn.existingSecret.name (not .turn.domain) }}
+{{- fail "livekit.turn.domain is required when livekit.turn.existingSecret.name is set: the DNS name of the TURN server, which the certificate must cover" }}
+{{- end }}
 {{- if and .metrics.serviceMonitor.enabled .metrics.podMonitor.enabled }}
 {{- fail "livekit.metrics.serviceMonitor and livekit.metrics.podMonitor are exclusive: both would scrape LiveKit twice" }}
 {{- end }}
@@ -335,6 +338,16 @@ LiveKit config.yaml: the chart-owned keys win over livekit.config.
 {{- $owned := dict "key_file" (printf "/etc/livekit/keys/%s" $l.existingSecret.key) "port" 7880 "rtc" (dict "tcp_port" 7881 "udp_port" 7882) }}
 {{- if $l.metrics.enabled }}
 {{- $_ := set $owned "prometheus" (dict "port" 6789) }}
+{{- end }}
+{{- if $l.turn.enabled }}
+{{- $turn := dict "enabled" true "udp_port" 3478 }}
+{{- if $l.turn.existingSecret.name }}
+{{- $_ := set $turn "cert_file" "/etc/livekit/turn-tls/tls.crt" }}
+{{- $_ := set $turn "domain" $l.turn.domain }}
+{{- $_ := set $turn "key_file" "/etc/livekit/turn-tls/tls.key" }}
+{{- $_ := set $turn "tls_port" 5349 }}
+{{- end }}
+{{- $_ := set $owned "turn" $turn }}
 {{- end }}
 {{- merge $owned (deepCopy $l.config) | toYaml }}
 {{- end }}

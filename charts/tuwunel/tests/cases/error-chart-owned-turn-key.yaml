@@ -1,0 +1,12 @@
+values:
+  serverName: example.com
+  livekit:
+    enabled: true
+    host: calls.example.com
+    existingSecret:
+      name: lk-keys
+    config:
+      turn:
+        udp_port: 1
+expect:
+  error: udp_port

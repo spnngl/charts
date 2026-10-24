@@ -85,6 +85,22 @@ spec:
               {{- end }}
               name: rtc-udp
               protocol: UDP
+            {{- if $l.turn.enabled }}
+            - containerPort: 3478
+              {{- if $hostPort }}
+              hostPort: 3478
+              {{- end }}
+              name: turn-udp
+              protocol: UDP
+            {{- if $l.turn.existingSecret.name }}
+            - containerPort: 5349
+              {{- if $hostPort }}
+              hostPort: 5349
+              {{- end }}
+              name: turn-tls
+              protocol: TCP
+            {{- end }}
+            {{- end }}
             {{- if $l.metrics.enabled }}
             - containerPort: 6789
               name: metrics
@@ -110,6 +126,11 @@ spec:
             - mountPath: /etc/livekit/keys
               name: keys
               readOnly: true
+            {{- if and $l.turn.enabled $l.turn.existingSecret.name }}
+            - mountPath: /etc/livekit/turn-tls
+              name: turn-tls
+              readOnly: true
+            {{- end }}
       dnsConfig:
         {{- toYaml .Values.dnsConfig | nindent 8 }}
       {{- if $hostNetwork }}
@@ -152,4 +173,15 @@ spec:
               - key: {{ $l.existingSecret.key }}
                 path: {{ $l.existingSecret.key }}
             secretName: {{ $l.existingSecret.name }}
+        {{- if and $l.turn.enabled $l.turn.existingSecret.name }}
+        - name: turn-tls
+          secret:
+            defaultMode: 288
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+            secretName: {{ $l.turn.existingSecret.name }}
+        {{- end }}
 {{- end }}
