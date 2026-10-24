@@ -3,12 +3,12 @@ apiVersion: v2
 name: ghcr-exporter
 description: Prometheus exporter for GitHub Container Registry package metrics (ghcr-exporter) running as a hardened Deployment
 type: application
-version: 0.2.1
+version: 0.2.2
 # renovate: datasource=docker depName=ghcr.io/d0ugal/ghcr-exporter
 appVersion: "v2.13.68"
 kubeVersion: ">=1.33.0-0"
 home: https://github.com/d0ugal/ghcr-exporter
-icon: https://avatars.githubusercontent.com/u/48211?s=200
+icon: https://pub-88a5d59bf94746e7bb5fada7650fc67e.r2.dev/generic/ghcr.png
 sources:
   - https://github.com/spnngl/charts
   - https://github.com/d0ugal/ghcr-exporter

@@ -6,10 +6,12 @@ description: >-
   CustomResourceDefinitions for the Kubernetes Vertical Pod Autoscaler
   (VerticalPodAutoscaler, checkpoints)
 type: application
-version: 1.8.3
+version: 1.8.4
 appVersion: 1.8.1
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler
+icon: >-
+  https://user-images.githubusercontent.com/29163931/284109366-14e9484c-5def-4fa1-a8da-4f23b49c2cce.png
 sources:
 - https://github.com/spnngl/charts
 - https://github.com/kubernetes/autoscaler
@@ -54,5 +56,5 @@ annotations:
   charts.spnngl.io/upstream-commit: de59752fd24e25cca63e8e779561b97c9240623a
   artifacthub.io/changes: |
     - >-
-      Upstream CRDs updated from vertical-pod-autoscaler-1.8.0 to
-      vertical-pod-autoscaler-1.8.1
+      Chart regenerated with updated tooling (upstream unchanged at
+      vertical-pod-autoscaler-1.8.1)
