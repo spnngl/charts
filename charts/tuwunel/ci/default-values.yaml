@@ -1,0 +1,6 @@
+serverName: example.test
+hostUsers: true
+persistence:
+  data:
+    volumeClaimTemplate:
+      size: 100Mi

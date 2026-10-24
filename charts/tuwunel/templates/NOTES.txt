@@ -1,0 +1,35 @@
+{{ include "tuwunel.fullname" . }} runs one tuwunel homeserver for {{ .Values.serverName }} (StatefulSet, downtime on every upgrade).
+
+The server name is permanent: changing it later orphans the database.
+
+Reach it:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+  https://{{ . }}
+{{- end }}
+{{- end }}
+{{- if .Values.httpRoute.enabled }}
+{{- range .Values.httpRoute.hostnames }}
+  https://{{ . }}
+{{- end }}
+{{- end }}
+  kubectl -n {{ .Release.Namespace }} port-forward service/{{ include "tuwunel.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+  then open http://127.0.0.1:{{ .Values.service.port }}/_matrix/client/versions
+
+First administrator: the first user to register becomes admin. Registration is
+closed by default. Create a Secret with a token, mount it through
+existingSecret.name, and open registration with the token:
+
+  kubectl -n {{ .Release.Namespace }} create secret generic <name> --from-literal=registration_token=<token>
+
+  existingSecret.name: <name>
+  config.registration_token_file: /etc/tuwunel/secrets/registration_token
+  config.allow_registration: true
+
+Register with that token, then close registration again (or keep the token).
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: the pod runs in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) or volumes without idmapped
+mounts (NFS/SMB) cannot start it; set hostUsers=true to use host users.
+{{- end }}

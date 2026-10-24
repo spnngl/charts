@@ -1,0 +1,11 @@
+{{- include "tuwunel.validate" . }}
+apiVersion: v1
+data:
+  tuwunel.toml: |
+    {{- include "tuwunel.config" . | nindent 4 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "tuwunel.labels" (dict "ctx" . "component" "homeserver") | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}
+  namespace: {{ .Release.Namespace }}

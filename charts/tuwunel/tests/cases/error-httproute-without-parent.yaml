@@ -1,0 +1,6 @@
+values:
+  serverName: example.com
+  httpRoute:
+    enabled: true
+expect:
+  error: httpRoute.parentRefs is required

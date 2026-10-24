@@ -1,0 +1,98 @@
+values:
+  serverName: example.com
+  nameOverride: ts
+  imagePullSecrets:
+  - name: regcred
+  existingSecret:
+    name: ts-secrets
+  config:
+    allow_registration: true
+    registration_token_file: /etc/tuwunel/secrets/registration_token
+    db_cache_capacity_mb: 256
+    max_request_size: 20000000
+    ip_range_denylist:
+    - 10.0.0.0/8
+    - 127.0.0.0/8
+    well_known:
+      support_page: https://example.com/support
+    ldap:
+      enable: false
+  persistence:
+    data:
+      volumeClaimTemplate:
+        storageClassName: fast
+        size: 50Gi
+        annotations:
+          a: b
+        labels:
+          c: d
+  service:
+    annotations:
+      a: b
+  ingress:
+    enabled: true
+    wellKnown: true
+    className: nginx
+    annotations:
+      a: b
+    labels:
+      c: d
+    hosts:
+    - matrix.example.com
+    tls:
+    - secretName: matrix-tls
+      hosts:
+      - matrix.example.com
+      - example.com
+  httpRoute:
+    enabled: true
+    wellKnown: true
+    annotations:
+      a: b
+    labels:
+      c: d
+    parentRefs:
+    - name: gateway
+      namespace: gateway
+    hostnames:
+    - matrix.example.com
+  verticalPodAutoscaler:
+    enabled: true
+    recommender: custom
+    minAllowed:
+      cpu: 50m
+      memory: 128Mi
+    maxAllowed:
+      memory: 4Gi
+  serviceAccount:
+    annotations:
+      a: b
+  podAnnotations:
+    a: b
+  podLabels:
+    c: d
+  priorityClassName: low
+  tolerations:
+  - key: k
+    operator: Exists
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: disk
+            operator: In
+            values:
+            - ssd
+  extraVolumes:
+  - name: scripts
+    emptyDir: {}
+  extraVolumeMounts:
+  - name: scripts
+    mountPath: /scripts
+  extraArgs:
+  - --read-only
+  extraEnv:
+  - name: TZ
+    value: UTC
+  hostUsers: true

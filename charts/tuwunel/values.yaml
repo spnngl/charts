@@ -1,0 +1,511 @@
+# yaml-language-server: $schema=values.schema.json
+# @schema.root
+# title: tuwunel values
+# @schema.root
+# -- Override the chart name used in resource names and labels.
+nameOverride: ""
+# -- Override the full resource name (default `<release>-<chart>`).
+fullnameOverride: ""
+
+image:
+  # -- Image repository.
+  repository: ghcr.io/spnngl/images/tuwunel
+  # -- Image tag. Empty: the tag and digest recorded for `image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.
+  tag: ""
+  # @schema
+  # type: string
+  # pattern: "^(sha256:[a-f0-9]{64})?$"
+  # @schema
+  # -- Image digest, only valid together with `image.tag`.
+  digest: ""
+  # @schema
+  # type: string
+  # enum: [Always, IfNotPresent, Never]
+  # @schema
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+# @schema
+# -- Image pull secrets (list of `{name: <secret>}`).
+imagePullSecrets: []
+
+# -- Matrix server name: the domain of user IDs (`@user:example.com`). Required. Permanent: tuwunel cannot change it after the first start without wiping the database. It need not be the host that serves the homeserver, see `ingress.wellKnown`.
+serverName: ""
+
+existingSecret:
+  # -- Name of a Secret to mount at `/etc/tuwunel/secrets` (mode 0440), for the `*_file` options: `registration_token_file`, `registration_shared_secret_file`, `turn_secret_file`, `ldap.bind_password_file`, `identity_provider[].client_secret_file`. Each key becomes a file. Empty: nothing mounted. The chart never creates it.
+  name: ""
+
+# @schema
+# type: object
+# additionalProperties: true
+# propertyNames:
+#   pattern: "^[a-z0-9_]+$"
+#   not:
+#     enum: [server_name, database_path, address, port, unix_socket_path]
+# @schema
+# -- tuwunel settings (the `[global]` table of `tuwunel.toml`, see `tuwunel-example.toml` upstream), rendered into a ConfigMap. Nested maps become `[global.<key>]` tables. Chart-owned keys (`server_name`, `database_path`, `address`, `port`, `unix_socket_path`) are rejected. With `ingress.wellKnown` or `httpRoute.wellKnown` the chart defaults `well_known.client` and `well_known.server`; your values win. Secrets go through `existingSecret` and the `*_file` options, never here.
+config: {}
+
+persistence:
+  data:
+    # @schema
+    # type: string
+    # enum: [volumeClaimTemplate, existingClaim, hostPath, emptyDir]
+    # @schema
+    # -- Where `/var/lib/tuwunel` (database and uploaded media) lives. `volumeClaimTemplate` creates a PVC and keeps it on uninstall; the other types use the matching sub-section.
+    type: volumeClaimTemplate
+    volumeClaimTemplate:
+      # -- StorageClass (empty: cluster default).
+      storageClassName: ""
+      # @schema
+      # type: array
+      # items:
+      #   type: string
+      # @schema
+      # -- Access modes.
+      accessModes:
+        - ReadWriteOnce
+      # -- Requested size. The database and every uploaded file live here: size it for media. The template is immutable once installed: resize the PVC, see the README.
+      size: 10Gi
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- PVC annotations.
+      annotations: {}
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- PVC labels.
+      labels: {}
+    existingClaim:
+      # -- Name of an existing PVC (`type: existingClaim`).
+      name: ""
+      # -- Sub-path inside the claim.
+      subPath: ""
+    hostPath:
+      # -- Absolute node path (`type: hostPath`), owned by uid/gid 65532. Pin the pod to the node.
+      path: ""
+      # @schema
+      # type: string
+      # enum: [Directory, DirectoryOrCreate]
+      # @schema
+      # -- `hostPath` type. `DirectoryOrCreate` makes a root-owned directory the server cannot write.
+      type: Directory
+    emptyDir:
+      # -- Size limit (`type: emptyDir`, everything is lost with the pod). Empty: none.
+      sizeLimit: ""
+
+service:
+  # @schema
+  # type: string
+  # enum: [ClusterIP, LoadBalancer, NodePort]
+  # @schema
+  # -- Service type.
+  type: ClusterIP
+  # @schema
+  # type: integer
+  # minimum: 1
+  # maximum: 65535
+  # @schema
+  # -- Service port (the container listens on 8008).
+  port: 8008
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Service annotations.
+  annotations: {}
+
+ingress:
+  # -- Create an Ingress for the homeserver (path `/`).
+  enabled: false
+  # -- Delegate `serverName` to the homeserver host: add a rule on host `serverName`, path `/.well-known/matrix`, and default `well_known.client` to `https://<first host>` and `well_known.server` to `<first host>:443`. For a `serverName` that differs from the homeserver host (`example.com` served by `matrix.example.com`). Needs `hosts`. Add `serverName` to `tls`.
+  wellKnown: false
+  # -- Ingress class name (empty: cluster default).
+  className: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Ingress annotations.
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra Ingress labels (for example the label an external-dns `--label-filter` selects).
+  labels: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   minLength: 1
+  # @schema
+  # -- Host names. Required when enabled. The first one is the homeserver host.
+  hosts: []
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Ingress TLS blocks (`secretName`, `hosts`).
+  tls: []
+
+httpRoute:
+  # -- Create a Gateway API HTTPRoute for the homeserver (path prefix `/`).
+  enabled: false
+  # -- Delegate `serverName` to the homeserver host: create a second HTTPRoute (`<fullname>-well-known`) on host name `serverName`, path prefix `/.well-known/matrix`, and default `well_known.client` to `https://<first host name>` and `well_known.server` to `<first host name>:443`. Needs `hostnames`, and a Gateway listener accepting `serverName`.
+  wellKnown: false
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- HTTPRoute annotations.
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra HTTPRoute labels.
+  labels: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Gateways (`parentRefs`). Required when enabled.
+  parentRefs: []
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   minLength: 1
+  # @schema
+  # -- Host names (empty: any host of the Gateway listener). The first one is the homeserver host.
+  hostnames: []
+
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Seconds the homeserver gets to stop. Upstream asks for 1800: a start after an upgrade can run a one-way database migration, and a kill during it corrupts the database.
+terminationGracePeriodSeconds: 1800
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Resources of the tuwunel container. A scheduling floor, not a sizing: memory grows with the number of rooms and the cache (measure, then tune; VPA in `Off` mode gives recommendations). No CPU limit on purpose.
+resources:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  limits:
+    memory: 1Gi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  requests:
+    cpu: 100m
+    memory: 256Mi
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Startup probe (`tuwunel --health-check`). 30 minutes: a start after an upgrade can run a long database migration, during which the listener is closed.
+startupProbe:
+  failureThreshold: 180
+  periodSeconds: 10
+  timeoutSeconds: 5
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Readiness probe (`tuwunel --health-check`).
+readinessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+  timeoutSeconds: 5
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Liveness probe (`tuwunel --health-check`).
+livenessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+  timeoutSeconds: 5
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Affinity.
+affinity: {}
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Tolerations.
+tolerations: []
+# -- Priority class name.
+priorityClassName: ""
+
+verticalPodAutoscaler:
+  # -- Create a VerticalPodAutoscaler for the homeserver (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).
+  enabled: false
+  # @schema
+  # type: string
+  # enum: ["Off", Initial, Recreate, InPlaceOrRecreate]
+  # @schema
+  # -- VPA update mode.
+  updateMode: "Off"
+  # @schema
+  # type: string
+  # @schema
+  # -- Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`. Set it when the cluster's recommender runs under another `--recommender-name`: a VPA nobody serves gets no recommendation.
+  recommender: ""
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   enum: [cpu, memory]
+  # @schema
+  # -- Resources VPA controls.
+  controlledResources:
+    - cpu
+    - memory
+  # @schema
+  # type: string
+  # enum: [RequestsAndLimits, RequestsOnly]
+  # @schema
+  # -- Whether VPA also scales limits.
+  controlledValues: RequestsAndLimits
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Lower bound of recommendations (for example `{cpu: 25m, memory: 64Mi}`).
+  minAllowed: {}
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Upper bound of recommendations.
+  maxAllowed: {}
+
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+#       minLength: 1
+#       not:
+#         pattern: '^(?:CONDUIT|CONDUWUIT|TUWUNEL)_(?:CONFIG|SERVER_NAME|DATABASE_PATH|ADDRESS|PORT|UNIX_SOCKET_PATH)$'
+# @schema
+# -- Extra environment variables (`EnvVar` list) for the tuwunel container. `TUWUNEL_<KEY>` variables win over the config file. Variables for chart-owned settings and the config file path are rejected.
+extraEnv: []
+# @schema
+# type: array
+# items:
+#   type: string
+#   minLength: 1
+#   not:
+#     pattern: '^(?:-[cO]|--(?:config|option|health-check|generate-config|regenerate-config|restore-backup|test|bench)(?:=.*)?$)'
+# @schema
+# -- Extra `tuwunel` options, after the chart's own (none). Options for the config file and options that exit or start another mode are rejected.
+extraArgs: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volumes.
+extraVolumes: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volume mounts for the tuwunel container.
+extraVolumeMounts: []
+
+# -- Old ControllerRevisions to keep.
+revisionHistoryLimit: 3
+
+serviceAccount:
+  # -- Create the ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false).
+  name: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- ServiceAccount annotations.
+  annotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Pod annotations.
+podAnnotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Extra pod labels.
+podLabels: {}
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Pod security context. Overrides are merged onto these defaults. `fsGroup` does not apply to NFS/SMB volumes or `hostPath`.
+podSecurityContext:
+  fsGroup: 65532
+  fsGroupChangePolicy: OnRootMismatch
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Container security context of the tuwunel container. Overrides are merged onto these defaults.
+securityContext:
+  allowPrivilegeEscalation: false
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: boolean
+# @schema
+# -- Run the pods in a user namespace (`false`: uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) and idmapped mounts on every volume's file system (not NFS/SMB, not `hostPath` on some file systems); pods fail to start otherwise. `true` uses host users.
+hostUsers: false
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Node selector. With a `hostPath`, pin the pod to the node.
+nodeSelector:
+  kubernetes.io/os: linux
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- DNS config.
+dnsConfig:
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  #   additionalProperties: true
+  # @schema
+  # -- DNS options (fewer search-list lookups for federation host names).
+  options:
+    - name: ndots
+      value: "2"
+
+networkPolicy:
+  # -- Create a NetworkPolicy per component (ingress: the homeserver port).
+  enabled: true
+  homeserver:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach the homeserver port. Empty: any source (clients, federation and the ingress controller can be anywhere).
+    from: []
+  egress:
+    # -- Restrict egress (DNS, internet peers for federation, push and URL previews, `extraEgress`).
+    enabled: false
+    dns:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels.
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    peers:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- Internet peers (any port). Default: the internet, not the private, CGNAT and link-local ranges, so a compromised pod cannot move sideways. Remove an `except` entry to reach a server there.
+      to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 100.64.0.0/10
+              - 127.0.0.0/8
+              - 169.254.0.0/16
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+              - fc00::/7
+              - fe80::/10
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Extra `NetworkPolicyEgressRule`s.
+    extraEgress: []

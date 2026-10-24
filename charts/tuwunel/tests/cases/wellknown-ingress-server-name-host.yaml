@@ -1,0 +1,14 @@
+values:
+  serverName: example.com
+  ingress:
+    enabled: true
+    wellKnown: true
+    hosts:
+    - example.com
+  httpRoute:
+    enabled: true
+    wellKnown: true
+    parentRefs:
+    - name: gateway
+    hostnames:
+    - example.com

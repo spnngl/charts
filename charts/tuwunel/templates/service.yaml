@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "tuwunel.labels" (dict "ctx" . "component" "homeserver") | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      protocol: TCP
+      targetPort: http
+  selector:
+    {{- include "tuwunel.selectorLabels" (dict "ctx" . "component" "homeserver") | nindent 4 }}
+  type: {{ .Values.service.type }}

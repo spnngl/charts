@@ -1,0 +1,27 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $np := .Values.networkPolicy }}
+{{- $homeserver := dict "ports" (list (dict "port" 8008 "protocol" "TCP")) }}
+{{- with $np.homeserver.from }}{{ $_ := set $homeserver "from" . }}{{ end }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    {{- include "tuwunel.labels" (dict "ctx" . "component" "homeserver") | nindent 4 }}
+  name: {{ include "tuwunel.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- if $np.egress.enabled }}
+  egress:
+    {{- include "tuwunel.egress" . | nindent 4 }}
+  {{- end }}
+  ingress:
+    {{- toYaml (list $homeserver) | nindent 4 }}
+  podSelector:
+    matchLabels:
+      {{- include "tuwunel.selectorLabels" (dict "ctx" . "component" "homeserver") | nindent 6 }}
+  policyTypes:
+    - Ingress
+    {{- if $np.egress.enabled }}
+    - Egress
+    {{- end }}
+{{- end }}

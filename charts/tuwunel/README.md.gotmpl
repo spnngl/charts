@@ -1,0 +1,208 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.description" . }}
+
+Runs [tuwunel](https://tuwunel.chat) ([source](https://github.com/matrix-construct/tuwunel)),
+a Matrix homeserver, as a single-replica StatefulSet. The image is built from
+[spnngl/images](https://github.com/spnngl/images): distroless, non-root, no shell.
+
+One replica only: tuwunel is the single writer of its embedded database. Every
+upgrade or reschedule is a short downtime. The pod gets 30 minutes to stop, and
+as long to start: the first start after an upgrade can run a one-way database
+migration, and a kill during it corrupts the database.
+
+## Install
+
+`serverName` is required. It is the domain of your user IDs (`@alice:example.com`)
+and **permanent**: changing it later orphans the database.
+
+```sh
+helm install tuwunel oci://ghcr.io/spnngl/charts/tuwunel --version <version> -n matrix --create-namespace \
+  --set serverName=example.com
+```
+
+### First administrator
+
+The first user to register becomes the administrator, and registration is closed
+by default. Create a Secret holding a registration token, mount it, and open
+registration with that token:
+
+```sh
+kubectl -n matrix create secret generic tuwunel-secrets --from-literal=registration_token=<token>
+```
+
+```yaml
+serverName: example.com
+existingSecret:
+  name: tuwunel-secrets
+config:
+  allow_registration: true
+  registration_token_file: /etc/tuwunel/secrets/registration_token
+```
+
+Register the administrator with a Matrix client, using the token. Then close
+registration again (`allow_registration: false`), or keep the token so only
+people who hold it can register.
+
+### Settings
+
+Everything else goes in `config`: the `[global]` table of `tuwunel.toml`
+(see [`tuwunel-example.toml`](https://github.com/matrix-construct/tuwunel/blob/main/tuwunel-example.toml)).
+The chart renders it into a ConfigMap and points `TUWUNEL_CONFIG` at it. A map
+becomes a `[global.<key>]` table (`well_known`, `ldap`, `tls`).
+`TUWUNEL_<KEY>` environment variables (`extraEnv`) win over the file.
+
+Keys the chart owns (`server_name`, `database_path`, `address`, `port`,
+`unix_socket_path`) are rejected, as are `extraEnv` names for them and
+`extraArgs` that select another config file or mode (`--config`, `--option`,
+`--health-check`, ...).
+
+Keep secrets out of `config`: it lands in a ConfigMap, Helm release history and
+Git. The `*_file` options read a file instead, and `existingSecret.name` mounts a
+Secret of yours at `/etc/tuwunel/secrets`, one file per key:
+`registration_token_file`, `registration_shared_secret_file`,
+`turn_secret_file`, `ldap.bind_password_file` and
+`identity_provider[].client_secret_file`. The chart never creates the Secret.
+
+On nodes with many cores the database thread pool can exceed the pod's PID
+limit and tuwunel fails to start with `EAGAIN`. Set `config.db_pool_max_workers`
+(for example `512`) or raise the node's `podPidsLimit`
+([upstream notes](https://github.com/matrix-construct/tuwunel/blob/main/docs/deploying/container-security.md)).
+
+## Exposing it
+
+`ingress` (Ingress) and `httpRoute` (Gateway API HTTPRoute) expose the
+homeserver on `/`; both need explicit hosts (and `parentRefs` for the route).
+Terminate TLS in front: tuwunel serves plain HTTP on 8008.
+
+### Delegation
+
+Often `serverName` (`example.com`) differs from the host serving the homeserver
+(`matrix.example.com`). Matrix clients and servers then look for
+`https://example.com/.well-known/matrix/{client,server}`. `ingress.wellKnown` or
+`httpRoute.wellKnown` adds that rule on host `serverName` (path prefix
+`/.well-known/matrix` only, the rest of the host stays yours) and defaults
+`well_known.client` to `https://<first host>` and `well_known.server` to
+`<first host>:443`. Your own `config.well_known` values win.
+
+```yaml
+serverName: example.com
+ingress:
+  enabled: true
+  wellKnown: true
+  hosts: [matrix.example.com]
+  tls:
+    - secretName: matrix-tls
+      hosts: [matrix.example.com, example.com]
+```
+
+With `httpRoute.wellKnown`, the chart creates a second HTTPRoute
+(`<fullname>-well-known`) on host name `serverName`, because a route holds one set of
+host names; the Gateway needs a listener that accepts `serverName`. If
+`serverName` already is one of the hosts, no extra rule is added.
+
+## Storage
+
+`/var/lib/tuwunel` (database and uploaded media) takes one of four types in
+`persistence.data.type`:
+
+- `volumeClaimTemplate` (default): a PVC from the StatefulSet, `10Gi`. The
+  database **and every uploaded file** live there: size it for media. The
+  StatefulSet keeps its PVC when it is deleted or scaled down
+  (`persistentVolumeClaimRetentionPolicy: Retain`), so `helm uninstall` leaves
+  your data; delete the PVC by hand to remove it.
+- `existingClaim`: an existing PVC (and optional `subPath`).
+- `hostPath`: a directory on the node, owned by uid/gid 65532 (the chart sets
+  `fsGroup`, but Kubernetes does not apply it to `hostPath`). Pin the pod with
+  `nodeSelector`. `type: DirectoryOrCreate` makes a root-owned directory tuwunel
+  cannot write.
+- `emptyDir`: scratch space, lost with the pod.
+
+A `volumeClaimTemplate` cannot be edited on an existing StatefulSet, so changing
+`size` in values makes the upgrade fail. To grow a volume, expand the PVC
+(`kubectl patch pvc ...`, the StorageClass must allow expansion), then recreate
+the StatefulSet without touching the pod or the PVC:
+
+```sh
+kubectl -n matrix delete statefulset tuwunel --cascade=orphan
+helm upgrade tuwunel ... -n matrix
+```
+
+### Backups
+
+tuwunel offers managed online backups and checkpoints of its RocksDB database
+(`database_backup_path`, `database_backups_to_keep`), see
+[`docs/backups.md`](https://github.com/matrix-construct/tuwunel/blob/main/docs/backups.md).
+They **do not include media**, which lives in the same volume: back that up
+separately. A repository on the same volume does not survive its loss: point
+`database_backup_path` at another volume (`extraVolumes` and `extraVolumeMounts`).
+
+## Image
+
+The default image is `appVersion`, pinned by the digest recorded in the
+`artifacthub.io/images` annotation of `Chart.yaml` (Renovate updates tag and
+digest together). Setting `image.tag` drops that digest; add `image.digest` to
+pin the tag again (a digest without a tag is an error).
+
+The images are signed keyless with cosign (GitHub Actions OIDC). Verify a digest with:
+
+```sh
+cosign verify ghcr.io/spnngl/images/tuwunel@sha256:<digest> \
+  --certificate-identity-regexp '^https://github.com/spnngl/images/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+The amd64 image needs a CPU with x86-64-v2.
+
+## Security
+
+Defaults satisfy the `restricted` Pod Security Standard: non-root uid/gid
+65532, read-only root filesystem, all capabilities dropped, no privilege
+escalation, `RuntimeDefault` seccomp, no ServiceAccount token, no Service
+environment variables. tuwunel writes only to `/var/lib/tuwunel`.
+
+### User namespaces
+
+`hostUsers: false` (default) runs the pod in a user namespace: uid 65532 in
+the pod maps to an unprivileged host uid, which limits what a container escape
+gains. Nodes need a container runtime with user namespace support
+(containerd 2.0+ or CRI-O), runc 1.2+ or crun, and a Linux kernel 6.3+
+(idmapped mounts on tmpfs for Secret and ConfigMap volumes). On other nodes the
+pod sandbox cannot be created: set `hostUsers: true`. Volumes without idmapped
+mounts (NFS, SMB) and `hostPath` ownership need it too.
+
+## Network
+
+- The NetworkPolicy (`networkPolicy.enabled`, on by default) allows the
+  homeserver port. Restrict the sources with `networkPolicy.homeserver.from`;
+  empty means any source: clients, other homeservers (federation) and your
+  ingress controller can be anywhere.
+- `networkPolicy.egress.enabled` (off by default) allows DNS, `peers.to` (the
+  internet except private, CGNAT and link-local ranges: federation, push
+  gateways, URL previews) and `extraEgress`. A server on your LAN needs an
+  `except` entry removed, or an `extraEgress` rule.
+
+## Autoscaling and resources
+
+There is no HPA and no PodDisruptionBudget (one replica: `maxUnavailable: 1` does
+nothing, `minAvailable: 1` blocks node drains). `verticalPodAutoscaler` supports
+`Off`, `Initial`, `Recreate` and `InPlaceOrRecreate` (in-place resize needs
+Kubernetes 1.33+). A recommender started with another `--recommender-name`
+than `default` ignores the VPA unless `verticalPodAutoscaler.recommender`
+names it. The default requests (`100m` CPU, `256Mi` memory) are scheduling
+floors, not a sizing: memory grows with the number of rooms and the cache, so
+measure then tune.
+
+## Compatibility
+
+The values schema is strict: unknown keys fail the install. A breaking change
+to values bumps the chart MAJOR version; deprecations are announced one MINOR
+version ahead. Requires Kubernetes 1.33 or later.
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}

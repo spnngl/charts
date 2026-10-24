@@ -1,0 +1,5 @@
+values:
+  serverName: example.com
+  bogus: 1
+expect:
+  error: bogus

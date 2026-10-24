@@ -1,0 +1,6 @@
+values:
+  serverName: example.com
+  config:
+    port: 8009
+expect:
+  error: port

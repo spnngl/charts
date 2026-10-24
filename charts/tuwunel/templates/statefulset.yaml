@@ -1,0 +1,150 @@
+{{- $fullname := include "tuwunel.fullname" . }}
+{{- $component := dict "ctx" . "component" "homeserver" }}
+{{- $p := .Values.persistence.data }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: tuwunel is the single writer of its embedded database."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    {{- if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: isolation is the user's choice."
+    {{- end }}
+    {{- if eq $p.type "hostPath" }}
+    ignore-check.kube-linter.io/writable-host-mount: "A hostPath volume is the user's choice (persistence.data.type: hostPath)."
+    {{- end }}
+  labels:
+    {{- include "tuwunel.labels" $component | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "tuwunel.selectorLabels" $component | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- toYaml (merge (dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum)) (deepCopy .Values.podAnnotations)) | nindent 8 }}
+      labels:
+        {{- toYaml (merge (include "tuwunel.labels" $component | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        - args:{{ if .Values.extraArgs }}{{ toYaml .Values.extraArgs | nindent 12 }}{{ else }} []{{ end }}
+          env:
+            - name: TUWUNEL_CONFIG
+              value: /etc/tuwunel/tuwunel.toml
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          image: {{ include "tuwunel.image" (dict "image" .Values.image "ctx" $) | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            {{- toYaml (merge (dict "exec" (dict "command" (list "/usr/bin/tuwunel" "--health-check"))) (deepCopy .Values.livenessProbe)) | nindent 12 }}
+          name: tuwunel
+          ports:
+            - containerPort: 8008
+              name: http
+              protocol: TCP
+          readinessProbe:
+            {{- toYaml (merge (dict "exec" (dict "command" (list "/usr/bin/tuwunel" "--health-check"))) (deepCopy .Values.readinessProbe)) | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- toYaml (merge (dict "exec" (dict "command" (list "/usr/bin/tuwunel" "--health-check"))) (deepCopy .Values.startupProbe)) | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /var/lib/tuwunel
+              name: data
+              {{- if and (eq $p.type "existingClaim") $p.existingClaim.subPath }}
+              subPath: {{ $p.existingClaim.subPath }}
+              {{- end }}
+            - mountPath: /etc/tuwunel/tuwunel.toml
+              name: config
+              readOnly: true
+              subPath: tuwunel.toml
+            {{- if .Values.existingSecret.name }}
+            - mountPath: /etc/tuwunel/secrets
+              name: secrets
+              readOnly: true
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      enableServiceLinks: false
+      hostUsers: {{ .Values.hostUsers }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "tuwunel.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - configMap:
+            name: {{ $fullname }}
+          name: config
+        {{- with .Values.existingSecret.name }}
+        - name: secrets
+          secret:
+            defaultMode: 288
+            secretName: {{ . }}
+        {{- end }}
+        {{- with include "tuwunel.volume" $ }}
+        {{- . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+  updateStrategy:
+    type: RollingUpdate
+  {{- /* Template metadata carries no chart labels: a volumeClaimTemplate is immutable, a version label would fail every upgrade. */}}
+  {{- if eq $p.type "volumeClaimTemplate" }}
+  {{- $t := $p.volumeClaimTemplate }}
+  volumeClaimTemplates:
+    - metadata:
+        {{- with $t.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with $t.labels }}
+        labels:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        name: data
+      spec:
+        accessModes:
+          {{- toYaml $t.accessModes | nindent 10 }}
+        resources:
+          requests:
+            storage: {{ $t.size }}
+        {{- with $t.storageClassName }}
+        storageClassName: {{ . }}
+        {{- end }}
+  {{- end }}

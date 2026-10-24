@@ -1,0 +1,417 @@
+---
+# Source: tuwunel/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts
+  namespace: tuwunel
+spec:
+  ingress:
+    - ports:
+      - port: 8008
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: homeserver
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: ts
+  policyTypes:
+    - Ingress
+---
+# Source: tuwunel/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts
+  namespace: tuwunel
+---
+# Source: tuwunel/templates/configmap.yaml
+apiVersion: v1
+data:
+  tuwunel.toml: |
+    [global]
+    address = "0.0.0.0"
+    allow_registration = true
+    database_path = "/var/lib/tuwunel"
+    db_cache_capacity_mb = 256
+    ip_range_denylist = ["10.0.0.0/8", "127.0.0.0/8"]
+    max_request_size = 20000000
+    port = 8008
+    registration_token_file = "/etc/tuwunel/secrets/registration_token"
+    server_name = "example.com"
+    [global.ldap]
+    enable = false
+    [global.well_known]
+    client = "https://matrix.example.com"
+    server = "matrix.example.com:443"
+    support_page = "https://example.com/support"
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts
+  namespace: tuwunel
+---
+# Source: tuwunel/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts
+  namespace: tuwunel
+spec:
+  ports:
+    - name: http
+      port: 8008
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/name: ts
+  type: ClusterIP
+---
+# Source: tuwunel/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: tuwunel is the single writer of its embedded database."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts
+  namespace: tuwunel
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: homeserver
+      app.kubernetes.io/instance: tuwunel
+      app.kubernetes.io/name: ts
+  template:
+    metadata:
+      annotations:
+        a: b
+        checksum/config: bfad37ef634d46c4f5f137cd6cd56d19355559874cbd825a17bb82df88ed58c2
+      labels:
+        app.kubernetes.io/component: homeserver
+        app.kubernetes.io/instance: tuwunel
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: ts
+        app.kubernetes.io/version: 0.0.0
+        c: d
+        helm.sh/chart: tuwunel-0.0.0
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: disk
+                operator: In
+                values:
+                - ssd
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - --read-only
+          env:
+            - name: TUWUNEL_CONFIG
+              value: /etc/tuwunel/tuwunel.toml
+            - name: TZ
+              value: UTC
+          image: "ghcr.io/spnngl/images/tuwunel:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            exec:
+              command:
+              - /usr/bin/tuwunel
+              - --health-check
+            failureThreshold: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+          name: tuwunel
+          ports:
+            - containerPort: 8008
+              name: http
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - /usr/bin/tuwunel
+              - --health-check
+            failureThreshold: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            exec:
+              command:
+              - /usr/bin/tuwunel
+              - --health-check
+            failureThreshold: 180
+            periodSeconds: 10
+            timeoutSeconds: 5
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /var/lib/tuwunel
+              name: data
+            - mountPath: /etc/tuwunel/tuwunel.toml
+              name: config
+              readOnly: true
+              subPath: tuwunel.toml
+            - mountPath: /etc/tuwunel/secrets
+              name: secrets
+              readOnly: true
+            - mountPath: /scripts
+              name: scripts
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: true
+      imagePullSecrets:
+        - name: regcred
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: low
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: tuwunel-ts
+      terminationGracePeriodSeconds: 1800
+      tolerations:
+        - key: k
+          operator: Exists
+      volumes:
+        - configMap:
+            name: tuwunel-ts
+          name: config
+        - name: secrets
+          secret:
+            defaultMode: 288
+            secretName: ts-secrets
+        - emptyDir: {}
+          name: scripts
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+    - metadata:
+        annotations:
+          a: b
+        labels:
+          c: d
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 50Gi
+        storageClassName: fast
+---
+# Source: tuwunel/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: 0.0.0
+    c: d
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts
+  namespace: tuwunel
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "matrix.example.com"
+      http:
+        paths:
+          - backend:
+              service:
+                name: tuwunel-ts
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+    - host: "example.com"
+      http:
+        paths:
+          - backend:
+              service:
+                name: tuwunel-ts
+                port:
+                  name: http
+            path: /.well-known/matrix
+            pathType: Prefix
+  tls:
+    - hosts:
+      - matrix.example.com
+      - example.com
+      secretName: matrix-tls
+---
+# Source: tuwunel/templates/httproute.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: 0.0.0
+    c: d
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts
+  namespace: tuwunel
+spec:
+  hostnames:
+    - matrix.example.com
+  parentRefs:
+    - name: gateway
+      namespace: gateway
+  rules:
+    - backendRefs:
+        - name: tuwunel-ts
+          port: 8008
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
+# Source: tuwunel/templates/httproute.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: 0.0.0
+    c: d
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts-well-known
+  namespace: tuwunel
+spec:
+  hostnames:
+    - "example.com"
+  parentRefs:
+    - name: gateway
+      namespace: gateway
+  rules:
+    - backendRefs:
+        - name: tuwunel-ts
+          port: 8008
+      matches:
+        - path:
+            type: PathPrefix
+            value: /.well-known/matrix
+---
+# Source: tuwunel/templates/vpa.yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    app.kubernetes.io/component: homeserver
+    app.kubernetes.io/instance: tuwunel
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ts
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: tuwunel-0.0.0
+  name: tuwunel-ts
+  namespace: tuwunel
+spec:
+  recommenders:
+    - name: "custom"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: tuwunel
+        controlledResources:
+        - cpu
+        - memory
+        controlledValues: RequestsAndLimits
+        maxAllowed:
+          memory: 4Gi
+        minAllowed:
+          cpu: 50m
+          memory: 128Mi
+  targetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: tuwunel-ts
+  updatePolicy:
+    updateMode: "Off"
