@@ -13,6 +13,7 @@ modifications made, and attribution in its README.
 - cert-manager-crds: CRDs from https://github.com/cert-manager/cert-manager (Apache-2.0)
 - chaos-mesh-crds: CRDs from https://github.com/chaos-mesh/chaos-mesh (Apache-2.0)
 - cilium-crds: CRDs from https://github.com/cilium/cilium (Apache-2.0)
+- cloudnative-pg-crds: CRDs from https://github.com/cloudnative-pg/cloudnative-pg (Apache-2.0)
 - cluster-api-crds: CRDs from https://github.com/kubernetes-sigs/cluster-api (Apache-2.0)
 - external-dns-crds: CRDs from https://github.com/kubernetes-sigs/external-dns (Apache-2.0)
 - external-secrets-crds: CRDs from https://github.com/external-secrets/external-secrets (Apache-2.0)

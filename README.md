@@ -32,6 +32,7 @@ Two kinds of charts live here:
 | [`cert-manager-crds`](./charts/cert-manager-crds) | [cert-manager/cert-manager](https://github.com/cert-manager/cert-manager) | certificates, (Cluster)Issuer, ACME orders and challenges |
 | [`chaos-mesh-crds`](./charts/chaos-mesh-crds) | [chaos-mesh/chaos-mesh](https://github.com/chaos-mesh/chaos-mesh) | chaos experiments, schedules, workflows |
 | [`cilium-crds`](./charts/cilium-crds) | [cilium/cilium](https://github.com/cilium/cilium) | cilium.io v2 + v2alpha1 |
+| [`cloudnative-pg-crds`](./charts/cloudnative-pg-crds) | [cloudnative-pg/cloudnative-pg](https://github.com/cloudnative-pg/cloudnative-pg) | PostgreSQL clusters, backups, poolers, databases |
 | [`cluster-api-crds`](./charts/cluster-api-crds) | [kubernetes-sigs/cluster-api](https://github.com/kubernetes-sigs/cluster-api) | core CRDs (clusters, machines, ClusterClass, IPAM, runtime) |
 | [`external-dns-crds`](./charts/external-dns-crds) | [kubernetes-sigs/external-dns](https://github.com/kubernetes-sigs/external-dns) | DNSEndpoint, DNSRecord |
 | [`external-snapshotter-crds`](./charts/external-snapshotter-crds) | [kubernetes-csi/external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter) | VolumeSnapshot, VolumeGroupSnapshot (+ classes and contents) |

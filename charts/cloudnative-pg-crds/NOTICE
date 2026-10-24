@@ -1,0 +1,6 @@
+The CustomResourceDefinition manifests under templates/ were copied from
+  https://github.com/cloudnative-pg/cloudnative-pg
+at tag v1.30.1 (commit 2a35abb4628f209d149825ef3c38011e0701ff2f), path(s): config/crd/bases
+and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
+added; server-side metadata and upstream Helm release metadata were removed.
+Upstream license: Apache-2.0 (see LICENSE in this directory).
