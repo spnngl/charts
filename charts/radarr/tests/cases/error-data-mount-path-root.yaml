@@ -1,0 +1,6 @@
+values:
+  persistence:
+    data:
+      mountPath: /
+expect:
+  error: "/persistence/data/mountPath"

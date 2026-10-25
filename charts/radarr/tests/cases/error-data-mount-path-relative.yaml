@@ -1,0 +1,6 @@
+values:
+  persistence:
+    data:
+      mountPath: data
+expect:
+  error: mountPath

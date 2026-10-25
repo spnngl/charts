@@ -1,0 +1,48 @@
+values:
+  hostUsers: true
+  auth:
+    method: Forms
+  apiKey:
+    existingSecret:
+      name: radarr-api
+  externalDatabase:
+    enabled: true
+    host: pg.example.com
+    existingSecret:
+      name: radarr-db
+  service:
+    annotations:
+      a: b
+  ingress:
+    enabled: true
+    hosts: [radarr.example.com]
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: gw
+  podAnnotations:
+    a: b
+  podLabels:
+    team: media
+  extraArgs: [-logging=debug]
+  extraEnv:
+    - name: Radarr__Server__UrlBase
+      value: /radarr
+    - name: Radarr__App__InstanceName
+      value: Radarr
+  extraVolumes:
+    - name: x
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: x
+      mountPath: /x
+  networkPolicy:
+    http:
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+    egress:
+      enabled: true
+  verticalPodAutoscaler:
+    enabled: true

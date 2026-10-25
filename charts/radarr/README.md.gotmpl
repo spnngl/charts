@@ -1,0 +1,226 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.description" . }}
+
+Runs [Radarr](https://github.com/Radarr/Radarr) as a single-replica
+StatefulSet. The image is built from
+[spnngl/images](https://github.com/spnngl/images): distroless, non-root, no shell.
+
+One replica only: Radarr is the sole writer of `/config` and of its SQLite
+databases. Every upgrade or reschedule is a short downtime.
+
+## Install
+
+```sh
+kubectl create namespace radarr
+helm install radarr oci://ghcr.io/spnngl/charts/radarr --version <version> -n radarr
+```
+
+The defaults start Radarr with SQLite in a `1Gi` PVC and no authentication
+method pinned: the first visit to the web UI opens Radarr's setup dialog, which
+asks for the method and creates the first user. Complete it before exposing the
+Service, or pin a method as below.
+
+## Authentication
+
+The chart always sets `Auth__Required=Enabled`: the web UI never runs
+unauthenticated for local addresses. `auth.method` picks how:
+
+- empty (default): nothing is pinned, the first-run dialog decides.
+- `Forms`: a login page. Radarr locks the UI while no user exists, and the
+  dialog does not open when a method is pinned. Create the first user through
+  the API with the API key (read it from `config.xml`, or set it with
+  `apiKey.existingSecret`): `GET /api/v3/config/host`, set
+  `authenticationMethod`, `username`, `password` and `passwordConfirmation` in
+  the result, `PUT` it back with the `X-Api-Key` header.
+- `External`: an authenticating proxy in front does the login, Radarr trusts
+  everything that reaches it. Radarr then serves its API key to any client that
+  reaches the pod (`GET /initialize.json`), so the chart requires
+  `networkPolicy.enabled: true` and a non-empty `networkPolicy.http.from`
+  (your proxy only). That protects only with a CNI that enforces NetworkPolicy.
+  Put the proxy at the Ingress, for example oauth2-proxy with the ingress-nginx
+  `auth-url` / `auth-signin` annotations in `ingress.annotations`.
+  Do not use `DisabledForLocalAddresses` instead: every private and loopback
+  address passes it, which is every pod in a cluster.
+
+### API key
+
+Radarr generates its API key and keeps it in `/config/config.xml`. To set it
+from a Secret (for Prowlarr, Bazarr and Configarr to share), create the Secret and
+point `apiKey.existingSecret.name` at it:
+
+```sh
+kubectl -n radarr create secret generic radarr-api --from-literal=api-key="$(openssl rand -hex 16)"
+```
+
+Radarr reads it once at startup: restart the pod after changing it. The chart
+never creates the Secret.
+
+```sh
+kubectl -n radarr rollout restart statefulset/radarr
+```
+
+## External database
+
+`externalDatabase.enabled: true` uses PostgreSQL instead of SQLite in `/config`.
+Radarr creates its tables, never the databases: create the main and the log
+database first (`radarr-main` and `radarr-log` by default), owned by the login
+in `externalDatabase.existingSecret` (keys `username` and `password`, the shape
+of a CloudNativePG role Secret). A missing database makes the pod crash-loop.
+The two names must differ.
+
+- One database per application: never point Radarr or another app at the same
+  database.
+- The chart does not migrate SQLite data: enabling it on an existing install
+  starts empty.
+- To keep logs out of PostgreSQL, add `Radarr__Log__DbEnabled=false` to
+  `extraEnv`; the log database is then never opened and need not exist.
+- TLS and other connection options are not exposed: set both
+  `Radarr__Postgres__MainDbConnectionString` and
+  `Radarr__Postgres__LogDbConnectionString` in `extraEnv`, with
+  `externalDatabase.enabled: false` (`Radarr__Postgres__*` names then belong to you).
+- Back up PostgreSQL yourself. Radarr's own backups are SQLite only.
+
+The readiness probe reads the database: while PostgreSQL is down the pod leaves
+the Service without restarting.
+
+## Web UI
+
+```sh
+kubectl -n radarr port-forward service/radarr 7878:7878
+```
+
+then <http://127.0.0.1:7878>. `ingress` (Ingress) and `httpRoute` (Gateway API
+HTTPRoute) expose it; both need explicit hosts (and `parentRefs` for the route).
+Terminate TLS in front: Radarr serves plain HTTP.
+
+To serve under a path, set `Radarr__Server__UrlBase` in `extraEnv`: the chart
+prefixes the probe, Ingress and HTTPRoute paths with it. Behind a proxy that
+rewrites the `Host` header, also set `Radarr__Server__AllowedHosts`.
+
+## Configuration
+
+Settings Radarr reads from the environment go in `extraEnv`, named
+`Radarr__<Section>__<Key>`, for example `Radarr__App__InstanceName` or
+`Radarr__Log__Level`. Names the chart sets (`Radarr__Auth__{ApiKey,Enabled,Method,Required}`, `Radarr__Server__{BindAddress,Port}`,
+and `Radarr__Postgres__*` with `externalDatabase.enabled`) are rejected in any
+case and in the `Radarr:Auth:Method` form. Command-line options go in
+`extraArgs`.
+
+The pinned port and bind address keep the Service, probes and NetworkPolicy
+valid: changing them in Settings › General has no effect.
+
+Radarr logs to standard output and to files in `/config/logs`, and keeps a copy
+in its log database. Collect the standard output.
+
+## Storage
+
+Two volumes: `/config` (state) and `/data` (media and downloads, see Data volume).
+
+`/config` takes one of four types in `persistence.config.type`:
+
+- `volumeClaimTemplate` (default): a PVC per pod from the StatefulSet. The
+  StatefulSet keeps its PVC when it is deleted or scaled down
+  (`persistentVolumeClaimRetentionPolicy: Retain`), so `helm uninstall` leaves
+  your data; delete the PVC by hand to remove it.
+- `existingClaim`: an existing PVC (and optional `subPath`).
+- `hostPath`: a directory on the node, owned by uid/gid 65532 (Kubernetes does
+  not apply `fsGroup` to `hostPath`). Pin the pod with `nodeSelector`.
+  `type: DirectoryOrCreate` makes a root-owned directory Radarr cannot write.
+- `emptyDir`: scratch space, lost with the pod.
+
+Use block storage with SQLite: it corrupts on NFS and SMB (use
+`externalDatabase` there). A `volumeClaimTemplate` cannot be edited on an
+existing StatefulSet, so changing `size` in values makes the upgrade fail. To
+grow the volume, expand the PVC (the StorageClass must allow it), then recreate
+the StatefulSet without touching pods or PVCs:
+
+```sh
+kubectl -n radarr delete statefulset radarr --cascade=orphan
+helm upgrade radarr ... -n radarr
+```
+
+## Data volume
+
+`persistence.data` mounts the tree Radarr imports into and reads downloads from, at
+`/data` by default (`emptyDir`, scratch space, until you choose a type):
+
+- `existingClaim`: a PVC, ReadWriteMany or ReadWriteOnce with every pod on one
+  node, with an optional `subPath`.
+- `hostPath`: a node directory, writable by uid/gid 65532 (Kubernetes does not
+  apply `fsGroup`). Pin the pod with `nodeSelector`.
+- `nfs`: `server` and `path`; needs `hostUsers: true` and an export writable by
+  65532.
+
+Mount the same volume at the same path in Radarr and in the download client:
+an import is then a hardlink or an atomic move, not a copy. Both directories
+must be on one filesystem, for example `/data/usenet/complete` and
+`/data/media/movies`. Point Radarr's root folder at `/data/media/movies` and the
+download client's category path at `/data/usenet/complete` (remote path mappings
+are then unnecessary).
+
+A library on S3 is a FUSE mount made on the node, under the `hostPath`, by
+another pod: set `mountPropagation: HostToContainer` so Radarr sees the mount
+even when it starts first. `Bidirectional` is not offered. Radarr's `/config` and
+its databases never go on S3.
+
+## Image
+
+The default image is `appVersion`, pinned by the digest recorded in the
+`artifacthub.io/images` annotation of `Chart.yaml` (Renovate updates tag and
+digest together). Setting `image.tag` drops that digest; add `image.digest` to pin
+the tag again (a digest without a tag is an error).
+
+The image is signed with cosign (keyless, GitHub Actions OIDC) and carries SLSA
+provenance. See the repository README, "Verifying what you install".
+
+## Security
+
+Defaults satisfy the `restricted` Pod Security Standard: non-root uid/gid 65532,
+read-only root filesystem (writes go to `/config` and an `emptyDir` on `/tmp`),
+all capabilities dropped, no privilege escalation, `RuntimeDefault` seccomp, no
+ServiceAccount token, no Service environment variables.
+
+### User namespaces
+
+`hostUsers: false` (default) runs the pod in a user namespace: uid 65532 in the
+pod maps to an unprivileged host uid, which limits what a container escape
+gains. Nodes need a container runtime with user namespace support (containerd
+2.0+ or CRI-O), runc 1.2+ or crun, and a Linux kernel 6.3+. On other nodes the
+pod sandbox cannot be created: set `hostUsers: true`. Volumes without idmapped
+mounts (NFS, SMB) and `hostPath` ownership need it too.
+
+## Network
+
+- The NetworkPolicy (`networkPolicy.enabled`, on by default) allows the web
+  port. `networkPolicy.http.from` restricts the sources; empty means any source.
+  When you set it, include the Ingress controller and every application that calls
+  Radarr (Prowlarr, Bazarr, Seerr, Configarr).
+- `networkPolicy.egress.enabled` (off by default) allows DNS, `peers.to` (the
+  internet except private, CGNAT and link-local ranges: indexers and metadata
+  APIs, so a compromised process cannot move sideways) and `extraEgress`. Add
+  `extraEgress` rules for PostgreSQL, Prowlarr, SABnzbd, or an indexer or
+  media server on your LAN.
+
+## Autoscaling and resources
+
+There is no HPA (one replica). `verticalPodAutoscaler` supports `Off`, `Initial`,
+`Recreate` and `InPlaceOrRecreate` (in-place resize needs Kubernetes 1.33+). A
+recommender started with another `--recommender-name` than `default` ignores the
+VPA unless `verticalPodAutoscaler.recommender` names it. The default requests
+are scheduling floors, not a sizing: memory grows with the size of the library
+and of the searches, so measure then tune.
+
+## Compatibility
+
+The values schema is strict: unknown keys fail the install. A breaking change to
+values bumps the chart MAJOR version; deprecations are announced one MINOR
+version ahead. Requires Kubernetes 1.33 or later.
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}

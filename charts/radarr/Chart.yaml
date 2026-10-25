@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: radarr
+description: Radarr movie collection manager as a hardened single-replica StatefulSet, with SQLite or an external PostgreSQL
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/radarr
+appVersion: "6.4.4.10685"
+kubeVersion: ">=1.33.0-0"
+home: https://radarr.video
+icon: https://raw.githubusercontent.com/Radarr/Radarr/v6.4.4.10685/Logo/256.png
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/Radarr/Radarr
+  - https://github.com/spnngl/images
+keywords:
+  - radarr
+  - servarr
+  - movies
+  - usenet
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: GPL-3.0-only
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # radarr.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: radarr
+      image: ghcr.io/spnngl/images/radarr:6.4.4.10685@sha256:f91dd28ed55c38c24c41e344f1ba1f23aaa73b1975f7bfe89139727b8a587b83
+  artifacthub.io/links: |-
+    - name: Upstream project
+      url: https://radarr.video
+    - name: Upstream repository
+      url: https://github.com/Radarr/Radarr
+    - name: Images repository
+      url: https://github.com/spnngl/images
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/radarr
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

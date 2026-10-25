@@ -1,0 +1,202 @@
+---
+# Source: radarr/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: radarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: radarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: radarr-0.0.0
+  name: radarr
+  namespace: radarr
+spec:
+  ingress:
+    - ports:
+      - port: 7878
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: radarr
+      app.kubernetes.io/name: radarr
+  policyTypes:
+    - Ingress
+---
+# Source: radarr/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: radarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: radarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: radarr-0.0.0
+  name: radarr
+  namespace: radarr
+---
+# Source: radarr/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: radarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: radarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: radarr-0.0.0
+  name: radarr
+  namespace: radarr
+spec:
+  ports:
+    - name: http
+      port: 7878
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: radarr
+    app.kubernetes.io/name: radarr
+  type: ClusterIP
+---
+# Source: radarr/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: Radarr is the single writer of /config and of its SQLite databases."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/instance: radarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: radarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: radarr-0.0.0
+  name: radarr
+  namespace: radarr
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: radarr
+      app.kubernetes.io/name: radarr
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: radarr
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: radarr
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: radarr-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - -nobrowser
+            - -data=/config
+          env:
+            - name: Radarr__Auth__Required
+              value: Enabled
+            - name: Radarr__Server__BindAddress
+              value: "*"
+            - name: Radarr__Server__Port
+              value: "7878"
+            - name: Radarr__Auth__Method
+              value: Forms
+          image: "ghcr.io/spnngl/images/radarr:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            tcpSocket:
+              port: http
+          name: radarr
+          ports:
+            - containerPort: 7878
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              httpHeaders:
+              - name: Host
+                value: localhost
+              path: /ping
+              port: http
+            periodSeconds: 10
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 192Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              httpHeaders:
+              - name: Host
+                value: localhost
+              path: /ping
+              port: http
+            periodSeconds: 5
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /config
+              name: config
+            - mountPath: /data
+              mountPropagation: None
+              name: data
+            - mountPath: /tmp
+              name: tmp
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: radarr
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - emptyDir:
+          name: data
+        - emptyDir: {}
+          name: tmp
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+    - metadata:
+        name: config
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi

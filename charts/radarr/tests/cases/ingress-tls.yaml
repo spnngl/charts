@@ -1,0 +1,7 @@
+values:
+  ingress:
+    enabled: true
+    hosts: [a.example.com, b.example.com]
+    tls:
+      - secretName: radarr-tls
+        hosts: [a.example.com, b.example.com]

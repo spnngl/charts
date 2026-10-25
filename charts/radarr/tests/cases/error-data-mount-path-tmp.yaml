@@ -1,0 +1,6 @@
+values:
+  persistence:
+    data:
+      mountPath: /tmp
+expect:
+  error: persistence.data.mountPath must not be /, /config or /tmp

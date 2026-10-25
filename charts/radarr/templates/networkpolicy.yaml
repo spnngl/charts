@@ -1,0 +1,44 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $np := .Values.networkPolicy }}
+{{- $http := dict "ports" (list (dict "port" 7878 "protocol" "TCP")) }}
+{{- with $np.http.from }}{{ $_ := set $http "from" . }}{{ end }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    {{- include "radarr.labels" . | nindent 4 }}
+  name: {{ include "radarr.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- if $np.egress.enabled }}
+  egress:
+    - ports:
+        - port: 53
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+      {{- with $np.egress.dns.to }}
+      to:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with $np.egress.peers.to }}
+    - to:
+        {{- toYaml . | nindent 8 }}
+    {{- else }}
+    - {}
+    {{- end }}
+    {{- with $np.egress.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  ingress:
+    {{- toYaml (list $http) | nindent 4 }}
+  podSelector:
+    matchLabels:
+      {{- include "radarr.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    {{- if $np.egress.enabled }}
+    - Egress
+    {{- end }}
+{{- end }}

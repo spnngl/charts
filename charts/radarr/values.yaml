@@ -1,0 +1,650 @@
+# yaml-language-server: $schema=values.schema.json
+# @schema.root
+# title: radarr values
+# allOf:
+#   # `External` (and `None`) serve the API key to any UI client (GET /initialize.json): whoever reaches the pod has it, so only the NetworkPolicy keeps it private
+#   - if:
+#       required: [auth]
+#       properties:
+#         auth:
+#           required: [method]
+#           properties:
+#             method:
+#               const: External
+#     then:
+#       properties:
+#         networkPolicy:
+#           properties:
+#             enabled:
+#               const: true
+#             http:
+#               properties:
+#                 from:
+#                   minItems: 1
+#   # the chart renders the connection from the host and the Secret
+#   - if:
+#       required: [externalDatabase]
+#       properties:
+#         externalDatabase:
+#           required: [enabled]
+#           properties:
+#             enabled:
+#               const: true
+#     then:
+#       properties:
+#         externalDatabase:
+#           properties:
+#             host:
+#               minLength: 1
+#             existingSecret:
+#               properties:
+#                 name:
+#                   minLength: 1
+#   # NFS has no idmapped mounts and needs a server and a path
+#   - if:
+#       required: [persistence]
+#       properties:
+#         persistence:
+#           required: [data]
+#           properties:
+#             data:
+#               required: [type]
+#               properties:
+#                 type:
+#                   const: nfs
+#     then:
+#       properties:
+#         hostUsers:
+#           const: true
+#         persistence:
+#           properties:
+#             data:
+#               properties:
+#                 nfs:
+#                   properties:
+#                     server:
+#                       minLength: 1
+#                     path:
+#                       minLength: 1
+# @schema.root
+# -- Override the chart name used in resource names and labels.
+nameOverride: ""
+# -- Override the full resource name (default `<release>-<chart>`).
+fullnameOverride: ""
+
+image:
+  # -- Image repository.
+  repository: ghcr.io/spnngl/images/radarr
+  # -- Image tag. Empty: the tag and digest recorded for `image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.
+  tag: ""
+  # @schema
+  # type: string
+  # pattern: "^(sha256:[a-f0-9]{64})?$"
+  # @schema
+  # -- Image digest, only valid together with `image.tag`.
+  digest: ""
+  # @schema
+  # type: string
+  # enum: [Always, IfNotPresent, Never]
+  # @schema
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+# @schema
+# -- Image pull secrets (list of `{name: <secret>}`).
+imagePullSecrets: []
+
+auth:
+  # @schema
+  # type: string
+  # enum: ["", Forms, External]
+  # @schema
+  # -- Authentication method for the web UI. Empty: none is pinned and Radarr's first-run dialog picks one and creates the user. `Forms`: login page; with no user yet the UI is locked (create the first one through the API, see the README). `External`: an authenticating proxy in front does the login, Radarr trusts everything that reaches it and serves its API key to it, so it needs `networkPolicy.enabled` and a non-empty `networkPolicy.http.from`. The chart always pins `Auth__Required=Enabled`.
+  method: ""
+
+apiKey:
+  existingSecret:
+    # -- Name of a Secret holding the API key, passed as `Radarr__Auth__ApiKey`. Empty: no env, Radarr generates its own key and keeps it in `config.xml`. The chart never creates the Secret.
+    name: ""
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the API key in the Secret.
+    key: api-key
+
+externalDatabase:
+  # -- Use an external PostgreSQL instead of SQLite in `/config`. Radarr creates its tables but no database: create both databases first. Enabling it on an existing install starts empty; the SQLite data is not migrated.
+  enabled: false
+  # -- PostgreSQL host. Required when enabled.
+  host: ""
+  # @schema
+  # type: integer
+  # minimum: 1
+  # maximum: 65535
+  # @schema
+  # -- PostgreSQL port.
+  port: 5432
+  # @schema
+  # type: string
+  # minLength: 1
+  # @schema
+  # -- Main database name (`Radarr__Postgres__MainDb`).
+  database: radarr-main
+  # @schema
+  # type: string
+  # minLength: 1
+  # @schema
+  # -- Log database name (`Radarr__Postgres__LogDb`), different from `database`. Ignored when `Radarr__Log__DbEnabled=false` is set in `extraEnv`.
+  logDatabase: radarr-log
+  existingSecret:
+    # -- Name of the Secret holding the database login (for example a CloudNativePG role Secret). Required when enabled. The chart never creates it.
+    name: ""
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the user name in the Secret.
+    usernameKey: username
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the password in the Secret.
+    passwordKey: password
+
+service:
+  # @schema
+  # type: string
+  # enum: [ClusterIP, LoadBalancer, NodePort]
+  # @schema
+  # -- Web UI and API Service type.
+  type: ClusterIP
+  # @schema
+  # type: integer
+  # minimum: 1
+  # maximum: 65535
+  # @schema
+  # -- Web UI and API Service port (the container listens on 7878).
+  port: 7878
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Service annotations.
+  annotations: {}
+
+ingress:
+  # -- Create an Ingress for the web UI (path `/`, or the `Radarr__Server__UrlBase` set in `extraEnv`).
+  enabled: false
+  # -- Ingress class name (empty: cluster default).
+  className: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Ingress annotations.
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra Ingress labels (for example the label an external-dns `--label-filter` selects).
+  labels: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   minLength: 1
+  # @schema
+  # -- Host names. Required when enabled.
+  hosts: []
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Ingress TLS blocks (`secretName`, `hosts`).
+  tls: []
+
+httpRoute:
+  # -- Create a Gateway API HTTPRoute for the web UI (path prefix `/`, or the `Radarr__Server__UrlBase` set in `extraEnv`).
+  enabled: false
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- HTTPRoute annotations.
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra HTTPRoute labels.
+  labels: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Gateways (`parentRefs`). Required when enabled.
+  parentRefs: []
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   minLength: 1
+  # @schema
+  # -- Host names (empty: any host of the Gateway listener).
+  hostnames: []
+
+persistence:
+  config:
+    # @schema
+    # type: string
+    # enum: [volumeClaimTemplate, existingClaim, hostPath, emptyDir]
+    # @schema
+    # -- Where `/config` (`config.xml`, the SQLite databases unless `externalDatabase.enabled`, logs, backups) lives. Block storage: SQLite on NFS corrupts. `volumeClaimTemplate` creates a PVC per pod and keeps it on uninstall; the other types use the matching sub-section.
+    type: volumeClaimTemplate
+    volumeClaimTemplate:
+      # -- StorageClass (empty: cluster default).
+      storageClassName: ""
+      # @schema
+      # type: array
+      # items:
+      #   type: string
+      # @schema
+      # -- Access modes.
+      accessModes:
+        - ReadWriteOnce
+      # -- Requested size. The template is immutable once installed: resize the PVC, see the README.
+      size: 1Gi
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- PVC annotations.
+      annotations: {}
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- PVC labels.
+      labels: {}
+    existingClaim:
+      # -- Name of an existing PVC (`type: existingClaim`).
+      name: ""
+      # -- Sub-path inside the claim.
+      subPath: ""
+    hostPath:
+      # -- Absolute node path (`type: hostPath`), owned by uid/gid 65532. Pin the pod to the node.
+      path: ""
+      # @schema
+      # type: string
+      # enum: [Directory, DirectoryOrCreate]
+      # @schema
+      # -- `hostPath` type. `DirectoryOrCreate` makes a root-owned directory the app cannot write.
+      type: Directory
+    emptyDir:
+      # -- Size limit (`type: emptyDir`, state is lost with the pod). Empty: none.
+      sizeLimit: ""
+  data:
+    # @schema
+    # type: string
+    # enum: [emptyDir, existingClaim, hostPath, nfs]
+    # @schema
+    # -- Where the media and download tree lives. Mount the same volume at the same path in every app that shares it: a hardlink or an atomic move needs one filesystem (see the README). `emptyDir` is scratch space lost with the pod; the other types use the matching sub-section. ReadWriteMany, or ReadWriteOnce with every pod on one node. `hostPath` and `nfs` ignore `fsGroup`: the share must be writable by uid/gid 65532.
+    type: emptyDir
+    # @schema
+    # type: string
+    # pattern: ^/[^:]+$
+    # @schema
+    # -- Mount path. Not `/`, `/config` or `/tmp` (with or without a trailing slash).
+    mountPath: /data
+    # @schema
+    # type: string
+    # enum: [None, HostToContainer]
+    # @schema
+    # -- Mount propagation. `HostToContainer` shows a FUSE mount made on the node under the volume after the pod started (the rclone chart). `Bidirectional` is not offered: it needs a privileged container.
+    mountPropagation: None
+    existingClaim:
+      # -- Name of an existing PVC (`type: existingClaim`).
+      name: ""
+      # -- Sub-path inside the claim.
+      subPath: ""
+    hostPath:
+      # -- Absolute node path (`type: hostPath`), writable by uid/gid 65532. Pin the pod to the node.
+      path: ""
+      # @schema
+      # type: string
+      # enum: [Directory, DirectoryOrCreate]
+      # @schema
+      # -- `hostPath` type. `DirectoryOrCreate` makes a root-owned directory the app cannot write.
+      type: Directory
+    emptyDir:
+      # -- Size limit (`type: emptyDir`, state is lost with the pod). Empty: none.
+      sizeLimit: ""
+    nfs:
+      # -- NFS server (`type: nfs`). Needs `hostUsers: true`.
+      server: ""
+      # -- Exported path on the server.
+      path: ""
+
+# -- Old ControllerRevisions to keep.
+revisionHistoryLimit: 3
+
+serviceAccount:
+  # -- Create the ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false).
+  name: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- ServiceAccount annotations.
+  annotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Pod annotations.
+podAnnotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Extra pod labels.
+podLabels: {}
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Pod security context. Overrides are merged onto these defaults. `fsGroup` does not apply to NFS/SMB volumes or `hostPath`.
+podSecurityContext:
+  fsGroup: 65532
+  fsGroupChangePolicy: OnRootMismatch
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Container security context of the Radarr container. Overrides are merged onto these defaults.
+securityContext:
+  allowPrivilegeEscalation: false
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: boolean
+# @schema
+# -- Run the pod in a user namespace (`false`: uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) and idmapped mounts on every volume's file system (not NFS/SMB, not `hostPath` on some file systems); pods fail to start otherwise. `true` uses host users.
+hostUsers: false
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Resources of the Radarr container. A scheduling floor, not a sizing: memory grows with the size of the library and of the searches (measure, then tune; VPA in `Off` mode gives recommendations). No CPU limit on purpose.
+resources:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  limits:
+    memory: 512Mi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  requests:
+    cpu: 50m
+    memory: 192Mi
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- DNS config.
+dnsConfig:
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  #   additionalProperties: true
+  # @schema
+  # -- DNS options (fewer search-list lookups for indexer host names).
+  options:
+    - name: ndots
+      value: "2"
+
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Startup probe (`GET /ping`, Kestrel listens only after the database migrations). A missing database makes Radarr exit instead of waiting: the pod crash-loops until it exists.
+startupProbe:
+  failureThreshold: 30
+  periodSeconds: 5
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Readiness probe (`GET /ping`, which reads the database: the pod leaves the Service while it is down, without a restart).
+readinessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Liveness probe (TCP on the web port: a database outage must not restart the pod).
+livenessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Node selector. With a `hostPath`, pin the pod to the node.
+nodeSelector:
+  kubernetes.io/os: linux
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Tolerations.
+tolerations: []
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Affinity.
+affinity: {}
+# -- Priority class name.
+priorityClassName: ""
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra init containers, rendered as given: seed a file before start, or run a native sidecar (`restartPolicy: Always`) that calls the API. The image has no shell: use another image.
+extraInitContainers: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volumes.
+extraVolumes: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volume mounts for the Radarr container.
+extraVolumeMounts: []
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+#       minLength: 1
+# @schema
+# -- Extra environment variables (`EnvVar` list) for the Radarr container, for example `Radarr__Server__AllowedHosts` or `Radarr__App__InstanceName`. Names the chart sets are rejected (`Radarr__Auth__{ApiKey,Enabled,Method,Required}`, `Radarr__Server__{BindAddress,Port}`, and `Radarr__Postgres__*` with `externalDatabase.enabled`), in any case and in the `Radarr:Auth:Method` form.
+extraEnv: []
+# @schema
+# type: array
+# items:
+#   type: string
+#   minLength: 1
+#   not:
+#     pattern: '^[ /-]*(?:[dD][aA][tT][aA]=.*|\?|[iIuU]|[rR][eE][gG][iI][sS][tT][eE][rR][uU][rR][lL]|[eE][xX][iI][tT][iI][mM][mM][eE][dD][iI][aA][tT][eE][lL][yY])[ ]*$'
+# @schema
+# -- Extra Radarr options, after the chart's own `-nobrowser -data=/config`. The data directory and the options that install a service, register a URL or exit are rejected.
+extraArgs: []
+
+networkPolicy:
+  # -- Create a NetworkPolicy (ingress: the web port).
+  enabled: true
+  http:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach the web UI and API port. Empty: any source. It must admit the Ingress controller and every app that calls Radarr (Prowlarr, Bazarr, Seerr, Configarr).
+    from: []
+  egress:
+    # -- Restrict egress (DNS, internet indexers, `extraEgress`).
+    enabled: false
+    dns:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels.
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    peers:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- Indexers, metadata APIs and notification services (any port). Default: the internet, not the private, CGNAT and link-local ranges, so a compromised process cannot move sideways. Remove an `except` entry to reach an indexer there.
+      to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 100.64.0.0/10
+              - 127.0.0.0/8
+              - 169.254.0.0/16
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+              - fc00::/7
+              - fe80::/10
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Extra `NetworkPolicyEgressRule`s: the database, Prowlarr, SABnzbd, a media server.
+    extraEgress: []
+
+verticalPodAutoscaler:
+  # -- Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).
+  enabled: false
+  # @schema
+  # type: string
+  # enum: ["Off", Initial, Recreate, InPlaceOrRecreate]
+  # @schema
+  # -- VPA update mode.
+  updateMode: "Off"
+  # @schema
+  # type: string
+  # @schema
+  # -- Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`. Set it when the cluster's recommender runs under another `--recommender-name`: a VPA nobody serves gets no recommendation.
+  recommender: ""
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   enum: [cpu, memory]
+  # @schema
+  # -- Resources VPA controls.
+  controlledResources:
+    - cpu
+    - memory
+  # @schema
+  # type: string
+  # enum: [RequestsAndLimits, RequestsOnly]
+  # @schema
+  # -- Whether VPA also scales limits.
+  controlledValues: RequestsAndLimits
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Lower bound of recommendations (for example `{cpu: 25m, memory: 64Mi}`).
+  minAllowed: {}
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Upper bound of recommendations.
+  maxAllowed: {}

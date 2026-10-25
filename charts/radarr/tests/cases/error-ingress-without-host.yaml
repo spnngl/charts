@@ -1,0 +1,5 @@
+values:
+  ingress:
+    enabled: true
+expect:
+  error: ingress.hosts is required
