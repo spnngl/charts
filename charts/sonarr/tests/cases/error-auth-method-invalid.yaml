@@ -1,0 +1,5 @@
+values:
+  auth:
+    method: None
+expect:
+  error: "/auth/method"

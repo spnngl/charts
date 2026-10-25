@@ -1,0 +1,7 @@
+values:
+  auth:
+    method: External
+  networkPolicy:
+    enabled: false
+expect:
+  error: "/networkPolicy/enabled"

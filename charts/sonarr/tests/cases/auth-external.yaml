@@ -1,0 +1,9 @@
+values:
+  auth:
+    method: External
+  networkPolicy:
+    http:
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: oauth2-proxy

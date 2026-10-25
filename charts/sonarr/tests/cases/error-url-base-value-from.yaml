@@ -1,0 +1,9 @@
+values:
+  extraEnv:
+    - name: Sonarr__Server__UrlBase
+      valueFrom:
+        configMapKeyRef:
+          name: x
+          key: y
+expect:
+  error: must be a plain value

@@ -1,0 +1,5 @@
+values:
+  apiKey:
+    existingSecret:
+      name: sonarr-api
+      key: token

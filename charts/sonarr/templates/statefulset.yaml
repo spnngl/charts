@@ -1,0 +1,197 @@
+{{- include "sonarr.validate" . }}
+{{- $fullname := include "sonarr.fullname" . }}
+{{- $config := .Values.persistence.config }}
+{{- $db := .Values.externalDatabase }}
+{{- $probe := dict "httpGet" (dict "httpHeaders" (list (dict "name" "Host" "value" "localhost")) "path" (printf "%s/ping" (include "sonarr.urlPath" .)) "port" "http") }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    {{- if include "sonarr.envRefs" . }}
+    ignore-check.kube-linter.io/env-value-from: "The Secrets and ConfigMaps the env reads are created by the user, outside the chart."
+    {{- end }}
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: Sonarr is the single writer of /config and of its SQLite databases."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    {{- if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: isolation is the user's choice."
+    {{- end }}
+    {{- if contains "secret" (include "sonarr.envRefs" .) }}
+    ignore-check.kube-linter.io/read-secret-from-env-var: "Sonarr reads its API key and database password from env or config.xml only, never from a file."
+    {{- end }}
+    {{- if or (eq $config.type "hostPath") (eq .Values.persistence.data.type "hostPath") }}
+    ignore-check.kube-linter.io/writable-host-mount: "A hostPath volume is the user's choice (persistence.config.type or persistence.data.type: hostPath)."
+    {{- end }}
+  labels:
+    {{- include "sonarr.labels" . | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "sonarr.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- toYaml (merge (include "sonarr.labels" . | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - -nobrowser
+            - -data=/config
+            {{- with .Values.extraArgs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          env:
+            - name: Sonarr__Auth__Required
+              value: Enabled
+            - name: Sonarr__Server__BindAddress
+              value: "*"
+            - name: Sonarr__Server__Port
+              value: "8989"
+            {{- with .Values.auth.method }}
+            - name: Sonarr__Auth__Method
+              value: {{ . }}
+            {{- end }}
+            {{- with .Values.apiKey.existingSecret.name }}
+            - name: Sonarr__Auth__ApiKey
+              valueFrom:
+                secretKeyRef:
+                  key: {{ $.Values.apiKey.existingSecret.key }}
+                  name: {{ . }}
+            {{- end }}
+            {{- if $db.enabled }}
+            - name: Sonarr__Postgres__Host
+              value: {{ $db.host | quote }}
+            - name: Sonarr__Postgres__Port
+              value: {{ int $db.port | quote }}
+            - name: Sonarr__Postgres__User
+              valueFrom:
+                secretKeyRef:
+                  key: {{ $db.existingSecret.usernameKey }}
+                  name: {{ $db.existingSecret.name }}
+            - name: Sonarr__Postgres__Password
+              valueFrom:
+                secretKeyRef:
+                  key: {{ $db.existingSecret.passwordKey }}
+                  name: {{ $db.existingSecret.name }}
+            - name: Sonarr__Postgres__MainDb
+              value: {{ $db.database | quote }}
+            - name: Sonarr__Postgres__LogDb
+              value: {{ $db.logDatabase | quote }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          image: {{ include "sonarr.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            {{- toYaml (merge (dict "tcpSocket" (dict "port" "http")) (deepCopy .Values.livenessProbe)) | nindent 12 }}
+          name: sonarr
+          ports:
+            - containerPort: 8989
+              name: http
+              protocol: TCP
+          readinessProbe:
+            {{- toYaml (merge (deepCopy $probe) (deepCopy .Values.readinessProbe)) | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- toYaml (merge (deepCopy $probe) (deepCopy .Values.startupProbe)) | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /config
+              name: config
+              {{- if and (eq $config.type "existingClaim") $config.existingClaim.subPath }}
+              subPath: {{ $config.existingClaim.subPath }}
+              {{- end }}
+            - mountPath: {{ .Values.persistence.data.mountPath }}
+              mountPropagation: {{ .Values.persistence.data.mountPropagation }}
+              name: data
+              {{- if and (eq .Values.persistence.data.type "existingClaim") .Values.persistence.data.existingClaim.subPath }}
+              subPath: {{ .Values.persistence.data.existingClaim.subPath }}
+              {{- end }}
+            - mountPath: /tmp
+              name: tmp
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      enableServiceLinks: false
+      hostUsers: {{ .Values.hostUsers }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.extraInitContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "sonarr.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 30
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        {{- with include "sonarr.configVolume" . }}
+        {{- . | nindent 8 }}
+        {{- end }}
+        {{- include "sonarr.dataVolume" . | nindent 8 }}
+        - emptyDir: {}
+          name: tmp
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+  updateStrategy:
+    type: RollingUpdate
+  {{- /* Template metadata carries no chart labels: a volumeClaimTemplate is immutable, a version label would fail every upgrade. */}}
+  {{- if eq $config.type "volumeClaimTemplate" }}
+  {{- $t := $config.volumeClaimTemplate }}
+  volumeClaimTemplates:
+    - metadata:
+        {{- with $t.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with $t.labels }}
+        labels:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        name: config
+      spec:
+        accessModes:
+          {{- toYaml $t.accessModes | nindent 10 }}
+        resources:
+          requests:
+            storage: {{ $t.size }}
+        {{- with $t.storageClassName }}
+        storageClassName: {{ . }}
+        {{- end }}
+  {{- end }}

@@ -1,0 +1,7 @@
+values:
+  persistence:
+    data:
+      type: existingClaim
+      existingClaim:
+        name: media
+        subPath: arr
