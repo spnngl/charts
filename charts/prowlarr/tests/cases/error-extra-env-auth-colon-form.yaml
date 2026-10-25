@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: Prowlarr:Auth:Method
+      value: None
+expect:
+  error: set by the chart

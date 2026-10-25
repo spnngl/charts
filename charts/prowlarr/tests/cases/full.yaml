@@ -1,0 +1,48 @@
+values:
+  hostUsers: true
+  auth:
+    method: Forms
+  apiKey:
+    existingSecret:
+      name: prowlarr-api
+  externalDatabase:
+    enabled: true
+    host: pg.example.com
+    existingSecret:
+      name: prowlarr-db
+  service:
+    annotations:
+      a: b
+  ingress:
+    enabled: true
+    hosts: [prowlarr.example.com]
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: gw
+  podAnnotations:
+    a: b
+  podLabels:
+    team: media
+  extraArgs: [-logging=debug]
+  extraEnv:
+    - name: Prowlarr__Server__UrlBase
+      value: /prowlarr
+    - name: Prowlarr__App__InstanceName
+      value: Prowlarr
+  extraVolumes:
+    - name: x
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: x
+      mountPath: /x
+  networkPolicy:
+    http:
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+    egress:
+      enabled: true
+  verticalPodAutoscaler:
+    enabled: true

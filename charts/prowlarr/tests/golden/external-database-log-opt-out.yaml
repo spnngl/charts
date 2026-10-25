@@ -1,0 +1,217 @@
+---
+# Source: prowlarr/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: prowlarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: prowlarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: prowlarr-0.0.0
+  name: prowlarr
+  namespace: prowlarr
+spec:
+  ingress:
+    - ports:
+      - port: 9696
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: prowlarr
+      app.kubernetes.io/name: prowlarr
+  policyTypes:
+    - Ingress
+---
+# Source: prowlarr/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: prowlarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: prowlarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: prowlarr-0.0.0
+  name: prowlarr
+  namespace: prowlarr
+---
+# Source: prowlarr/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: prowlarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: prowlarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: prowlarr-0.0.0
+  name: prowlarr
+  namespace: prowlarr
+spec:
+  ports:
+    - name: http
+      port: 9696
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: prowlarr
+    app.kubernetes.io/name: prowlarr
+  type: ClusterIP
+---
+# Source: prowlarr/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/env-value-from: "The Secrets and ConfigMaps the env reads are created by the user, outside the chart."
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: Prowlarr is the single writer of /config and of its SQLite databases."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/read-secret-from-env-var: "Prowlarr reads its API key and database password from env or config.xml only, never from a file."
+  labels:
+    app.kubernetes.io/instance: prowlarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: prowlarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: prowlarr-0.0.0
+  name: prowlarr
+  namespace: prowlarr
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: prowlarr
+      app.kubernetes.io/name: prowlarr
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: prowlarr
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: prowlarr
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: prowlarr-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - -nobrowser
+            - -data=/config
+          env:
+            - name: Prowlarr__Auth__Required
+              value: Enabled
+            - name: Prowlarr__Server__BindAddress
+              value: "*"
+            - name: Prowlarr__Server__Port
+              value: "9696"
+            - name: Prowlarr__Postgres__Host
+              value: "pg.example.com"
+            - name: Prowlarr__Postgres__Port
+              value: "5432"
+            - name: Prowlarr__Postgres__User
+              valueFrom:
+                secretKeyRef:
+                  key: username
+                  name: prowlarr-db
+            - name: Prowlarr__Postgres__Password
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: prowlarr-db
+            - name: Prowlarr__Postgres__MainDb
+              value: "prowlarr-main"
+            - name: Prowlarr__Postgres__LogDb
+              value: "prowlarr-log"
+            - name: Prowlarr__Log__DbEnabled
+              value: "false"
+          image: "ghcr.io/spnngl/images/prowlarr:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            tcpSocket:
+              port: http
+          name: prowlarr
+          ports:
+            - containerPort: 9696
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              httpHeaders:
+              - name: Host
+                value: localhost
+              path: /ping
+              port: http
+            periodSeconds: 10
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 192Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              httpHeaders:
+              - name: Host
+                value: localhost
+              path: /ping
+              port: http
+            periodSeconds: 5
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /config
+              name: config
+            - mountPath: /tmp
+              name: tmp
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: prowlarr
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - emptyDir: {}
+          name: tmp
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+    - metadata:
+        name: config
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi

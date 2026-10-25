@@ -1,0 +1,11 @@
+values:
+  externalDatabase:
+    enabled: true
+    host: pg.example.com
+    port: 6432
+    database: arr-prowlarr
+    logDatabase: arr-prowlarr-logs
+    existingSecret:
+      name: prowlarr-db
+      usernameKey: user
+      passwordKey: pass

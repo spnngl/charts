@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: Prowlarr__Auth__Method
+      value: Forms
+expect:
+  error: set by the chart

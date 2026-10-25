@@ -1,0 +1,9 @@
+values:
+  externalDatabase:
+    enabled: true
+    host: pg.example.com
+    existingSecret:
+      name: prowlarr-db
+  extraEnv:
+    - name: Prowlarr__Log__DbEnabled
+      value: "false"
