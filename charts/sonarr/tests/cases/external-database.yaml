@@ -1,0 +1,11 @@
+values:
+  externalDatabase:
+    enabled: true
+    host: pg.example.com
+    port: 6432
+    database: arr-sonarr
+    logDatabase: arr-sonarr-logs
+    existingSecret:
+      name: sonarr-db
+      usernameKey: user
+      passwordKey: pass

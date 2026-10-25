@@ -1,0 +1,7 @@
+values:
+  externalDatabase:
+    enabled: true
+    existingSecret:
+      name: db
+expect:
+  error: "/externalDatabase/host"

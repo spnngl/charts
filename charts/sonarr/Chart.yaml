@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: sonarr
+description: Sonarr TV series collection manager as a hardened single-replica StatefulSet, with SQLite or an external PostgreSQL
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/sonarr
+appVersion: "4.0.20.3014"
+kubeVersion: ">=1.33.0-0"
+home: https://sonarr.tv
+icon: https://raw.githubusercontent.com/Sonarr/Sonarr/v4.0.20.3014/Logo/256.png
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/Sonarr/Sonarr
+  - https://github.com/spnngl/images
+keywords:
+  - sonarr
+  - servarr
+  - tv
+  - series
+  - usenet
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: GPL-3.0-only
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # sonarr.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: sonarr
+      image: ghcr.io/spnngl/images/sonarr:4.0.20.3014@sha256:6311a5d359e45e9b5e6aece3e61be67e70dd02b2460caaf8cbd12f5ed1c330c9
+  artifacthub.io/links: |-
+    - name: Upstream project
+      url: https://sonarr.tv
+    - name: Upstream repository
+      url: https://github.com/Sonarr/Sonarr
+    - name: Images repository
+      url: https://github.com/spnngl/images
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/sonarr
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

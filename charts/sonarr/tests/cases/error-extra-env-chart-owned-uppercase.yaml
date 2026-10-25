@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: SONARR__AUTH__REQUIRED
+      value: DisabledForLocalAddresses
+expect:
+  error: set by the chart

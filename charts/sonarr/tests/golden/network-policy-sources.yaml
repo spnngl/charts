@@ -1,0 +1,207 @@
+---
+# Source: sonarr/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: sonarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sonarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sonarr-0.0.0
+  name: sonarr
+  namespace: sonarr
+spec:
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: media
+      ports:
+      - port: 8989
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: sonarr
+      app.kubernetes.io/name: sonarr
+  policyTypes:
+    - Ingress
+---
+# Source: sonarr/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: sonarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sonarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sonarr-0.0.0
+  name: sonarr
+  namespace: sonarr
+---
+# Source: sonarr/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: sonarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sonarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sonarr-0.0.0
+  name: sonarr
+  namespace: sonarr
+spec:
+  ports:
+    - name: http
+      port: 8989
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: sonarr
+    app.kubernetes.io/name: sonarr
+  type: ClusterIP
+---
+# Source: sonarr/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: Sonarr is the single writer of /config and of its SQLite databases."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/instance: sonarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sonarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sonarr-0.0.0
+  name: sonarr
+  namespace: sonarr
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: sonarr
+      app.kubernetes.io/name: sonarr
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: sonarr
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: sonarr
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: sonarr-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - -nobrowser
+            - -data=/config
+          env:
+            - name: Sonarr__Auth__Required
+              value: Enabled
+            - name: Sonarr__Server__BindAddress
+              value: "*"
+            - name: Sonarr__Server__Port
+              value: "8989"
+          image: "ghcr.io/spnngl/images/sonarr:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            tcpSocket:
+              port: http
+          name: sonarr
+          ports:
+            - containerPort: 8989
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              httpHeaders:
+              - name: Host
+                value: localhost
+              path: /ping
+              port: http
+            periodSeconds: 10
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 192Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              httpHeaders:
+              - name: Host
+                value: localhost
+              path: /ping
+              port: http
+            periodSeconds: 5
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /config
+              name: config
+            - mountPath: /data
+              mountPropagation: None
+              name: data
+            - mountPath: /tmp
+              name: tmp
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: sonarr
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - emptyDir:
+          name: data
+        - emptyDir: {}
+          name: tmp
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+    - metadata:
+        name: config
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi

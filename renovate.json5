@@ -86,10 +86,11 @@
             "automerge": true
         },
         {
-            "description": "prowlarr, radarr: Servarr versions have four parts (`2.6.5.5623`), which the chart manager's `^X.Y.Z$` versioning rejects: the images would never be bumped.",
+            "description": "prowlarr, radarr, sonarr: Servarr versions have four parts (`2.6.5.5623`), which the chart manager's `^X.Y.Z$` versioning rejects: the images would never be bumped.",
             "matchDepNames": [
                 "ghcr.io/spnngl/images/prowlarr",
-                "ghcr.io/spnngl/images/radarr"
+                "ghcr.io/spnngl/images/radarr",
+                "ghcr.io/spnngl/images/sonarr"
             ],
             "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\.(?<build>\\d+)$"
         },

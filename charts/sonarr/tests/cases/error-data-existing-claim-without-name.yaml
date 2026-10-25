@@ -1,0 +1,6 @@
+values:
+  persistence:
+    data:
+      type: existingClaim
+expect:
+  error: persistence.data.existingClaim.name is required

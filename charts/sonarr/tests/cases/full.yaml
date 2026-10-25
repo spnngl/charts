@@ -1,0 +1,48 @@
+values:
+  hostUsers: true
+  auth:
+    method: Forms
+  apiKey:
+    existingSecret:
+      name: sonarr-api
+  externalDatabase:
+    enabled: true
+    host: pg.example.com
+    existingSecret:
+      name: sonarr-db
+  service:
+    annotations:
+      a: b
+  ingress:
+    enabled: true
+    hosts: [sonarr.example.com]
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: gw
+  podAnnotations:
+    a: b
+  podLabels:
+    team: media
+  extraArgs: [-logging=debug]
+  extraEnv:
+    - name: Sonarr__Server__UrlBase
+      value: /sonarr
+    - name: Sonarr__App__InstanceName
+      value: Sonarr
+  extraVolumes:
+    - name: x
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: x
+      mountPath: /x
+  networkPolicy:
+    http:
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+    egress:
+      enabled: true
+  verticalPodAutoscaler:
+    enabled: true

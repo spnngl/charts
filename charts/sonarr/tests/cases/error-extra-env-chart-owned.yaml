@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: Sonarr__Auth__Method
+      value: Forms
+expect:
+  error: set by the chart

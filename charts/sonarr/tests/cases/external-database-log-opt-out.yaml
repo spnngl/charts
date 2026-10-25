@@ -1,0 +1,9 @@
+values:
+  externalDatabase:
+    enabled: true
+    host: pg.example.com
+    existingSecret:
+      name: sonarr-db
+  extraEnv:
+    - name: Sonarr__Log__DbEnabled
+      value: "false"

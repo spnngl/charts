@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: Sonarr__Auth__Enabled
+      value: "true"
+expect:
+  error: set by the chart
