@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: DB_HOST
+      value: pg
+expect:
+  error: "extraEnv DB_HOST is set by the chart"

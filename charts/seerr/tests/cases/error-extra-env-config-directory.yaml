@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: CONFIG_DIRECTORY
+      value: /x
+expect:
+  error: "extraEnv CONFIG_DIRECTORY is set by the chart"

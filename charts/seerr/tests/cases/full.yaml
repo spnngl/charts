@@ -1,0 +1,48 @@
+values:
+  hostUsers: true
+  apiKey:
+    existingSecret:
+      name: seerr-api
+  externalDatabase:
+    enabled: true
+    host: pg.example.com
+    existingSecret:
+      name: seerr-db
+  service:
+    annotations:
+      a: b
+  ingress:
+    enabled: true
+    hosts: [seerr.example.com]
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: gw
+  podAnnotations:
+    a: b
+  podLabels:
+    team: media
+  persistence:
+    cache:
+      sizeLimit: 1Gi
+  extraEnv:
+    - name: LOG_LEVEL
+      value: debug
+    - name: DB_USE_SSL
+      value: "true"
+  extraVolumes:
+    - name: x
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: x
+      mountPath: /x
+  networkPolicy:
+    http:
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+    egress:
+      enabled: true
+  verticalPodAutoscaler:
+    enabled: true

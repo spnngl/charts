@@ -1,0 +1,543 @@
+# yaml-language-server: $schema=values.schema.json
+# @schema.root
+# title: seerr values
+# allOf:
+#   # the chart renders the connection from the host and the Secret
+#   - if:
+#       required: [externalDatabase]
+#       properties:
+#         externalDatabase:
+#           required: [enabled]
+#           properties:
+#             enabled:
+#               const: true
+#     then:
+#       properties:
+#         externalDatabase:
+#           properties:
+#             host:
+#               minLength: 1
+#             existingSecret:
+#               properties:
+#                 name:
+#                   minLength: 1
+# @schema.root
+# -- Override the chart name used in resource names and labels.
+nameOverride: ""
+# -- Override the full resource name (default `<release>-<chart>`).
+fullnameOverride: ""
+
+image:
+  # -- Image repository.
+  repository: ghcr.io/spnngl/images/seerr
+  # -- Image tag. Empty: the tag and digest recorded for `image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.
+  tag: ""
+  # @schema
+  # type: string
+  # pattern: "^(sha256:[a-f0-9]{64})?$"
+  # @schema
+  # -- Image digest, only valid together with `image.tag`.
+  digest: ""
+  # @schema
+  # type: string
+  # enum: [Always, IfNotPresent, Never]
+  # @schema
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+# @schema
+# -- Image pull secrets (list of `{name: <secret>}`).
+imagePullSecrets: []
+
+apiKey:
+  existingSecret:
+    # -- Name of a Secret holding the API key, passed as `API_KEY`. Empty: no env, Seerr generates its own key and keeps it in `settings.json`. The chart never creates the Secret.
+    name: ""
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the API key in the Secret.
+    key: api-key
+
+externalDatabase:
+  # -- Use an external PostgreSQL instead of SQLite in `/app/config`. Seerr creates its tables but no database: create it first. Enabling it on an existing install starts empty; the SQLite data is not migrated.
+  enabled: false
+  # -- PostgreSQL host. Required when enabled.
+  host: ""
+  # @schema
+  # type: integer
+  # minimum: 1
+  # maximum: 65535
+  # @schema
+  # -- PostgreSQL port.
+  port: 5432
+  # @schema
+  # type: string
+  # minLength: 1
+  # @schema
+  # -- Database name (`DB_NAME`).
+  database: seerr
+  existingSecret:
+    # -- Name of the Secret holding the database login (for example a CloudNativePG role Secret). Required when enabled. The chart never creates it.
+    name: ""
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the user name in the Secret.
+    usernameKey: username
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the password in the Secret.
+    passwordKey: password
+
+service:
+  # @schema
+  # type: string
+  # enum: [ClusterIP, LoadBalancer, NodePort]
+  # @schema
+  # -- Web UI and API Service type.
+  type: ClusterIP
+  # @schema
+  # type: integer
+  # minimum: 1
+  # maximum: 65535
+  # @schema
+  # -- Web UI and API Service port (the container listens on 5055).
+  port: 5055
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Service annotations.
+  annotations: {}
+
+ingress:
+  # -- Create an Ingress for the web UI (path `/`).
+  enabled: false
+  # -- Ingress class name (empty: cluster default).
+  className: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Ingress annotations.
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra Ingress labels (for example the label an external-dns `--label-filter` selects).
+  labels: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   minLength: 1
+  # @schema
+  # -- Host names. Required when enabled.
+  hosts: []
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Ingress TLS blocks (`secretName`, `hosts`).
+  tls: []
+
+httpRoute:
+  # -- Create a Gateway API HTTPRoute for the web UI (path prefix `/`).
+  enabled: false
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- HTTPRoute annotations.
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra HTTPRoute labels.
+  labels: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Gateways (`parentRefs`). Required when enabled.
+  parentRefs: []
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   minLength: 1
+  # @schema
+  # -- Host names (empty: any host of the Gateway listener).
+  hostnames: []
+
+persistence:
+  config:
+    # @schema
+    # type: string
+    # enum: [volumeClaimTemplate, existingClaim, hostPath, emptyDir]
+    # @schema
+    # -- Where `/app/config` (`settings.json`, the SQLite database unless `externalDatabase.enabled`, logs, the image proxy cache) lives. Block storage: SQLite on NFS corrupts. `volumeClaimTemplate` creates a PVC per pod and keeps it on uninstall; the other types use the matching sub-section.
+    type: volumeClaimTemplate
+    volumeClaimTemplate:
+      # -- StorageClass (empty: cluster default).
+      storageClassName: ""
+      # @schema
+      # type: array
+      # items:
+      #   type: string
+      # @schema
+      # -- Access modes.
+      accessModes:
+        - ReadWriteOnce
+      # -- Requested size. The template is immutable once installed: resize the PVC, see the README.
+      size: 1Gi
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- PVC annotations.
+      annotations: {}
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- PVC labels.
+      labels: {}
+    existingClaim:
+      # -- Name of an existing PVC (`type: existingClaim`).
+      name: ""
+      # -- Sub-path inside the claim.
+      subPath: ""
+    hostPath:
+      # -- Absolute node path (`type: hostPath`), owned by uid/gid 65532. Pin the pod to the node.
+      path: ""
+      # @schema
+      # type: string
+      # enum: [Directory, DirectoryOrCreate]
+      # @schema
+      # -- `hostPath` type. `DirectoryOrCreate` makes a root-owned directory the app cannot write.
+      type: Directory
+    emptyDir:
+      # -- Size limit (`type: emptyDir`, state is lost with the pod). Empty: none.
+      sizeLimit: ""
+  cache:
+    # -- Size limit of the `emptyDir` on `/app/.next/cache` (Next.js' optimised images, rebuilt on demand). Empty: none. A limit that is hit evicts the pod.
+    sizeLimit: ""
+
+# -- Old ControllerRevisions to keep.
+revisionHistoryLimit: 3
+
+serviceAccount:
+  # -- Create the ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false).
+  name: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- ServiceAccount annotations.
+  annotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Pod annotations.
+podAnnotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Extra pod labels.
+podLabels: {}
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Pod security context. Overrides are merged onto these defaults. `fsGroup` does not apply to NFS/SMB volumes or `hostPath`.
+podSecurityContext:
+  fsGroup: 65532
+  fsGroupChangePolicy: OnRootMismatch
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Container security context of the Seerr container (read-only root filesystem: it writes only to the `/app/config`, `/app/.next/cache` and `/tmp` volumes). Overrides are merged onto these defaults.
+securityContext:
+  allowPrivilegeEscalation: false
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: boolean
+# @schema
+# -- Run the pod in a user namespace (`false`: uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) and idmapped mounts on every volume's file system (not NFS/SMB, not `hostPath` on some file systems); pods fail to start otherwise. `true` uses host users.
+hostUsers: false
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Resources of the Seerr container. A scheduling floor, not a sizing: memory grows with the number of users and the size of the media scans (measure, then tune; VPA in `Off` mode gives recommendations). No CPU limit on purpose.
+resources:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  limits:
+    memory: 768Mi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  requests:
+    cpu: 50m
+    memory: 256Mi
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- DNS config.
+dnsConfig:
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  #   additionalProperties: true
+  # @schema
+  # -- DNS options (fewer search-list lookups for external host names such as TMDB).
+  options:
+    - name: ndots
+      value: "2"
+
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Startup probe (`GET /api/v1/status/appdata`, which needs no login, no database and no outbound call; `/api/v1/status` calls GitHub and hangs with egress blocked).
+startupProbe:
+  failureThreshold: 30
+  periodSeconds: 5
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Readiness probe (`GET /api/v1/status/appdata`, which does not read the database: the pod stays in the Service while PostgreSQL is down).
+readinessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Liveness probe (`GET /api/v1/status/appdata`: a database outage must not restart the pod).
+livenessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Node selector. With a `hostPath`, pin the pod to the node.
+nodeSelector:
+  kubernetes.io/os: linux
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Tolerations.
+tolerations: []
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Affinity.
+affinity: {}
+# -- Priority class name.
+priorityClassName: ""
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra init containers, rendered as given: seed a file before start, or run a native sidecar (`restartPolicy: Always`) that calls the API. The Seerr image has no shell: use another image.
+extraInitContainers: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volumes.
+extraVolumes: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volume mounts for the Seerr container.
+extraVolumeMounts: []
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+#       minLength: 1
+# @schema
+# -- Extra environment variables (`EnvVar` list) for the Seerr container: `LOG_LEVEL` (the chart sets `info`; this overrides it), `TZ`, `DB_USE_SSL` and `DB_SSL_*` (PostgreSQL TLS), `DB_POOL_SIZE`. Names the chart sets are rejected: `API_KEY`, `PORT`, `HOST`, `CONFIG_DIRECTORY`, `DB_TYPE`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `DB_SOCKET_PATH`. Names are case-sensitive.
+extraEnv: []
+
+networkPolicy:
+  # -- Create a NetworkPolicy (ingress: the web port).
+  enabled: true
+  http:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach the web UI and API port. Empty: any source. It must admit the Ingress controller and every client of the API.
+    from: []
+  egress:
+    # -- Restrict egress (DNS, the internet for TMDB and notifications, `extraEgress`).
+    enabled: false
+    dns:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels.
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    peers:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- TMDB, notification services and other internet hosts (any port). Default: the internet, not the private, CGNAT and link-local ranges, so a compromised process cannot move sideways. Remove an `except` entry to reach a provider there.
+      to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 100.64.0.0/10
+              - 127.0.0.0/8
+              - 169.254.0.0/16
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+              - fc00::/7
+              - fe80::/10
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Extra `NetworkPolicyEgressRule`s: the database, Radarr, Sonarr and the media server (they are in the private ranges `peers` excludes).
+    extraEgress: []
+
+verticalPodAutoscaler:
+  # -- Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).
+  enabled: false
+  # @schema
+  # type: string
+  # enum: ["Off", Initial, Recreate, InPlaceOrRecreate]
+  # @schema
+  # -- VPA update mode.
+  updateMode: "Off"
+  # @schema
+  # type: string
+  # @schema
+  # -- Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`. Set it when the cluster's recommender runs under another `--recommender-name`: a VPA nobody serves gets no recommendation.
+  recommender: ""
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   enum: [cpu, memory]
+  # @schema
+  # -- Resources VPA controls.
+  controlledResources:
+    - cpu
+    - memory
+  # @schema
+  # type: string
+  # enum: [RequestsAndLimits, RequestsOnly]
+  # @schema
+  # -- Whether VPA also scales limits.
+  controlledValues: RequestsAndLimits
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Lower bound of recommendations (for example `{cpu: 25m, memory: 64Mi}`).
+  minAllowed: {}
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Upper bound of recommendations.
+  maxAllowed: {}

@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: API_KEY
+      value: x
+expect:
+  error: "extraEnv API_KEY is set by the chart"

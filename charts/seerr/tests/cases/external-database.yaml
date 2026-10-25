@@ -1,0 +1,10 @@
+values:
+  externalDatabase:
+    enabled: true
+    host: pg.example.com
+    port: 6432
+    database: arr-seerr
+    existingSecret:
+      name: seerr-db
+      usernameKey: user
+      passwordKey: pass

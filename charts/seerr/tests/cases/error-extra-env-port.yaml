@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: PORT
+      value: "80"
+expect:
+  error: "extraEnv PORT is set by the chart"

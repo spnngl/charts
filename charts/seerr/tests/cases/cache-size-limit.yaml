@@ -1,0 +1,4 @@
+values:
+  persistence:
+    cache:
+      sizeLimit: 2Gi

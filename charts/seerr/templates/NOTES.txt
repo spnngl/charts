@@ -1,0 +1,38 @@
+{{ include "seerr.fullname" . }} runs one Seerr (StatefulSet, downtime on every upgrade).
+
+The first sign-in with a media server account becomes the admin: finish the
+setup wizard before exposing the Service.
+{{- if .Values.apiKey.existingSecret.name }}
+
+The API key comes from the Secret {{ .Values.apiKey.existingSecret.name }} (key {{ .Values.apiKey.existingSecret.key }}), read at startup only:
+roll the pod after changing it.
+
+  kubectl -n {{ .Release.Namespace }} rollout restart statefulset/{{ include "seerr.fullname" . }}
+{{- end }}
+{{- if .Values.externalDatabase.enabled }}
+
+Seerr uses PostgreSQL at {{ .Values.externalDatabase.host }}:{{ .Values.externalDatabase.port }}: the database {{ .Values.externalDatabase.database }}
+must exist, owned by the login in the Secret {{ .Values.externalDatabase.existingSecret.name }}. A missing database makes the pod
+crash-loop.
+{{- end }}
+
+Web UI:
+
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+  https://{{ . }}
+{{- end }}
+{{- end }}
+{{- if .Values.httpRoute.enabled }}
+{{- range .Values.httpRoute.hostnames }}
+  https://{{ . }}
+{{- end }}
+{{- end }}
+  kubectl -n {{ .Release.Namespace }} port-forward service/{{ include "seerr.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+  then open http://127.0.0.1:{{ .Values.service.port }}
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: the pod runs in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) or volumes without idmapped
+mounts (NFS/SMB) cannot start it; set hostUsers=true to use host users.
+{{- end }}
