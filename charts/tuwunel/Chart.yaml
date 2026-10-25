@@ -40,7 +40,7 @@ annotations:
     - name: livekit
       image: ghcr.io/spnngl/images/livekit:1.13.10@sha256:a8e27c7ab81a29adafb1efd7d1cdddac41158a9bb8640790713a5226f19e307b
     - name: lk-jwt-service
-      image: ghcr.io/spnngl/images/lk-jwt-service:0.9.0@sha256:e550ff806419fcbffe5afce02e6a6e11a9b60124d1fe0e550caaacfed3c7fdc4
+      image: ghcr.io/spnngl/images/lk-jwt-service:0.9.0@sha256:708869841254d0a0a7d264466e170f94bc7e375b15a041df35a9cf2eeffdd0b0
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://tuwunel.chat
