@@ -1,0 +1,202 @@
+{{- include "bazarr.validate" . }}
+{{- $fullname := include "bazarr.fullname" . }}
+{{- $config := .Values.persistence.config }}
+{{- $db := .Values.externalDatabase }}
+{{- $probe := dict "httpGet" (dict "path" (printf "%s/api/system/ping" (include "bazarr.urlPath" .)) "port" "http") }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    {{- if include "bazarr.envRefs" . }}
+    ignore-check.kube-linter.io/env-value-from: "The Secrets and ConfigMaps the env reads are created by the user, outside the chart."
+    {{- end }}
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: Bazarr is the single writer of /config and of its SQLite database."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    {{- if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: isolation is the user's choice."
+    {{- end }}
+    {{- if contains "secret" (include "bazarr.envRefs" .) }}
+    ignore-check.kube-linter.io/read-secret-from-env-var: "Bazarr reads its API key and database password from env or its config.yaml only, never from a file."
+    {{- end }}
+    {{- if or (eq $config.type "hostPath") (eq .Values.persistence.data.type "hostPath") }}
+    ignore-check.kube-linter.io/writable-host-mount: "A hostPath volume is the user's choice (persistence.config.type or persistence.data.type: hostPath)."
+    {{- end }}
+  labels:
+    {{- include "bazarr.labels" . | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "bazarr.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- toYaml (merge (dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum)) (deepCopy .Values.podAnnotations)) | nindent 8 }}
+      labels:
+        {{- toYaml (merge (include "bazarr.labels" . | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            {{- with .Values.extraArgs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- /* Last: argparse keeps the last value, and --port wins over the setting. */}}
+            - --config
+            - /config
+            - --port
+            - "6767"
+          env:
+            - name: INCLUDES_FOR_DYNACONF
+              value: /etc/bazarr/config.yaml
+            - name: DYNACONF_GENERAL__ip
+              value: "*"
+            - name: DYNACONF_GENERAL__base_url
+              value: {{ include "bazarr.urlPath" . | quote }}
+            - name: DYNACONF_POSTGRESQL__enabled
+              value: {{ $db.enabled | quote }}
+            {{- with .Values.apiKey.existingSecret.name }}
+            - name: BAZARR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: {{ $.Values.apiKey.existingSecret.key }}
+                  name: {{ . }}
+            - name: DYNACONF_AUTH__apikey
+              value: "@str $(BAZARR_API_KEY)"
+            {{- end }}
+            {{- if $db.enabled }}
+            - name: POSTGRES_HOST
+              value: {{ $db.host | quote }}
+            - name: POSTGRES_PORT
+              value: {{ int $db.port | quote }}
+            - name: POSTGRES_DATABASE
+              value: {{ $db.database | quote }}
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: {{ $db.existingSecret.usernameKey }}
+                  name: {{ $db.existingSecret.name }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: {{ $db.existingSecret.passwordKey }}
+                  name: {{ $db.existingSecret.name }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          image: {{ include "bazarr.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            {{- toYaml (merge (dict "tcpSocket" (dict "port" "http")) (deepCopy .Values.livenessProbe)) | nindent 12 }}
+          name: bazarr
+          ports:
+            - containerPort: 6767
+              name: http
+              protocol: TCP
+          readinessProbe:
+            {{- toYaml (merge (deepCopy $probe) (deepCopy .Values.readinessProbe)) | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- toYaml (merge (deepCopy $probe) (deepCopy .Values.startupProbe)) | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /config
+              name: config
+              {{- if and (eq $config.type "existingClaim") $config.existingClaim.subPath }}
+              subPath: {{ $config.existingClaim.subPath }}
+              {{- end }}
+            - mountPath: {{ .Values.persistence.data.mountPath }}
+              mountPropagation: {{ .Values.persistence.data.mountPropagation }}
+              name: data
+              {{- if and (eq .Values.persistence.data.type "existingClaim") .Values.persistence.data.existingClaim.subPath }}
+              subPath: {{ .Values.persistence.data.existingClaim.subPath }}
+              {{- end }}
+            - mountPath: /etc/bazarr
+              name: settings
+              readOnly: true
+            - mountPath: /tmp
+              name: tmp
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      enableServiceLinks: false
+      hostUsers: {{ .Values.hostUsers }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.extraInitContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "bazarr.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 30
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        {{- with include "bazarr.configVolume" . }}
+        {{- . | nindent 8 }}
+        {{- end }}
+        {{- include "bazarr.dataVolume" . | nindent 8 }}
+        - configMap:
+            name: {{ $fullname }}
+          name: settings
+        - emptyDir: {}
+          name: tmp
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+  updateStrategy:
+    type: RollingUpdate
+  {{- /* Template metadata carries no chart labels: a volumeClaimTemplate is immutable, a version label would fail every upgrade. */}}
+  {{- if eq $config.type "volumeClaimTemplate" }}
+  {{- $t := $config.volumeClaimTemplate }}
+  volumeClaimTemplates:
+    - metadata:
+        {{- with $t.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with $t.labels }}
+        labels:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        name: config
+      spec:
+        accessModes:
+          {{- toYaml $t.accessModes | nindent 10 }}
+        resources:
+          requests:
+            storage: {{ $t.size }}
+        {{- with $t.storageClassName }}
+        storageClassName: {{ . }}
+        {{- end }}
+  {{- end }}

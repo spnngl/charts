@@ -1,0 +1,9 @@
+values:
+  apiKey:
+    existingSecret:
+      name: bazarr-api
+  config:
+    auth:
+      apikey: x
+expect:
+  error: "/config/auth/apikey"

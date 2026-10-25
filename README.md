@@ -17,6 +17,7 @@ Two kinds of charts live here:
 | Chart | Upstream | Contents |
 |-------|----------|----------|
 | [`artifacthub-exporter`](./charts/artifacthub-exporter) | [spnngl/artifacthub-exporter](https://github.com/spnngl/artifacthub-exporter) | Artifact Hub package and repository metrics exporter Deployment (ServiceMonitor/PodMonitor/PrometheusRule, VPA) |
+| [`bazarr`](./charts/bazarr) | [morpheus65535/bazarr](https://github.com/morpheus65535/bazarr) | Subtitle manager for Sonarr and Radarr StatefulSet, SQLite or external PostgreSQL, settings as code (ConfigMap), API key Secret, `/data` volume (emptyDir, PVC, hostPath, NFS) (Ingress/HTTPRoute, NetworkPolicy, VPA) |
 | [`cinny`](./charts/cinny) | [cinnyapp/cinny](https://github.com/cinnyapp/cinny) | Matrix web client Deployment (Ingress/HTTPRoute, NetworkPolicy, HPA/PDB, VPA, ServiceMonitor/PodMonitor) |
 | [`cloudflared`](./charts/cloudflared) | [cloudflare/cloudflared](https://github.com/cloudflare/cloudflared) | Cloudflare Tunnel connector Deployment (HPA, VPA, ServiceMonitor/PodMonitor) |
 | [`cryptgeon`](./charts/cryptgeon) | [cupcakearmy/cryptgeon](https://github.com/cupcakearmy/cryptgeon) | Encrypted self-destructing notes Deployment, external Redis (Ingress/HTTPRoute, NetworkPolicy, VPA) |

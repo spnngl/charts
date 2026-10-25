@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: DYNACONF_AUTH__apikey
+      value: x
+expect:
+  error: set by the chart

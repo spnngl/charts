@@ -1,0 +1,11 @@
+values:
+  config:
+    general:
+      base_url: /bazarr/
+  ingress:
+    enabled: true
+    hosts: [arr.example.com]
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: gw

@@ -1,0 +1,6 @@
+values:
+  config:
+    general:
+      port: 8080
+expect:
+  error: "/config/general/port"

@@ -1,0 +1,278 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.description" . }}
+
+Runs [Bazarr](https://github.com/morpheus65535/bazarr) as a single-replica
+StatefulSet. The image is built from
+[spnngl/images](https://github.com/spnngl/images): distroless, non-root, no shell.
+
+One replica only: Bazarr is the sole writer of `/config` and of its SQLite
+database. Every upgrade or reschedule is a short downtime.
+
+## Install
+
+```sh
+kubectl create namespace bazarr
+helm install bazarr oci://ghcr.io/spnngl/charts/bazarr --version <version> -n bazarr
+```
+
+The defaults start Bazarr with SQLite in a `1Gi` PVC and **no login**: Bazarr
+has none by default, and its web UI then shows the API key to whoever reaches
+it. Set a login (Settings › General, or `config.auth` below) before exposing the
+Service.
+
+## Settings as code
+
+`config` holds Bazarr settings in the shape of its `config.yaml` (`general`,
+`auth`, `sonarr`, `radarr`, providers, ...). The chart renders it to a
+ConfigMap that Bazarr loads at every start over its saved settings
+(`INCLUDES_FOR_DYNACONF`); changing it restarts the pod.
+
+Each top-level section you list **replaces** Bazarr's whole section:
+
+- a change made in the UI anywhere in that section reverts at the next start;
+- a key you leave out of a listed section takes Bazarr's default, not its
+  saved value;
+- a section you do not list keeps what was saved in the UI.
+
+List complete sections, or none. Language profiles are database rows, not
+settings: set them in the UI or through the API.
+
+The chart owns some keys and rejects them in `config`: `postgresql` (use
+`externalDatabase`), `auth.apikey` (use `apiKey.existingSecret`), `general.ip`
+and `general.port` (they match the Service, probes and NetworkPolicy).
+
+### Secrets
+
+The ConfigMap is readable by anyone who can read the namespace: secrets go in
+`extraEnv`, from a Secret. Dynaconf reads `DYNACONF_<SECTION>__<key>` and parses
+the value as TOML: load the Secret into a plain variable first, then pass it
+with `@str` so it stays a string. A value made only of digits can still turn
+into a number and be reset to empty (a Dynaconf bug, seen with an API key of
+bare digits): random hex keys are safe. Sonarr's API key, for example:
+
+```yaml
+config:
+  general:
+    use_sonarr: true
+  sonarr:
+    ip: sonarr.media.svc
+    port: 8989
+extraEnv:
+  - name: SONARR_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: sonarr-api
+        key: api-key
+  - name: DYNACONF_SONARR__apikey
+    value: "@str $(SONARR_API_KEY)"
+```
+
+Kubernetes expands `$(SONARR_API_KEY)` only when it is defined earlier in the
+list. Bazarr also copies these values into `/config/config/config.yaml`.
+
+### Login
+
+`config.auth` replaces the whole `auth` section, saved API key included, so it
+requires `apiKey.existingSecret.name`: without it Bazarr would generate a new
+key at every start. Bazarr stores the password as an unsalted MD5 hex digest:
+
+```sh
+kubectl -n bazarr create secret generic bazarr-login \
+  --from-literal=password-md5="$(printf %s "$PASSWORD" | openssl md5 -r | cut -d" " -f1)"
+```
+
+```yaml
+apiKey:
+  existingSecret:
+    name: bazarr-api
+config:
+  auth:
+    type: form # or basic
+    username: admin
+extraEnv:
+  - name: BAZARR_PASSWORD_MD5
+    valueFrom:
+      secretKeyRef:
+        name: bazarr-login
+        key: password-md5
+  - name: DYNACONF_AUTH__password
+    value: "@str $(BAZARR_PASSWORD_MD5)"
+```
+
+The API stays reachable with the API key whatever the login.
+
+### API key
+
+Bazarr generates its API key and keeps it in `/config/config/config.yaml`. To
+set it from a Secret, create the Secret and point `apiKey.existingSecret.name`
+at it:
+
+```sh
+kubectl -n bazarr create secret generic bazarr-api --from-literal=api-key="$(openssl rand -hex 16)"
+```
+
+Bazarr reads it once at startup: restart the pod after changing it. The chart
+never creates the Secret.
+
+```sh
+kubectl -n bazarr rollout restart statefulset/bazarr
+```
+
+## External database
+
+`externalDatabase.enabled: true` uses PostgreSQL instead of SQLite in `/config`.
+Bazarr creates its tables, never the database: create it first (`bazarr` by
+default), owned by the login in `externalDatabase.existingSecret` (keys
+`username` and `password`, the shape of a CloudNativePG role Secret). A missing
+database makes the pod crash-loop.
+
+- One database per application: never point Bazarr or another app at the same
+  database.
+- The chart does not migrate SQLite data: enabling it on an existing install
+  starts empty.
+- Bazarr connects with TLS when the server offers it, without verifying the
+  certificate. For other connection options, set `POSTGRES_URL` in `extraEnv`
+  to a URL that carries only them, for example
+  `postgresql://?sslmode=verify-full&sslrootcert=/certs/ca.crt` (mount the CA
+  with `extraVolumes`): the chart's host, port, database and login fill in the
+  rest.
+- Back up PostgreSQL yourself. Bazarr's own backups hold its settings only
+  when PostgreSQL is enabled.
+
+The probes do not read the database: while PostgreSQL is down the pod stays in
+the Service and serves errors.
+
+## Web UI
+
+```sh
+kubectl -n bazarr port-forward service/bazarr 6767:6767
+```
+
+then <http://127.0.0.1:6767>. `ingress` (Ingress) and `httpRoute` (Gateway API
+HTTPRoute) expose it; both need explicit hosts (and `parentRefs` for the route).
+Terminate TLS in front: Bazarr serves plain HTTP.
+
+To serve under a path, set `config.general.base_url` (for example `/bazarr`):
+the chart pins it and prefixes the probe, Ingress and HTTPRoute paths with it.
+
+## Configuration
+
+Command-line options go in `extraArgs` (`--debug`, `--no-tasks`,
+`--no-signalr`). The chart passes `--config /config --port 6767` last, so they
+win.
+
+The pinned port, bind address and URL base keep the Service, probes and
+NetworkPolicy valid: changing them in Settings › General has no effect.
+
+Bazarr logs to standard output and to files in `/config/log`. Collect the
+standard output.
+
+## Storage
+
+Two volumes: `/config` (state) and `/data` (the media library, see Data volume).
+
+`/config` takes one of four types in `persistence.config.type`:
+
+- `volumeClaimTemplate` (default): a PVC per pod from the StatefulSet. The
+  StatefulSet keeps its PVC when it is deleted or scaled down
+  (`persistentVolumeClaimRetentionPolicy: Retain`), so `helm uninstall` leaves
+  your data; delete the PVC by hand to remove it.
+- `existingClaim`: an existing PVC (and optional `subPath`).
+- `hostPath`: a directory on the node, owned by uid/gid 65532 (Kubernetes does
+  not apply `fsGroup` to `hostPath`). Pin the pod with `nodeSelector`.
+  `type: DirectoryOrCreate` makes a root-owned directory Bazarr cannot write.
+- `emptyDir`: scratch space, lost with the pod.
+
+Use block storage with SQLite: it corrupts on NFS and SMB (use
+`externalDatabase` there). A `volumeClaimTemplate` cannot be edited on an
+existing StatefulSet, so changing `size` in values makes the upgrade fail. To
+grow the volume, expand the PVC (the StorageClass must allow it), then recreate
+the StatefulSet without touching pods or PVCs:
+
+```sh
+kubectl -n bazarr delete statefulset bazarr --cascade=orphan
+helm upgrade bazarr ... -n bazarr
+```
+
+## Data volume
+
+`persistence.data` mounts the media library Bazarr writes subtitles into, next
+to the video files, at `/data` by default (`emptyDir`, scratch space, until you
+choose a type):
+
+- `existingClaim`: a PVC, ReadWriteMany or ReadWriteOnce with every pod on one
+  node, with an optional `subPath`.
+- `hostPath`: a node directory, writable by uid/gid 65532 (Kubernetes does not
+  apply `fsGroup`). Pin the pod with `nodeSelector`.
+- `nfs`: `server` and `path`; needs `hostUsers: true` and an export writable by
+  65532.
+
+Bazarr opens the paths Sonarr and Radarr report. Mount the same volume at the
+same path as in those charts (`/data`), and no path mapping is needed;
+otherwise set `general.path_mappings` and `general.path_mappings_movie`.
+
+A library on S3 is a FUSE mount made on the node, under the `hostPath`, by
+another pod: set `mountPropagation: HostToContainer` so Bazarr sees the mount
+even when it starts first. `Bidirectional` is not offered. Bazarr's `/config` and
+its database never go on S3.
+
+## Image
+
+The default image is `appVersion`, pinned by the digest recorded in the
+`artifacthub.io/images` annotation of `Chart.yaml` (Renovate updates tag and
+digest together). Setting `image.tag` drops that digest; add `image.digest` to pin
+the tag again (a digest without a tag is an error).
+
+The image is signed with cosign (keyless, GitHub Actions OIDC) and carries SLSA
+provenance. See the repository README, "Verifying what you install".
+
+## Security
+
+Defaults satisfy the `restricted` Pod Security Standard: non-root uid/gid 65532,
+read-only root filesystem (writes go to `/config`, `/data` and an `emptyDir` on `/tmp`),
+all capabilities dropped, no privilege escalation, `RuntimeDefault` seccomp, no
+ServiceAccount token, no Service environment variables.
+
+### User namespaces
+
+`hostUsers: false` (default) runs the pod in a user namespace: uid 65532 in the
+pod maps to an unprivileged host uid, which limits what a container escape
+gains. Nodes need a container runtime with user namespace support (containerd
+2.0+ or CRI-O), runc 1.2+ or crun, and a Linux kernel 6.3+. On other nodes the
+pod sandbox cannot be created: set `hostUsers: true`. Volumes without idmapped
+mounts (NFS, SMB) and `hostPath` ownership need it too.
+
+## Network
+
+- The NetworkPolicy (`networkPolicy.enabled`, on by default) allows the web
+  port. `networkPolicy.http.from` restricts the sources; empty means any source.
+  When you set it, include the Ingress controller and every client of the API.
+- `networkPolicy.egress.enabled` (off by default) allows DNS, `peers.to` (the
+  internet except private, CGNAT and link-local ranges: subtitle providers, so
+  a compromised process cannot move sideways) and `extraEgress`. Add
+  `extraEgress` rules for PostgreSQL, Sonarr, Radarr, or a media server on your
+  LAN.
+
+## Autoscaling and resources
+
+There is no HPA (one replica). `verticalPodAutoscaler` supports `Off`, `Initial`,
+`Recreate` and `InPlaceOrRecreate` (in-place resize needs Kubernetes 1.33+). A
+recommender started with another `--recommender-name` than `default` ignores the
+VPA unless `verticalPodAutoscaler.recommender` names it. The default requests
+are scheduling floors, not a sizing: memory grows with the size of the library
+and with subtitle syncing, so measure then tune.
+
+## Compatibility
+
+The values schema is strict: unknown keys fail the install. A breaking change to
+values bumps the chart MAJOR version; deprecations are announced one MINOR
+version ahead. Requires Kubernetes 1.33 or later.
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}

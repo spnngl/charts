@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: DYNACONF_AUTH
+      value: "@json {}"
+expect:
+  error: set by the chart

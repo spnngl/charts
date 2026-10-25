@@ -1,0 +1,21 @@
+values:
+  apiKey:
+    existingSecret:
+      name: bazarr-api
+  config:
+    auth:
+      type: form
+      username: admin
+    general:
+      use_sonarr: true
+    sonarr:
+      ip: sonarr.media.svc
+      port: 8989
+  extraEnv:
+    - name: AUTH_PASSWORD_MD5
+      valueFrom:
+        secretKeyRef:
+          name: bazarr-login
+          key: password-md5
+    - name: DYNACONF_AUTH__password
+      value: "@str $(AUTH_PASSWORD_MD5)"
