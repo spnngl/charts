@@ -3,7 +3,7 @@ apiVersion: v2
 name: tuwunel
 description: Tuwunel Matrix homeserver as a hardened single-replica StatefulSet, with an optional Cinny web client and LiveKit for calls
 type: application
-version: 0.1.2
+version: 0.1.3
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/tuwunel
 appVersion: "1.9.4"
 kubeVersion: ">=1.33.0-0"
@@ -40,7 +40,7 @@ annotations:
     - name: livekit
       image: ghcr.io/spnngl/images/livekit:1.13.10@sha256:a84b2d27fd57a279cd40e071c97e6d859dedb76094cb484282bda9ba598815b3
     - name: lk-jwt-service
-      image: ghcr.io/spnngl/images/lk-jwt-service:0.9.0@sha256:e550ff806419fcbffe5afce02e6a6e11a9b60124d1fe0e550caaacfed3c7fdc4
+      image: ghcr.io/spnngl/images/lk-jwt-service:0.9.0@sha256:708869841254d0a0a7d264466e170f94bc7e375b15a041df35a9cf2eeffdd0b0
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://tuwunel.chat
