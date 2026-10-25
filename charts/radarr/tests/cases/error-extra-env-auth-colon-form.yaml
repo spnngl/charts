@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: Radarr:Auth:Method
+      value: None
+expect:
+  error: set by the chart

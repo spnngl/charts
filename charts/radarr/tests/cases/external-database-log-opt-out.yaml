@@ -1,0 +1,9 @@
+values:
+  externalDatabase:
+    enabled: true
+    host: pg.example.com
+    existingSecret:
+      name: radarr-db
+  extraEnv:
+    - name: Radarr__Log__DbEnabled
+      value: "false"

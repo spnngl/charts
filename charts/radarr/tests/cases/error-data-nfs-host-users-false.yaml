@@ -1,0 +1,10 @@
+values:
+  hostUsers: false
+  persistence:
+    data:
+      type: nfs
+      nfs:
+        server: nas.example.com
+        path: /export/data
+expect:
+  error: /hostUsers

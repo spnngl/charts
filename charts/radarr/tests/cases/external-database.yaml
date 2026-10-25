@@ -1,0 +1,11 @@
+values:
+  externalDatabase:
+    enabled: true
+    host: pg.example.com
+    port: 6432
+    database: arr-radarr
+    logDatabase: arr-radarr-logs
+    existingSecret:
+      name: radarr-db
+      usernameKey: user
+      passwordKey: pass

@@ -1,0 +1,11 @@
+values:
+  extraEnv:
+    - name: Radarr:Server:UrlBase
+      value: /indexers/
+  ingress:
+    enabled: true
+    hosts: [arr.example.com]
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: gw

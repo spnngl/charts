@@ -1,0 +1,9 @@
+values:
+  hostUsers: true
+  persistence:
+    data:
+      type: nfs
+      nfs:
+        path: /export/data
+expect:
+  error: /persistence/data/nfs/server

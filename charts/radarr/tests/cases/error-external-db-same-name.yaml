@@ -1,0 +1,10 @@
+values:
+  externalDatabase:
+    enabled: true
+    host: pg
+    database: same
+    logDatabase: same
+    existingSecret:
+      name: db
+expect:
+  error: externalDatabase.logDatabase must differ

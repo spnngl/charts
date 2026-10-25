@@ -1,0 +1,8 @@
+values:
+  persistence:
+    data:
+      type: hostPath
+      hostPath:
+        path: srv/data
+expect:
+  error: persistence.data.hostPath.path must be an absolute path

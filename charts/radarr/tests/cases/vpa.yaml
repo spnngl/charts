@@ -1,0 +1,8 @@
+values:
+  verticalPodAutoscaler:
+    enabled: true
+    minAllowed:
+      cpu: 25m
+      memory: 64Mi
+    maxAllowed:
+      memory: 2Gi

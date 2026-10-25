@@ -1,0 +1,7 @@
+values:
+  extraEnv:
+    - name: Radarr__App__InstanceName
+      valueFrom:
+        configMapKeyRef:
+          name: names
+          key: radarr
