@@ -1,0 +1,8 @@
+values:
+  hostUsers: true
+  persistence:
+    data:
+      type: hostPath
+      mountPropagation: HostToContainer
+      hostPath:
+        path: /srv/arr/data

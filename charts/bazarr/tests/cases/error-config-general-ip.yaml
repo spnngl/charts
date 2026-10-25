@@ -1,0 +1,6 @@
+values:
+  config:
+    general:
+      ip: 127.0.0.1
+expect:
+  error: "/config/general/ip"

@@ -1,0 +1,6 @@
+values:
+  config:
+    postgresql:
+      enabled: true
+expect:
+  error: "/config/postgresql"

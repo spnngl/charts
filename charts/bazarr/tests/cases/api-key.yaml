@@ -1,0 +1,5 @@
+values:
+  apiKey:
+    existingSecret:
+      name: bazarr-api
+      key: token

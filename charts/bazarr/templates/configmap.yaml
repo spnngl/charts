@@ -1,0 +1,11 @@
+{{- /* Bazarr settings: config, loaded by Dynaconf after Bazarr''s own config.yaml (INCLUDES_FOR_DYNACONF). */}}
+apiVersion: v1
+data:
+  config.yaml: |
+    {{- toYaml .Values.config | nindent 4 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "bazarr.labels" . | nindent 4 }}
+  name: {{ include "bazarr.fullname" . }}
+  namespace: {{ .Release.Namespace }}

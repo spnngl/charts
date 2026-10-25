@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: POSTGRES_HOST
+      value: pg
+expect:
+  error: set by the chart

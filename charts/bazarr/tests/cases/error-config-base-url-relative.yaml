@@ -1,0 +1,6 @@
+values:
+  config:
+    general:
+      base_url: bazarr
+expect:
+  error: "/config/general/base_url"

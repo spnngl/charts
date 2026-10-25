@@ -1,0 +1,6 @@
+values:
+  persistence:
+    data:
+      type: volumeClaimTemplate
+expect:
+  error: type

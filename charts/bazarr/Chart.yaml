@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: bazarr
+description: Bazarr subtitle manager for Sonarr and Radarr as a hardened single-replica StatefulSet, with SQLite or an external PostgreSQL
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/bazarr
+appVersion: "1.6.2"
+kubeVersion: ">=1.33.0-0"
+home: https://www.bazarr.media
+icon: https://raw.githubusercontent.com/morpheus65535/bazarr/v1.6.2/frontend/public/images/logo128.png
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/morpheus65535/bazarr
+  - https://github.com/spnngl/images
+keywords:
+  - bazarr
+  - subtitles
+  - sonarr
+  - radarr
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: GPL-3.0-only
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # bazarr.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: bazarr
+      image: ghcr.io/spnngl/images/bazarr:1.6.2@sha256:0c6c524a5ba37614575f8260dca57ca8e746ae1c4b0eb01861a5f0de238d70cb
+  artifacthub.io/links: |-
+    - name: Upstream project
+      url: https://www.bazarr.media
+    - name: Upstream repository
+      url: https://github.com/morpheus65535/bazarr
+    - name: Images repository
+      url: https://github.com/spnngl/images
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/bazarr
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

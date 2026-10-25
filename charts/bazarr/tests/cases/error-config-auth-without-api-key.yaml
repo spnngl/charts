@@ -1,0 +1,6 @@
+values:
+  config:
+    auth:
+      type: form
+expect:
+  error: "/apiKey/existingSecret/name"

@@ -1,0 +1,372 @@
+---
+# Source: bazarr/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: bazarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bazarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: bazarr-0.0.0
+  name: bazarr
+  namespace: bazarr
+spec:
+  egress:
+    - ports:
+        - port: 53
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+            - 10.0.0.0/8
+            - 100.64.0.0/10
+            - 127.0.0.0/8
+            - 169.254.0.0/16
+            - 172.16.0.0/12
+            - 192.168.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+            - fc00::/7
+            - fe80::/10
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+      ports:
+      - port: 6767
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: bazarr
+      app.kubernetes.io/name: bazarr
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Source: bazarr/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: bazarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bazarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: bazarr-0.0.0
+  name: bazarr
+  namespace: bazarr
+---
+# Source: bazarr/templates/configmap.yaml
+apiVersion: v1
+data:
+  config.yaml: |
+    auth:
+      type: basic
+      username: admin
+    general:
+      base_url: /bazarr
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: bazarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bazarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: bazarr-0.0.0
+  name: bazarr
+  namespace: bazarr
+---
+# Source: bazarr/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/instance: bazarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bazarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: bazarr-0.0.0
+  name: bazarr
+  namespace: bazarr
+spec:
+  ports:
+    - name: http
+      port: 6767
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: bazarr
+    app.kubernetes.io/name: bazarr
+  type: ClusterIP
+---
+# Source: bazarr/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/env-value-from: "The Secrets and ConfigMaps the env reads are created by the user, outside the chart."
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: Bazarr is the single writer of /config and of its SQLite database."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/read-secret-from-env-var: "Bazarr reads its API key and database password from env or its config.yaml only, never from a file."
+  labels:
+    app.kubernetes.io/instance: bazarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bazarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: bazarr-0.0.0
+  name: bazarr
+  namespace: bazarr
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: bazarr
+      app.kubernetes.io/name: bazarr
+  template:
+    metadata:
+      annotations:
+        a: b
+        checksum/config: 4e9c94476c1a5970dbb51bd340a583c387c2f03b1add5e2bdf2c0d121836d161
+      labels:
+        app.kubernetes.io/instance: bazarr
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: bazarr
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: bazarr-0.0.0
+        team: media
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - --debug
+            - --no-signalr
+            - --config
+            - /config
+            - --port
+            - "6767"
+          env:
+            - name: INCLUDES_FOR_DYNACONF
+              value: /etc/bazarr/config.yaml
+            - name: DYNACONF_GENERAL__ip
+              value: "*"
+            - name: DYNACONF_GENERAL__base_url
+              value: "/bazarr"
+            - name: DYNACONF_POSTGRESQL__enabled
+              value: "true"
+            - name: BAZARR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: api-key
+                  name: bazarr-api
+            - name: DYNACONF_AUTH__apikey
+              value: "@str $(BAZARR_API_KEY)"
+            - name: POSTGRES_HOST
+              value: "pg.example.com"
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DATABASE
+              value: "bazarr"
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: username
+                  name: bazarr-db
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: bazarr-db
+            - name: DYNACONF_GENERAL__debug
+              value: "true"
+          image: "ghcr.io/spnngl/images/bazarr:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            tcpSocket:
+              port: http
+          name: bazarr
+          ports:
+            - containerPort: 6767
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /bazarr/api/system/ping
+              port: http
+            periodSeconds: 10
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 192Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /bazarr/api/system/ping
+              port: http
+            periodSeconds: 5
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /config
+              name: config
+            - mountPath: /data
+              mountPropagation: None
+              name: data
+            - mountPath: /etc/bazarr
+              name: settings
+              readOnly: true
+            - mountPath: /tmp
+              name: tmp
+            - mountPath: /x
+              name: x
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: bazarr
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - emptyDir:
+          name: data
+        - configMap:
+            name: bazarr
+          name: settings
+        - emptyDir: {}
+          name: tmp
+        - emptyDir: {}
+          name: x
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+    - metadata:
+        name: config
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+---
+# Source: bazarr/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    app.kubernetes.io/instance: bazarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bazarr
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: bazarr-0.0.0
+  name: bazarr
+  namespace: bazarr
+spec:
+  rules:
+    - host: "bazarr.example.com"
+      http:
+        paths:
+          - backend:
+              service:
+                name: bazarr
+                port:
+                  name: http
+            path: /bazarr
+            pathType: Prefix
+---
+# Source: bazarr/templates/httproute.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  labels:
+    app.kubernetes.io/instance: bazarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bazarr
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: bazarr-0.0.0
+  name: bazarr
+  namespace: bazarr
+spec:
+  parentRefs:
+    - name: gw
+  rules:
+    - backendRefs:
+        - name: bazarr
+          port: 6767
+      matches:
+        - path:
+            type: PathPrefix
+            value: /bazarr
+---
+# Source: bazarr/templates/vpa.yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    app.kubernetes.io/instance: bazarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bazarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: bazarr-0.0.0
+  name: bazarr
+  namespace: bazarr
+spec:
+  resourcePolicy:
+    containerPolicies:
+      - containerName: bazarr
+        controlledResources:
+        - cpu
+        - memory
+        controlledValues: RequestsAndLimits
+  targetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: bazarr
+  updatePolicy:
+    updateMode: "Off"

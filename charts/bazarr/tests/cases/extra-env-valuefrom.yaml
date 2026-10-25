@@ -1,0 +1,9 @@
+values:
+  extraEnv:
+    - name: SONARR_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: sonarr-api
+          key: api-key
+    - name: DYNACONF_SONARR__apikey
+      value: "@str $(SONARR_API_KEY)"

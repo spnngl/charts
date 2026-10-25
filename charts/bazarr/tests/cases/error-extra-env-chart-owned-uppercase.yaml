@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: DYNACONF_general__BASE_URL
+      value: /x
+expect:
+  error: set by the chart

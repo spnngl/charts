@@ -1,0 +1,222 @@
+---
+# Source: bazarr/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: bazarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bazarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: bazarr-0.0.0
+  name: bazarr
+  namespace: bazarr
+spec:
+  ingress:
+    - ports:
+      - port: 6767
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: bazarr
+      app.kubernetes.io/name: bazarr
+  policyTypes:
+    - Ingress
+---
+# Source: bazarr/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: bazarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bazarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: bazarr-0.0.0
+  name: bazarr
+  namespace: bazarr
+---
+# Source: bazarr/templates/configmap.yaml
+apiVersion: v1
+data:
+  config.yaml: |
+    {}
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: bazarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bazarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: bazarr-0.0.0
+  name: bazarr
+  namespace: bazarr
+---
+# Source: bazarr/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: bazarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bazarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: bazarr-0.0.0
+  name: bazarr
+  namespace: bazarr
+spec:
+  ports:
+    - name: http
+      port: 6767
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: bazarr
+    app.kubernetes.io/name: bazarr
+  type: ClusterIP
+---
+# Source: bazarr/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: Bazarr is the single writer of /config and of its SQLite database."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/instance: bazarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bazarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: bazarr-0.0.0
+  name: bazarr
+  namespace: bazarr
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: bazarr
+      app.kubernetes.io/name: bazarr
+  template:
+    metadata:
+      annotations:
+        checksum/config: 4f138606d6aadab85f484a6efa1c202344513ade50958087f9b7535a948a286e
+      labels:
+        app.kubernetes.io/instance: bazarr
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: bazarr
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: bazarr-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - --config
+            - /config
+            - --port
+            - "6767"
+          env:
+            - name: INCLUDES_FOR_DYNACONF
+              value: /etc/bazarr/config.yaml
+            - name: DYNACONF_GENERAL__ip
+              value: "*"
+            - name: DYNACONF_GENERAL__base_url
+              value: ""
+            - name: DYNACONF_POSTGRESQL__enabled
+              value: "false"
+          image: "ghcr.io/spnngl/images/bazarr:2.6.4.5600@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            tcpSocket:
+              port: http
+          name: bazarr
+          ports:
+            - containerPort: 6767
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/system/ping
+              port: http
+            periodSeconds: 10
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 192Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /api/system/ping
+              port: http
+            periodSeconds: 5
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /config
+              name: config
+            - mountPath: /data
+              mountPropagation: None
+              name: data
+            - mountPath: /etc/bazarr
+              name: settings
+              readOnly: true
+            - mountPath: /tmp
+              name: tmp
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: bazarr
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - emptyDir:
+          name: data
+        - configMap:
+            name: bazarr
+          name: settings
+        - emptyDir: {}
+          name: tmp
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+    - metadata:
+        name: config
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
