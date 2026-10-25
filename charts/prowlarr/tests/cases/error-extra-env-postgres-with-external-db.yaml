@@ -1,0 +1,11 @@
+values:
+  externalDatabase:
+    enabled: true
+    host: pg
+    existingSecret:
+      name: db
+  extraEnv:
+    - name: Prowlarr__Postgres__Host
+      value: other
+expect:
+  error: set by the chart while externalDatabase.enabled

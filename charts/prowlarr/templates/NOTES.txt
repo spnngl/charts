@@ -1,0 +1,44 @@
+{{ include "prowlarr.fullname" . }} runs one Prowlarr (StatefulSet, downtime on every upgrade).
+{{- if not .Values.auth.method }}
+
+auth.method is unset: the first visit to the web UI opens Prowlarr's authentication
+dialog. Complete it before exposing the Service, or set auth.method.
+{{- else if eq .Values.auth.method "External" }}
+
+auth.method is External: Prowlarr trusts whatever reaches it and serves its API key
+to it. Only networkPolicy.http.from (an enforcing CNI) keeps other pods out.
+{{- end }}
+{{- if .Values.apiKey.existingSecret.name }}
+
+The API key comes from the Secret {{ .Values.apiKey.existingSecret.name }} (key {{ .Values.apiKey.existingSecret.key }}), read at startup only:
+roll the pod after changing it.
+
+  kubectl -n {{ .Release.Namespace }} rollout restart statefulset/{{ include "prowlarr.fullname" . }}
+{{- end }}
+{{- if .Values.externalDatabase.enabled }}
+
+Prowlarr uses PostgreSQL at {{ .Values.externalDatabase.host }}:{{ .Values.externalDatabase.port }}: the databases {{ .Values.externalDatabase.database }} and {{ .Values.externalDatabase.logDatabase }}
+must exist, owned by the login in the Secret {{ .Values.externalDatabase.existingSecret.name }}. A missing database makes the pod
+crash-loop.
+{{- end }}
+
+Web UI:
+{{- $path := default "/" (include "prowlarr.urlPath" .) }}
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+  https://{{ . }}{{ $path }}
+{{- end }}
+{{- end }}
+{{- if .Values.httpRoute.enabled }}
+{{- range .Values.httpRoute.hostnames }}
+  https://{{ . }}{{ $path }}
+{{- end }}
+{{- end }}
+  kubectl -n {{ .Release.Namespace }} port-forward service/{{ include "prowlarr.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+  then open http://127.0.0.1:{{ .Values.service.port }}{{ $path }}
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: the pod runs in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) or volumes without idmapped
+mounts (NFS/SMB) cannot start it; set hostUsers=true to use host users.
+{{- end }}

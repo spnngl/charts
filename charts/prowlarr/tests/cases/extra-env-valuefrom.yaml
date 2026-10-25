@@ -1,0 +1,7 @@
+values:
+  extraEnv:
+    - name: Prowlarr__App__InstanceName
+      valueFrom:
+        configMapKeyRef:
+          name: names
+          key: prowlarr

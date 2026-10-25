@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: prowlarr
+description: Prowlarr indexer manager for the Servarr apps as a hardened single-replica StatefulSet, with SQLite or an external PostgreSQL
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/prowlarr
+appVersion: "2.6.5.5623"
+kubeVersion: ">=1.33.0-0"
+home: https://prowlarr.com
+icon: https://raw.githubusercontent.com/Prowlarr/Prowlarr/v2.6.5.5623/Logo/256.png
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/Prowlarr/Prowlarr
+  - https://github.com/spnngl/images
+keywords:
+  - prowlarr
+  - servarr
+  - indexer
+  - usenet
+  - torrent
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: GPL-3.0-only
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # prowlarr.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: prowlarr
+      image: ghcr.io/spnngl/images/prowlarr:2.6.5.5623@sha256:fe88dbe991571c82a037b5a6288d1087b472dff2f1255d0e1652907e31bc0c41
+  artifacthub.io/links: |-
+    - name: Upstream project
+      url: https://prowlarr.com
+    - name: Upstream repository
+      url: https://github.com/Prowlarr/Prowlarr
+    - name: Images repository
+      url: https://github.com/spnngl/images
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/prowlarr
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

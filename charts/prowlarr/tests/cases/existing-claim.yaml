@@ -1,0 +1,7 @@
+values:
+  persistence:
+    config:
+      type: existingClaim
+      existingClaim:
+        name: prowlarr-config
+        subPath: prowlarr

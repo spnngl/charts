@@ -1,0 +1,5 @@
+values:
+  apiKey:
+    existingSecret:
+      name: prowlarr-api
+      key: token

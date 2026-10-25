@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: Prowlarr__Server__Port
+      value: "8080"
+expect:
+  error: set by the chart

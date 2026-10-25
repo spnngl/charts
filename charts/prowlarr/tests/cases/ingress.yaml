@@ -1,0 +1,9 @@
+values:
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      a: b
+    labels:
+      c: d
+    hosts: [prowlarr.example.com]

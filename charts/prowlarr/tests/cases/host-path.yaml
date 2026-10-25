@@ -1,0 +1,9 @@
+values:
+  hostUsers: true
+  persistence:
+    config:
+      type: hostPath
+      hostPath:
+        path: /srv/prowlarr/config
+  nodeSelector:
+    kubernetes.io/hostname: node-1

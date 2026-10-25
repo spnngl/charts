@@ -1,0 +1,5 @@
+values:
+  auth:
+    method: External
+expect:
+  error: "/networkPolicy/http/from"
