@@ -1,0 +1,5 @@
+values:
+  apiKey:
+    existingSecret:
+      name: seerr-api
+      key: token

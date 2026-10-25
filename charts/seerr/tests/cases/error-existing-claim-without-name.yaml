@@ -1,0 +1,6 @@
+values:
+  persistence:
+    config:
+      type: existingClaim
+expect:
+  error: persistence.config.existingClaim.name is required

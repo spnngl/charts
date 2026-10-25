@@ -1,0 +1,183 @@
+---
+# Source: seerr/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: seerr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: seerr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: seerr-0.0.0
+  name: seerr
+  namespace: seerr
+spec:
+  ingress:
+    - ports:
+      - port: 5055
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: seerr
+      app.kubernetes.io/name: seerr
+  policyTypes:
+    - Ingress
+---
+# Source: seerr/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: seerr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: seerr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: seerr-0.0.0
+  name: seerr
+  namespace: seerr
+---
+# Source: seerr/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: seerr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: seerr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: seerr-0.0.0
+  name: seerr
+  namespace: seerr
+spec:
+  ports:
+    - name: http
+      port: 5055
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: seerr
+    app.kubernetes.io/name: seerr
+  type: ClusterIP
+---
+# Source: seerr/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: Seerr is the single writer of /app/config and of its SQLite database."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/instance: seerr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: seerr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: seerr-0.0.0
+  name: seerr
+  namespace: seerr
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: seerr
+      app.kubernetes.io/name: seerr
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: seerr
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: seerr
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: seerr-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            - name: LOG_LEVEL
+              value: info
+            - name: PORT
+              value: "5055"
+          image: "ghcr.io/spnngl/images/seerr:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/v1/status/appdata
+              port: http
+            periodSeconds: 10
+          name: seerr
+          ports:
+            - containerPort: 5055
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/v1/status/appdata
+              port: http
+            periodSeconds: 10
+          resources:
+            limits:
+              memory: 768Mi
+            requests:
+              cpu: 50m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /api/v1/status/appdata
+              port: http
+            periodSeconds: 5
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /app/config
+              name: config
+            - mountPath: /app/.next/cache
+              name: cache
+            - mountPath: /tmp
+              name: tmp
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: seerr
+      terminationGracePeriodSeconds: 5
+      volumes:
+        - emptyDir:
+            sizeLimit: 1Gi
+          name: config
+        - emptyDir:
+          name: cache
+        - emptyDir: {}
+          name: tmp
+  updateStrategy:
+    type: RollingUpdate

@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: seerr
+description: Seerr media request manager for Jellyfin, Emby and Plex as a hardened single-replica StatefulSet, with SQLite or an external PostgreSQL
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/seerr
+appVersion: "3.5.1"
+kubeVersion: ">=1.33.0-0"
+home: https://docs.seerr.dev
+icon: https://raw.githubusercontent.com/seerr-team/seerr/v3.5.1/public/android-chrome-192x192.png
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/seerr-team/seerr
+  - https://github.com/spnngl/images
+keywords:
+  - seerr
+  - jellyseerr
+  - overseerr
+  - requests
+  - media
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: MIT
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # seerr.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: seerr
+      image: ghcr.io/spnngl/images/seerr:3.5.1@sha256:a9900f3f86dd38fe98df11b6120072df743374dd81e06c3800b9b079b1058602
+  artifacthub.io/links: |-
+    - name: Upstream project
+      url: https://docs.seerr.dev
+    - name: Upstream repository
+      url: https://github.com/seerr-team/seerr
+    - name: Images repository
+      url: https://github.com/spnngl/images
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/seerr
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

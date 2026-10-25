@@ -1,0 +1,335 @@
+---
+# Source: seerr/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: seerr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: seerr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: seerr-0.0.0
+  name: seerr
+  namespace: seerr
+spec:
+  egress:
+    - ports:
+        - port: 53
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+            - 10.0.0.0/8
+            - 100.64.0.0/10
+            - 127.0.0.0/8
+            - 169.254.0.0/16
+            - 172.16.0.0/12
+            - 192.168.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+            - fc00::/7
+            - fe80::/10
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+      ports:
+      - port: 5055
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: seerr
+      app.kubernetes.io/name: seerr
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Source: seerr/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: seerr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: seerr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: seerr-0.0.0
+  name: seerr
+  namespace: seerr
+---
+# Source: seerr/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/instance: seerr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: seerr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: seerr-0.0.0
+  name: seerr
+  namespace: seerr
+spec:
+  ports:
+    - name: http
+      port: 5055
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: seerr
+    app.kubernetes.io/name: seerr
+  type: ClusterIP
+---
+# Source: seerr/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/env-value-from: "The Secrets and ConfigMaps the env reads are created by the user, outside the chart."
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: Seerr is the single writer of /app/config and of its SQLite database."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/read-secret-from-env-var: "Seerr reads its API key and database password from env only, never from a file."
+  labels:
+    app.kubernetes.io/instance: seerr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: seerr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: seerr-0.0.0
+  name: seerr
+  namespace: seerr
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: seerr
+      app.kubernetes.io/name: seerr
+  template:
+    metadata:
+      annotations:
+        a: b
+      labels:
+        app.kubernetes.io/instance: seerr
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: seerr
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: seerr-0.0.0
+        team: media
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            - name: PORT
+              value: "5055"
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: api-key
+                  name: seerr-api
+            - name: DB_TYPE
+              value: postgres
+            - name: DB_HOST
+              value: "pg.example.com"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "seerr"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  key: username
+                  name: seerr-db
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: seerr-db
+            - name: LOG_LEVEL
+              value: debug
+            - name: DB_USE_SSL
+              value: "true"
+          image: "ghcr.io/spnngl/images/seerr:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/v1/status/appdata
+              port: http
+            periodSeconds: 10
+          name: seerr
+          ports:
+            - containerPort: 5055
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/v1/status/appdata
+              port: http
+            periodSeconds: 10
+          resources:
+            limits:
+              memory: 768Mi
+            requests:
+              cpu: 50m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /api/v1/status/appdata
+              port: http
+            periodSeconds: 5
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /app/config
+              name: config
+            - mountPath: /app/.next/cache
+              name: cache
+            - mountPath: /tmp
+              name: tmp
+            - mountPath: /x
+              name: x
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: seerr
+      terminationGracePeriodSeconds: 5
+      volumes:
+        - emptyDir:
+            sizeLimit: 1Gi
+          name: cache
+        - emptyDir: {}
+          name: tmp
+        - emptyDir: {}
+          name: x
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+    - metadata:
+        name: config
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+---
+# Source: seerr/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    app.kubernetes.io/instance: seerr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: seerr
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: seerr-0.0.0
+  name: seerr
+  namespace: seerr
+spec:
+  rules:
+    - host: "seerr.example.com"
+      http:
+        paths:
+          - backend:
+              service:
+                name: seerr
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+---
+# Source: seerr/templates/httproute.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  labels:
+    app.kubernetes.io/instance: seerr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: seerr
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: seerr-0.0.0
+  name: seerr
+  namespace: seerr
+spec:
+  parentRefs:
+    - name: gw
+  rules:
+    - backendRefs:
+        - name: seerr
+          port: 5055
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
+# Source: seerr/templates/vpa.yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    app.kubernetes.io/instance: seerr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: seerr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: seerr-0.0.0
+  name: seerr
+  namespace: seerr
+spec:
+  resourcePolicy:
+    containerPolicies:
+      - containerName: seerr
+        controlledResources:
+        - cpu
+        - memory
+        controlledValues: RequestsAndLimits
+  targetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: seerr
+  updatePolicy:
+    updateMode: "Off"
