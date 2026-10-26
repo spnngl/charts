@@ -118,7 +118,6 @@
 "type": "object"
 },
 "provider": {
-"default": "generic",
 "description": "The provider used for authentication, can be 'aws', 'azure', 'gcp' or 'generic'.\nWhen not specified, defaults to 'generic'.",
 "enum": [
 "generic",
@@ -177,7 +176,7 @@
 "type": "object"
 },
 "serviceAccountName": {
-"description": "ServiceAccountName is the name of the Kubernetes ServiceAccount used to authenticate\nthe image pull if the service account has attached pull secrets. For more information:\nhttps://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-imagepullsecrets-to-a-service-account",
+"description": "ServiceAccountName is the name of the Kubernetes ServiceAccount used to authenticate\nthe image pull, either with the pull secrets attached to the service account or with\nan object identity.\nFor more information about object identity:\nhttps://fluxcd.io/flux/integrations/object-identity/\nFor more information about image pull secrets:\nhttps://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-imagepullsecrets-to-a-service-account",
 "type": "string"
 },
 "suspend": {
@@ -185,7 +184,6 @@
 "type": "boolean"
 },
 "timeout": {
-"default": "60s",
 "description": "The timeout for remote OCI Repository operations like pulling, defaults to 60s.",
 "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m))+$",
 "type": "string"
@@ -262,10 +260,6 @@
 "type": "object"
 }
 },
-"required": [
-"interval",
-"url"
-],
 "type": "object"
 },
 "status": {
@@ -407,6 +401,10 @@
 },
 "type": "object"
 },
+"sourceVerificationFingerprint": {
+"description": "SourceVerificationFingerprint is the fingerprint of the verification\nmaterial used to verify the signature of the current Artifact. It is\nused to detect changes to the verification policy, such as a key\nrotation, that require the current revision to be verified again.",
+"type": "string"
+},
 "url": {
 "description": "URL is the download link for the artifact output of the last OCI Repository sync.",
 "type": "string"
@@ -415,7 +413,17 @@
 "type": "object"
 }
 },
-"type": "object"
+"type": "object",
+"x-kubernetes-validations": [
+{
+"message": "spec.url is required",
+"rule": "has(self.spec) && has(self.spec.url)"
+},
+{
+"message": "spec.interval is required",
+"rule": "has(self.spec) && has(self.spec.interval)"
+}
+]
 }
 },
 "served": true,

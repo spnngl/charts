@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for Flux (sources, kustomizations, Helm releases,
   notifications, image automation, artifact generators)
 type: application
-version: 2.9.6
-appVersion: 2.9.6
+version: 2.10.0
+appVersion: 2.10.0
 kubeVersion: ">=1.25.0-0"
 home: https://fluxcd.io
 icon: https://raw.githubusercontent.com/fluxcd/website/main/static/img/flux-icon.svg
@@ -24,7 +24,7 @@ annotations:
   artifacthub.io/license: Apache-2.0
   artifacthub.io/crds: |
     - kind: Alert
-      version: v1beta3
+      version: v1
       name: alerts.notification.toolkit.fluxcd.io
       displayName: Alert
       description: Alert is the Schema for the alerts API
@@ -89,7 +89,7 @@ annotations:
       displayName: OCIRepository
       description: OCIRepository is the Schema for the ocirepositories API
     - kind: Provider
-      version: v1beta3
+      version: v1
       name: providers.notification.toolkit.fluxcd.io
       displayName: Provider
       description: Provider is the Schema for the providers API
@@ -104,13 +104,13 @@ annotations:
     - name: Upstream repository
       url: https://github.com/fluxcd/flux2
     - name: Upstream CRD source (manifests/crds)
-      url: https://github.com/fluxcd/flux2/tree/v2.9.6/manifests/crds
+      url: https://github.com/fluxcd/flux2/tree/v2.10.0/manifests/crds
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/flux-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/fluxcd/flux2
-  charts.spnngl.io/upstream-tag: v2.9.6
-  charts.spnngl.io/upstream-commit: b9c17924adb533d3617ec7de97a7b0f4acc07b39
+  charts.spnngl.io/upstream-tag: v2.10.0
+  charts.spnngl.io/upstream-commit: 3fa784edd773d56630bb9f62645e08f70c2cff0a
   artifacthub.io/changes: |
-    - Initial release, CRDs from upstream v2.9.6
+    - Upstream CRDs updated from v2.9.6 to v2.10.0
