@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: CONFIG_LOCATION
+      value: x
+expect:
+  error: "extraEnv CONFIG_LOCATION is set by the chart"

@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: configarr
+description: Configarr as a hardened CronJob that syncs TRaSH-Guides profiles and settings as code into Sonarr, Radarr and Prowlarr
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/configarr
+appVersion: "1.37.0"
+kubeVersion: ">=1.33.0-0"
+home: https://configarr.de
+icon: https://raw.githubusercontent.com/raydak-labs/configarr/v1.37.0/docs/static/img/logo.svg
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/raydak-labs/configarr
+  - https://github.com/spnngl/images
+keywords:
+  - configarr
+  - trash-guides
+  - recyclarr
+  - sonarr
+  - radarr
+  - prowlarr
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: AGPL-3.0-only
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # configarr.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: configarr
+      image: ghcr.io/spnngl/images/configarr:1.37.0@sha256:70e2b7fdc5b75ea8d8a8b2c1581912167ecd673e114994d725f69c2387ac0d20
+  artifacthub.io/links: |-
+    - name: Upstream project
+      url: https://configarr.de
+    - name: Upstream repository
+      url: https://github.com/raydak-labs/configarr
+    - name: Images repository
+      url: https://github.com/spnngl/images
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/configarr
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

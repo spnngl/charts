@@ -1,0 +1,157 @@
+---
+# Source: configarr/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: configarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: configarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: configarr-0.0.0
+  name: configarr
+  namespace: configarr
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: configarr
+      app.kubernetes.io/name: configarr
+  policyTypes:
+    - Ingress
+---
+# Source: configarr/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: configarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: configarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: configarr-0.0.0
+  name: configarr
+  namespace: configarr
+---
+# Source: configarr/templates/configmap.yaml
+apiVersion: v1
+data:
+  config.yml: "{}"
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: configarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: configarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: configarr-0.0.0
+  name: configarr
+  namespace: configarr
+---
+# Source: configarr/templates/cronjob.yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/no-liveness-probe: "A run-to-completion Job has nothing to probe."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-readiness-probe: "A run-to-completion Job has nothing to probe."
+    ignore-check.kube-linter.io/restart-policy: "Never: a retry is a new pod and the failed pod keeps its logs; backoffLimit gives the fault tolerance."
+  labels:
+    app.kubernetes.io/instance: configarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: configarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: configarr-0.0.0
+  name: configarr
+  namespace: configarr
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: configarr
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: configarr
+        app.kubernetes.io/version: "0.0.0"
+        helm.sh/chart: configarr-0.0.0
+    spec:
+      activeDeadlineSeconds: 600
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/instance: configarr
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: configarr
+            app.kubernetes.io/version: 0.0.0
+            helm.sh/chart: configarr-0.0.0
+        spec:
+          automountServiceAccountToken: false
+          containers:
+            - env:
+                - name: STOP_ON_ERROR
+                  value: "true"
+                - name: CONFIGARR_ENFORCE_CONFIG_VALIDATION
+                  value: "true"
+              image: "ghcr.io/spnngl/images/configarr:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              imagePullPolicy: IfNotPresent
+              name: configarr
+              resources:
+                limits:
+                  memory: 1Gi
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                  - ALL
+                privileged: false
+                readOnlyRootFilesystem: true
+                runAsGroup: 65532
+                runAsNonRoot: true
+                runAsUser: 65532
+                seccompProfile:
+                  type: RuntimeDefault
+              terminationMessagePolicy: FallbackToLogsOnError
+              volumeMounts:
+                - mountPath: /app/config
+                  name: config
+                  readOnly: true
+                - mountPath: /app/repos
+                  name: repos
+          dnsConfig:
+            options:
+            - name: ndots
+              value: "2"
+          enableServiceLinks: false
+          hostUsers: true
+          nodeSelector:
+            kubernetes.io/os: linux
+          restartPolicy: Never
+          securityContext:
+            fsGroup: 65532
+            fsGroupChangePolicy: OnRootMismatch
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          serviceAccountName: configarr
+          volumes:
+            - name: config
+              projected:
+                sources:
+                  - configMap:
+                      items:
+                        - key: config.yml
+                          path: config.yml
+                      name: configarr
+            - emptyDir: {}
+              name: repos
+  schedule: "0 * * * *"
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 1

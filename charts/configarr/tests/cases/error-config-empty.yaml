@@ -1,0 +1,4 @@
+values:
+  config: ""
+expect:
+  error: config

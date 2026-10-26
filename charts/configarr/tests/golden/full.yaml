@@ -1,0 +1,256 @@
+---
+# Source: configarr/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: configarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: configarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: configarr-0.0.0
+  name: configarr
+  namespace: configarr
+spec:
+  egress:
+    - ports:
+        - port: 53
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+            - 10.0.0.0/8
+            - 100.64.0.0/10
+            - 127.0.0.0/8
+            - 169.254.0.0/16
+            - 172.16.0.0/12
+            - 192.168.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+            - fc00::/7
+            - fe80::/10
+    - ports:
+      - port: 7878
+        protocol: TCP
+      to:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: media
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: configarr
+      app.kubernetes.io/name: configarr
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Source: configarr/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  annotations:
+    example.com/owner: media
+  labels:
+    app.kubernetes.io/instance: configarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: configarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: configarr-0.0.0
+  name: configarr
+  namespace: configarr
+---
+# Source: configarr/templates/configmap.yaml
+apiVersion: v1
+data:
+  config.yml: "trashGuideUrl: https://github.com/TRaSH-Guides/Guides\nradarr:\n  main:\n    base_url: http://radarr.media.svc:7878\n    api_key: !env RADARR_API_KEY\n    quality_definition:\n      type: movie\nsonarr:\n  main:\n    base_url: http://sonarr.media.svc:8989\n    api_key: !secret SONARR_API_KEY\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: configarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: configarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: configarr-0.0.0
+  name: configarr
+  namespace: configarr
+---
+# Source: configarr/templates/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app.kubernetes.io/instance: configarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: configarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: configarr-0.0.0
+  name: configarr-repos
+  namespace: configarr
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: fast
+---
+# Source: configarr/templates/cronjob.yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/env-value-from: "The Secrets and ConfigMaps the env reads are created by the user, outside the chart."
+    ignore-check.kube-linter.io/no-liveness-probe: "A run-to-completion Job has nothing to probe."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-readiness-probe: "A run-to-completion Job has nothing to probe."
+    ignore-check.kube-linter.io/read-secret-from-env-var: "Configarr's !env tags read API keys from env; !secret reads a file (secrets.existingSecret)."
+    ignore-check.kube-linter.io/restart-policy: "Never: a retry is a new pod and the failed pod keeps its logs; backoffLimit gives the fault tolerance."
+  labels:
+    app.kubernetes.io/instance: configarr
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: configarr
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: configarr-0.0.0
+  name: configarr
+  namespace: configarr
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: configarr
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: configarr
+        app.kubernetes.io/version: "0.0.0"
+        helm.sh/chart: configarr-0.0.0
+    spec:
+      activeDeadlineSeconds: 600
+      backoffLimit: 1
+      template:
+        metadata:
+          annotations:
+            example.com/scrape: "false"
+          labels:
+            app.kubernetes.io/instance: configarr
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: configarr
+            app.kubernetes.io/version: 0.0.0
+            helm.sh/chart: configarr-0.0.0
+            team: media
+        spec:
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - preference:
+                  matchExpressions:
+                  - key: example.com/zone
+                    operator: In
+                    values:
+                    - a
+                weight: 1
+          automountServiceAccountToken: false
+          containers:
+            - env:
+                - name: STOP_ON_ERROR
+                  value: "true"
+                - name: CONFIGARR_ENFORCE_CONFIG_VALIDATION
+                  value: "true"
+                - name: RADARR_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      key: api-key
+                      name: radarr-api
+                - name: LOG_FORMAT
+                  value: json
+              image: "ghcr.io/spnngl/images/configarr:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              imagePullPolicy: IfNotPresent
+              name: configarr
+              resources:
+                limits:
+                  memory: 1Gi
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                  - ALL
+                privileged: false
+                readOnlyRootFilesystem: true
+                runAsGroup: 65532
+                runAsNonRoot: true
+                runAsUser: 65532
+                seccompProfile:
+                  type: RuntimeDefault
+              terminationMessagePolicy: FallbackToLogsOnError
+              volumeMounts:
+                - mountPath: /app/config
+                  name: config
+                  readOnly: true
+                - mountPath: /app/repos
+                  name: repos
+                - mountPath: /app/cfs
+                  name: cfs
+                  readOnly: true
+          dnsConfig:
+            options:
+            - name: ndots
+              value: "2"
+          enableServiceLinks: false
+          hostUsers: false
+          imagePullSecrets:
+            - name: ghcr
+          nodeSelector:
+            kubernetes.io/os: linux
+          priorityClassName: low
+          restartPolicy: Never
+          securityContext:
+            fsGroup: 65532
+            fsGroupChangePolicy: OnRootMismatch
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          serviceAccountName: configarr
+          tolerations:
+            - effect: NoSchedule
+              key: media
+              operator: Exists
+          volumes:
+            - name: config
+              projected:
+                sources:
+                  - configMap:
+                      items:
+                        - key: config.yml
+                          path: config.yml
+                      name: configarr
+                  - secret:
+                      items:
+                        - key: secrets.yml
+                          path: secrets.yml
+                      name: configarr-secrets
+            - name: repos
+              persistentVolumeClaim:
+                claimName: configarr-repos
+            - configMap:
+                name: configarr-cfs
+              name: cfs
+  schedule: "30 */6 * * *"
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 1

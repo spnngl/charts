@@ -1,0 +1,19 @@
+{{- $repos := .Values.persistence.repos }}
+{{- if and $repos.enabled (not $repos.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    {{- include "configarr.labels" . | nindent 4 }}
+  name: {{ include "configarr.fullname" . }}-repos
+  namespace: {{ .Release.Namespace }}
+spec:
+  accessModes:
+    {{- toYaml $repos.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ $repos.size }}
+  {{- with $repos.storageClassName }}
+  storageClassName: {{ . }}
+  {{- end }}
+{{- end }}

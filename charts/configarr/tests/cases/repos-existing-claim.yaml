@@ -1,0 +1,5 @@
+values:
+  persistence:
+    repos:
+      enabled: true
+      existingClaim: configarr-repos

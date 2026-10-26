@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: ROOT_PATH
+      value: x
+expect:
+  error: "extraEnv ROOT_PATH is set by the chart"

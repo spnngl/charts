@@ -1,0 +1,147 @@
+{{- include "configarr.validate" . }}
+{{- $fullname := include "configarr.fullname" . }}
+{{- $repos := .Values.persistence.repos }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  annotations:
+    {{- if include "configarr.envRefs" . }}
+    ignore-check.kube-linter.io/env-value-from: "The Secrets and ConfigMaps the env reads are created by the user, outside the chart."
+    {{- end }}
+    ignore-check.kube-linter.io/no-liveness-probe: "A run-to-completion Job has nothing to probe."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    ignore-check.kube-linter.io/no-readiness-probe: "A run-to-completion Job has nothing to probe."
+    {{- if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: isolation is the user's choice."
+    {{- end }}
+    {{- if contains "secret" (include "configarr.envRefs" .) }}
+    ignore-check.kube-linter.io/read-secret-from-env-var: "Configarr's !env tags read API keys from env; !secret reads a file (secrets.existingSecret)."
+    {{- end }}
+    ignore-check.kube-linter.io/restart-policy: "Never: a retry is a new pod and the failed pod keeps its logs; backoffLimit gives the fault tolerance."
+  labels:
+    {{- include "configarr.labels" . | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- /* One run at a time: one writer of the Servarr settings and of /app/repos. */}}
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "configarr.labels" . | nindent 8 }}
+    spec:
+      {{- /* A hung run would block every later run under Forbid. */}}
+      activeDeadlineSeconds: 600
+      backoffLimit: 1
+      template:
+        metadata:
+          {{- with .Values.podAnnotations }}
+          annotations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          labels:
+            {{- toYaml (merge (include "configarr.labels" . | fromYaml) (deepCopy .Values.podLabels)) | nindent 12 }}
+        spec:
+          {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          automountServiceAccountToken: false
+          containers:
+            - env:
+                {{- /* Without it a failed instance only logs and the Job succeeds. */}}
+                - name: STOP_ON_ERROR
+                  value: "true"
+                {{- /* Upstream only warns on a typo in config. extraEnv wins. */}}
+                {{- $enforce := true }}
+                {{- range .Values.extraEnv }}
+                {{- if eq .name "CONFIGARR_ENFORCE_CONFIG_VALIDATION" }}
+                {{- $enforce = false }}
+                {{- end }}
+                {{- end }}
+                {{- if $enforce }}
+                - name: CONFIGARR_ENFORCE_CONFIG_VALIDATION
+                  value: "true"
+                {{- end }}
+                {{- with .Values.extraEnv }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+              image: {{ include "configarr.image" . | quote }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              name: configarr
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
+              terminationMessagePolicy: FallbackToLogsOnError
+              volumeMounts:
+                {{- /* Upstream's default paths under ROOT_PATH=/app: no CONFIG_LOCATION or SECRETS_LOCATION. */}}
+                - mountPath: /app/config
+                  name: config
+                  readOnly: true
+                {{- /* No /tmp: Configarr and its git calls write only here (kind smoke test). */}}
+                - mountPath: /app/repos
+                  name: repos
+                {{- with .Values.extraVolumeMounts }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+          dnsConfig:
+            {{- toYaml .Values.dnsConfig | nindent 12 }}
+          enableServiceLinks: false
+          hostUsers: {{ .Values.hostUsers }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.extraInitContainers }}
+          initContainers:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.priorityClassName }}
+          priorityClassName: {{ . }}
+          {{- end }}
+          {{- /* A retry is a new pod: the failed one keeps its logs. */}}
+          restartPolicy: Never
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          serviceAccountName: {{ include "configarr.serviceAccountName" . }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumes:
+            - name: config
+              projected:
+                sources:
+                  - configMap:
+                      items:
+                        - key: config.yml
+                          path: config.yml
+                      name: {{ $fullname }}
+                  {{- with .Values.secrets.existingSecret.name }}
+                  - secret:
+                      items:
+                        - key: {{ $.Values.secrets.existingSecret.key }}
+                          path: secrets.yml
+                      name: {{ . }}
+                  {{- end }}
+            {{- if $repos.enabled }}
+            - name: repos
+              persistentVolumeClaim:
+                claimName: {{ $repos.existingClaim | default (printf "%s-repos" $fullname) }}
+            {{- else }}
+            - emptyDir: {}
+              name: repos
+            {{- end }}
+            {{- with .Values.extraVolumes }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+  schedule: {{ .Values.schedule | quote }}
+  {{- /* Still runs when the controller missed the schedule by up to 10 minutes. */}}
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 1

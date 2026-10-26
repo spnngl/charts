@@ -1,0 +1,4 @@
+values:
+  extraEnv:
+    - name: CONFIGARR_ENFORCE_CONFIG_VALIDATION
+      value: "false"
