@@ -1,0 +1,24 @@
+# Dashboard Ingress next to the DoH one; token from config.server.api_token.
+values:
+  api:
+    enabled: true
+  config:
+    server:
+      allow_from:
+        - 10.0.0.0/8
+      api_token: not-a-secret
+  ingress:
+    enabled: true
+    hosts:
+      - dns.example.com
+  extraIngresses:
+    - nameSuffix: dashboard
+      className: haproxy
+      port: api
+      annotations:
+        haproxy-ingress.github.io/affinity: cookie
+      hosts:
+        - numa.example.com
+      tls:
+        - hosts:
+            - numa.example.com

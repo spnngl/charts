@@ -52,6 +52,10 @@ imagePullSecrets: []
 #         items:
 #           type: string
 #           minLength: 1
+#       api_port:
+#         type: integer
+#         minimum: 1
+#         maximum: 65535
 #     propertyNames:
 #       not:
 #         enum: [api_bind_addr, bind_addr]
@@ -102,6 +106,10 @@ config:
       - tls://8.8.8.8#dns.google
       - tls://8.8.4.4#dns.google
     fallback: https://1.1.1.1/dns-query
+
+api:
+  # -- Expose numa's HTTP control plane (dashboard and REST API) on the pod network, for an ingress controller: `server.api_bind_addr` becomes `0.0.0.0`, the pod gets an `api` port (`config.server.api_port`, default 5380), the Service an `api` port 5380, the NetworkPolicy allows it and `ingress.port: api` becomes valid. Requires a token shared by every replica: an `extraEnv` entry `NUMA_API_TOKEN` (from a Secret) or `config.server.api_token`. Read [Dashboard](#dashboard) first.
+  enabled: false
 
 # @schema
 # type: integer
@@ -166,9 +174,9 @@ ingress:
   labels: {}
   # @schema
   # type: string
-  # enum: [doh, dns-tcp]
+  # enum: [doh, dns-tcp, api]
   # @schema
-  # -- Service port the Ingress routes to. `doh`: path `/dns-query` (Exact) to the DNS-over-HTTPS port, TLS to the pod. `dns-tcp`: path `/` to DNS over TCP, for controllers that route TCP from an Ingress (DoT).
+  # -- Service port the Ingress routes to. `doh`: path `/dns-query` (Exact) to the DNS-over-HTTPS port, TLS to the pod. `dns-tcp`: path `/` to DNS over TCP, for controllers that route TCP from an Ingress (DoT). `api`: path `/` (Prefix) to the dashboard and API, plain HTTP to the pod; requires `api.enabled`.
   port: doh
   # @schema
   # type: array
@@ -207,7 +215,7 @@ ingress:
 #         type: string
 #     port:
 #       type: string
-#       enum: [doh, dns-tcp]
+#       enum: [doh, dns-tcp, api]
 #     hosts:
 #       type: array
 #       items:
@@ -423,7 +431,7 @@ priorityClassName: ""
 #       type: string
 #       minLength: 1
 # @schema
-# -- Extra environment variables (`EnvVar` list) for the numa container. numa logs through `env_logger` at `info`, so every query (client address, name) and the API token reach stdout: `RUST_LOG=warn` stops both (`numa::ctx` logs queries, `numa::serve` the token).
+# -- Extra environment variables (`EnvVar` list) for the numa container. numa logs through `env_logger` at `info`, so every query (client address, name) and the API token it mints reach stdout: `RUST_LOG=warn` stops both (`numa::ctx` logs queries, `numa::serve` the token).
 extraEnv: []
 # @schema
 # type: array
@@ -529,7 +537,7 @@ verticalPodAutoscaler:
   maxAllowed: {}
 
 networkPolicy:
-  # -- Create a NetworkPolicy (ingress: DNS on 8053, DoH on 8443; the plain proxy port 8080 is never allowed).
+  # -- Create a NetworkPolicy (ingress: DNS on 8053, DoH on 8443, the API port with `api.enabled`; the plain proxy port 8080 is never allowed).
   enabled: true
   ingress:
     # @schema
@@ -537,7 +545,7 @@ networkPolicy:
     # items:
     #   type: object
     # @schema
-    # -- NetworkPolicyPeer list allowed to reach 8053 and 8443. Empty: any source, because an ingress controller on the host network cannot be selected by a `podSelector`. `config.server.allow_from` still filters by client address.
+    # -- NetworkPolicyPeer list allowed to reach 8053, 8443 and, with `api.enabled`, the API port. Empty: any source, because an ingress controller on the host network cannot be selected by a `podSelector`. `config.server.allow_from` still filters DNS clients by address; the API relies on its token.
     from: []
   egress:
     # -- Restrict egress (cluster DNS, upstreams).

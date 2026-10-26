@@ -8,6 +8,17 @@
       "required": [],
       "type": "object"
     },
+    "api": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Expose numa's HTTP control plane (dashboard and REST API) on the pod network, for an ingress controller: `server.api_bind_addr` becomes `0.0.0.0`, the pod gets an `api` port (`config.server.api_port`, default 5380), the Service an `api` port 5380, the NetworkPolicy allows it and `ingress.port: api` becomes valid. Requires a token shared by every replica: an `extraEnv` entry `NUMA_API_TOKEN` (from a Secret) or `config.server.api_token`. Read [Dashboard](#dashboard) first.",
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
     "autoscaling": {
       "additionalProperties": false,
       "properties": {
@@ -128,6 +139,11 @@
               },
               "minItems": 1,
               "type": "array"
+            },
+            "api_port": {
+              "maximum": 65535,
+              "minimum": 1,
+              "type": "integer"
             }
           },
           "propertyNames": {
@@ -188,7 +204,7 @@
       "type": "string"
     },
     "extraEnv": {
-      "description": "Extra environment variables (`EnvVar` list) for the numa container. numa logs through `env_logger` at `info`, so every query (client address, name) and the API token reach stdout: `RUST_LOG=warn` stops both (`numa::ctx` logs queries, `numa::serve` the token).",
+      "description": "Extra environment variables (`EnvVar` list) for the numa container. numa logs through `env_logger` at `info`, so every query (client address, name) and the API token it mints reach stdout: `RUST_LOG=warn` stops both (`numa::ctx` logs queries, `numa::serve` the token).",
       "items": {
         "properties": {
           "name": {
@@ -239,7 +255,8 @@
           "port": {
             "enum": [
               "doh",
-              "dns-tcp"
+              "dns-tcp",
+              "api"
             ],
             "type": "string"
           },
@@ -367,10 +384,11 @@
           "type": "object"
         },
         "port": {
-          "description": "Service port the Ingress routes to. `doh`: path `/dns-query` (Exact) to the DNS-over-HTTPS port, TLS to the pod. `dns-tcp`: path `/` to DNS over TCP, for controllers that route TCP from an Ingress (DoT).",
+          "description": "Service port the Ingress routes to. `doh`: path `/dns-query` (Exact) to the DNS-over-HTTPS port, TLS to the pod. `dns-tcp`: path `/` to DNS over TCP, for controllers that route TCP from an Ingress (DoT). `api`: path `/` (Prefix) to the dashboard and API, plain HTTP to the pod; requires `api.enabled`.",
           "enum": [
             "doh",
-            "dns-tcp"
+            "dns-tcp",
+            "api"
           ],
           "type": "string"
         },
@@ -464,14 +482,14 @@
           "type": "object"
         },
         "enabled": {
-          "description": "Create a NetworkPolicy (ingress: DNS on 8053, DoH on 8443; the plain proxy port 8080 is never allowed).",
+          "description": "Create a NetworkPolicy (ingress: DNS on 8053, DoH on 8443, the API port with `api.enabled`; the plain proxy port 8080 is never allowed).",
           "type": "boolean"
         },
         "ingress": {
           "additionalProperties": false,
           "properties": {
             "from": {
-              "description": "NetworkPolicyPeer list allowed to reach 8053 and 8443. Empty: any source, because an ingress controller on the host network cannot be selected by a `podSelector`. `config.server.allow_from` still filters by client address.",
+              "description": "NetworkPolicyPeer list allowed to reach 8053, 8443 and, with `api.enabled`, the API port. Empty: any source, because an ingress controller on the host network cannot be selected by a `podSelector`. `config.server.allow_from` still filters DNS clients by address; the API relies on its token.",
               "items": {
                 "required": [],
                 "type": "object"

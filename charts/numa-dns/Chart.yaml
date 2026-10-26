@@ -3,7 +3,7 @@ apiVersion: v2
 name: numa-dns
 description: Numa DNS resolver (ad blocking, local zones, DoT and DoH behind an ingress) running as a hardened, highly available Deployment
 type: application
-version: 0.1.0
+version: 0.2.0
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/numa-dns
 appVersion: "0.25.0"
 kubeVersion: ">=1.33.0-0"

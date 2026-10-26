@@ -1,0 +1,15 @@
+# API on the pod network, custom api_port (container and NetworkPolicy port
+# follow it, the Service port stays 5380). A literal token: the README's
+# secretKeyRef fails kube-linter here (env-value-from: the Secret is not in the
+# render; read-secret-from-env-var).
+values:
+  api:
+    enabled: true
+  config:
+    server:
+      allow_from:
+        - 10.0.0.0/8
+      api_port: 5381
+  extraEnv:
+    - name: NUMA_API_TOKEN
+      value: not-a-secret

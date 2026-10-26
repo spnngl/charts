@@ -6,9 +6,14 @@
 {{- range .Values.extraIngresses }}
 {{- $all = append $all (merge (dict "name" (printf "%s-%s" $fullname .nameSuffix)) (deepCopy .)) }}
 {{- end }}
+{{- /* Path per Service port. DoH is one HTTP path; DoT reaches the controller as TCP and the Ingress routes it to the DNS-over-TCP port; the API serves the dashboard on / and its routes below it. */}}
+{{- $paths := dict
+  "api" (dict "path" "/" "pathType" "Prefix")
+  "dns-tcp" (dict "path" "/" "pathType" "Prefix")
+  "doh" (dict "path" "/dns-query" "pathType" "Exact") }}
 {{- range $i, $ing := $all }}
-{{- /* DoH is an HTTP path; DoT reaches the controller as TCP and the Ingress routes it to the DNS-over-TCP port. */}}
-{{- $isDoh := eq (default "doh" $ing.port) "doh" }}
+{{- $port := default "doh" $ing.port }}
+{{- $path := get $paths $port }}
 {{- if $i }}
 ---
 {{- end }}
@@ -36,9 +41,9 @@ spec:
               service:
                 name: {{ $fullname }}
                 port:
-                  name: {{ ternary "doh" "dns-tcp" $isDoh }}
-            path: {{ ternary "/dns-query" "/" $isDoh }}
-            pathType: {{ ternary "Exact" "Prefix" $isDoh }}
+                  name: {{ $port }}
+            path: {{ $path.path }}
+            pathType: {{ $path.pathType }}
     {{- end }}
   {{- with $ing.tls }}
   tls:

@@ -152,8 +152,9 @@ sorted.
 
 {{/*
 numa.toml: chart-owned keys are set one by one onto a copy of .Values.config (sprig merge lets a user value replace an owned `false`). They bind the pod
-ports (8053 DNS, 8080 plain proxy, 8443 DoH), keep the API on loopback, and
-switch off the listeners the chart does not expose.
+ports (8053 DNS, 8080 plain proxy, 8443 DoH), keep the API on loopback (all
+addresses with api.enabled), and switch off the listeners the chart does not
+expose.
 */}}
 {{- define "numa-dns.config" -}}
 {{- $owned := dict
@@ -161,7 +162,7 @@ switch off the listeners the chart does not expose.
   "lan" (dict "enabled" false)
   "mobile" (dict "enabled" false)
   "proxy" (dict "bind_addr" "0.0.0.0" "enabled" true "port" 8080 "tls_port" 8443)
-  "server" (dict "api_bind_addr" "127.0.0.1" "bind_addr" (list "0.0.0.0:8053")) }}
+  "server" (dict "api_bind_addr" (ternary "0.0.0.0" "127.0.0.1" .Values.api.enabled) "bind_addr" (list "0.0.0.0:8053")) }}
 {{- $cfg := deepCopy .Values.config }}
 {{- range $table, $keys := $owned }}
 {{- $t := get $cfg $table | default dict }}
@@ -171,6 +172,15 @@ switch off the listeners the chart does not expose.
 {{- $_ := set $cfg $table $t }}
 {{- end }}
 {{- include "numa-dns.toml" $cfg }}
+{{- end }}
+
+{{/*
+API port: config.server.api_port, numa's default 5380 otherwise (numa
+src/config.rs:91-92,179-182). Not chart-owned: users set it before api.enabled
+existed.
+*/}}
+{{- define "numa-dns.apiPort" -}}
+{{- dig "server" "api_port" 5380 .Values.config | int }}
 {{- end }}
 
 {{/*
@@ -208,6 +218,27 @@ always rendered.
 {{- if and .Values.ingress.enabled (not .Values.ingress.hosts) }}
 {{- fail "ingress.hosts is required when ingress.enabled is true" }}
 {{- end }}
+{{- if .Values.api.enabled }}
+{{- /* Without a configured token each pod mints its own at start (numa src/api_auth.rs:84-120). Empty values do not count (api_auth.rs:89,92). */}}
+{{- $token := dig "server" "api_token" "" .Values.config }}
+{{- range .Values.extraEnv }}
+{{- if and (eq .name "NUMA_API_TOKEN") (or .value .valueFrom) }}
+{{- $token = "from-env" }}
+{{- end }}
+{{- end }}
+{{- if not $token }}
+{{- fail "api.enabled requires a token shared by every replica: add an extraEnv entry NUMA_API_TOKEN (valueFrom.secretKeyRef) or set config.server.api_token; without one each pod mints its own token at start" }}
+{{- end }}
+{{- else }}
+{{- if and .Values.ingress.enabled (eq .Values.ingress.port "api") }}
+{{- fail "ingress.port api requires api.enabled: the API listens on loopback only otherwise" }}
+{{- end }}
+{{- range .Values.extraIngresses }}
+{{- if eq (default "doh" .port) "api" }}
+{{- fail (printf "extraIngresses[%s].port api requires api.enabled: the API listens on loopback only otherwise" .nameSuffix) }}
+{{- end }}
+{{- end }}
+{{- end }}
 {{- $suffixes := list }}
 {{- range .Values.extraIngresses }}
 {{- if not .hosts }}
@@ -237,12 +268,15 @@ always rendered.
 {{- end }}
 
 {{/*
-NOTES line for one Ingress: the dig command that tests it.
+NOTES line for one Ingress: the command or URL that tests it.
 */}}
 {{- define "numa-dns.notesIngress" -}}
 {{- $host := first .ing.hosts }}
-{{- if eq (default "doh" .ing.port) "doh" }}
+{{- $port := default "doh" .ing.port }}
+{{- if eq $port "doh" }}
 {{ .name }}, DNS over HTTPS: kdig +https @{{ $host }} example.com
+{{- else if eq $port "api" }}
+{{ .name }}, dashboard and API: https://{{ $host }}/ (password: the API token)
 {{- else }}
 {{ .name }}, DNS over TLS: kdig +tls @{{ $host }} example.com
 {{- end }}

@@ -30,15 +30,16 @@ pods (`checksum/config`).
 - The chart owns the listeners: `server.bind_addr`, `server.api_bind_addr`,
   `dot.enabled`, `lan.enabled`, `mobile.enabled`, `proxy.bind_addr`,
   `proxy.enabled`, `proxy.port` and `proxy.tls_port` are rejected by the
-  schema.
+  schema. `server.api_bind_addr` is `127.0.0.1`, `0.0.0.0` with
+  `api.enabled` (see [Dashboard](#dashboard)).
 - `config.server.allow_from` is required and cannot be empty: an empty list
   disables numa's ACL and answers every client. It must contain the source
   address of every client, the ingress controller included.
 - An invalid `allow_from` entry stops numa at start (`CrashLoopBackOff`), and
   `0.0.0.0/0` is accepted (numa only warns): the schema checks neither.
 - Keys the schema leaves open but the chart relies on:
-  - `server.api_port` (default 5380) is the port the dashboard commands below
-    forward.
+  - `server.api_port` (default 5380, an integer) is the port the dashboard
+    commands below forward and, with `api.enabled`, the pod's `api` port.
   - `server.data_dir` must stay on a writable volume; the default `emptyDir`
     holds `/var/lib/numa`.
   - `server.api_token` lands in the ConfigMap in plaintext. Set `NUMA_API_TOKEN`
@@ -153,21 +154,102 @@ numa's own DoT listener, which the chart does not enable.
 
 ## Dashboard
 
-The web UI and REST API listen on loopback in each pod and give full admin
-access to anything that reaches them, without a token. Reach one pod with:
+numa's HTTP control plane, a web UI and a REST API, listens on
+`config.server.api_port` (default 5380), plain HTTP. It reads statistics, the
+last 1000 queries (client address and name), the cache and blocklist state;
+it writes overrides (any name to any address), cache flushes, blocking on/off
+and allow/blocklist entries. Writes land in that one pod and its `emptyDir`:
+other replicas never see them and a restart loses them. Use `config` for
+anything durable. There are no Prometheus metrics.
+
+numa lets a loopback peer in without a token (numa 0.25.0
+`src/api_auth.rs:44-50`).
+By default the API listens on loopback in each pod, and a port-forward is
+such a peer: whoever may port-forward to the pods has full admin access.
+Reach one pod with:
 
 ```sh
 kubectl -n numa-dns port-forward deploy/numa-dns 5380:5380
 ```
 
-It reads statistics, the last 1000 queries (client address and name), the
-cache and blocklist state; it writes overrides (any name to any address), cache
-flushes, blocking on/off and allow/blocklist entries. Writes land in that one
-pod and its `emptyDir`: other replicas never see them and a restart loses
-them. Use `config` for anything durable.
+### Through an ingress controller
+
+`api.enabled: true` binds the API to `0.0.0.0` and adds an `api` port to the
+pod, the Service (port 5380, `appProtocol: http`) and the NetworkPolicy;
+`ingress.port` / `extraIngresses[].port` then accept `api` (path `/`,
+`Prefix`).
+
+- **Token.** A peer other than loopback must send the API token as
+  `Authorization: Bearer <token>`, or HTTP Basic with the token as password
+  (any user name); otherwise numa answers 401 with
+  `WWW-Authenticate: Basic realm="numa"`, so a browser prompts. `/health` is
+  always open (numa `src/api_auth.rs:44-50,171-187`).
+- **A shared token is required.** numa takes `NUMA_API_TOKEN`, then
+  `[server] api_token`, then `<data_dir>/api_token`, and mints a random token
+  when none is set (numa `src/api_auth.rs:84-120`): each replica would have
+  its own, new after every pod restart. The chart fails the render unless
+  `extraEnv` holds `NUMA_API_TOKEN` (from a Secret: recommended) or
+  `config.server.api_token` is set (accepted, but it lands in the ConfigMap
+  in plaintext). numa logs only a token it mints (numa
+  `src/serve.rs:381-385`), never a configured one: read it from the Secret.
+  The Secret is not checksummed: `kubectl rollout restart` after a change,
+  or put a hash of the token in `podAnnotations` so a new one rolls the pods.
+- **Plain HTTP.** The controller reaches the pod over HTTP, token included:
+  end TLS at the controller and keep the hop inside the cluster.
+- **Per-pod state.** Statistics, query log, cache, overrides and
+  allow/blocklist edits belong to the pod that served the request: use
+  sticky sessions (cookie affinity) at the controller, or the dashboard
+  jumps between replicas. Writes still change one pod only.
+- **Network.** `config.server.allow_from` filters DNS only, not the API. The
+  NetworkPolicy allows the API port from `networkPolicy.ingress.from`, the
+  same peers as DNS and DoH (empty: any source), so the token is the guard
+  inside the cluster.
+- **Authentication in front.** The controller's own authentication (OIDC)
+  must not overwrite the `Authorization` header numa reads (haproxy-ingress
+  `auth-url`: limit `auth-headers-succeed` if the auth service returns one).
+  Users then log in twice: OIDC, then the token at the browser prompt. A
+  controller that sets `Authorization: Bearer <token>` itself skips the
+  prompt, but puts the token in the Ingress and leaves OIDC as the only
+  guard.
+
+Example for haproxy-ingress, next to the DoH and DoT example of
+[Remote access](#remote-access):
+
+```sh
+kubectl -n numa-dns create secret generic numa-dns-api --from-literal=token="$(openssl rand -hex 32)"
+```
+
+```yaml
+api:
+  enabled: true
+extraEnv:
+  - name: NUMA_API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: numa-dns-api
+        key: token
+extraIngresses:
+  - nameSuffix: dashboard
+    className: haproxy
+    port: api
+    annotations:
+      haproxy-ingress.github.io/affinity: cookie
+      # Your OIDC authentication, for example oauth2-proxy. Name the Service
+      # port: haproxy-ingress misses a named port given by number and denies
+      # every request (jcmoraisjr/haproxy-ingress#981).
+      haproxy-ingress.github.io/auth-url: svc://oauth2-proxy:http/oauth2/auth
+    hosts:
+      - numa.example.com
+    tls:
+      - hosts:
+          - numa.example.com
+```
+
+### Logs
 
 numa also logs every query (client address, name, outcome) at INFO on stdout,
-and the API token at start: whoever reads the pod logs reads both. Set
+and the API token at start when it mints one: whoever reads the pod logs
+reads both. Set
 `extraEnv: [{name: RUST_LOG, value: warn}]` to stop both (numa uses
 `env_logger`; `numa::ctx` logs queries, `numa::serve` the token).
 At start numa warns `bootstrap_resolver: skipping non-IP fallback` for the
@@ -249,10 +331,12 @@ pod sandbox cannot be created: set `hostUsers: true`.
 ## Network
 
 - The NetworkPolicy (`networkPolicy.enabled`, on by default) allows the DNS
-  port (8053) and the DoH port (8443); the plain proxy port (8080) is never
-  allowed. With `networkPolicy.ingress.from: []` any source is allowed,
-  because an ingress controller on the host network cannot be selected by a
-  `podSelector`; `config.server.allow_from` still filters by address.
+  port (8053), the DoH port (8443) and, with `api.enabled`, the API port; the
+  plain proxy port (8080) is never allowed. With
+  `networkPolicy.ingress.from: []` any source is allowed, because an ingress
+  controller on the host network cannot be selected by a `podSelector`;
+  `config.server.allow_from` still filters DNS clients by address, and the API
+  token guards the API.
 - `networkPolicy.egress.enabled` (off by default) allows cluster DNS, and
   53, 443 and 853 to `egress.upstreams.to` (default: anywhere). Narrow
   `upstreams.to` to the resolvers in `config.upstream` and the hosts of
@@ -289,6 +373,7 @@ Kubernetes: `>=1.33.0-0`
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` | Affinity. Empty: preferred podAntiAffinity on hostname. A non-empty value replaces that default wholesale. |
+| api.enabled | bool | `false` | Expose numa's HTTP control plane (dashboard and REST API) on the pod network, for an ingress controller: `server.api_bind_addr` becomes `0.0.0.0`, the pod gets an `api` port (`config.server.api_port`, default 5380), the Service an `api` port 5380, the NetworkPolicy allows it and `ingress.port: api` becomes valid. Requires a token shared by every replica: an `extraEnv` entry `NUMA_API_TOKEN` (from a Secret) or `config.server.api_token`. Read [Dashboard](#dashboard) first. |
 | autoscaling.behavior | object | `{"scaleDown":{"stabilizationWindowSeconds":300}}` | HPA behavior. Slow scale-down: a removed pod drops its cache and its in-flight queries. |
 | autoscaling.enabled | bool | `false` | Create a HorizontalPodAutoscaler. Enabling it drops `replicas` from the Deployment: it falls to 1 until the HPA reacts. |
 | autoscaling.maxReplicas | int | `10` | HPA maximum replicas. |
@@ -300,7 +385,7 @@ Kubernetes: `>=1.33.0-0`
 | dnsConfig | object | `{"options":[{"name":"ndots","value":"2"}]}` | DNS config. |
 | dnsConfig.options | list | `[{"name":"ndots","value":"2"}]` | DNS options (fewer search-list lookups for numa's own name lookups, such as blocklist hosts). |
 | dnsPolicy | string | `"ClusterFirst"` | Pod DNS policy. `ClusterFirst`: numa forwards `cluster.local` names to the cluster DNS it finds in `resolv.conf`. `Default` turns that off. |
-| extraEnv | list | `[]` | Extra environment variables (`EnvVar` list) for the numa container. numa logs through `env_logger` at `info`, so every query (client address, name) and the API token reach stdout: `RUST_LOG=warn` stops both (`numa::ctx` logs queries, `numa::serve` the token). |
+| extraEnv | list | `[]` | Extra environment variables (`EnvVar` list) for the numa container. numa logs through `env_logger` at `info`, so every query (client address, name) and the API token it mints reach stdout: `RUST_LOG=warn` stops both (`numa::ctx` logs queries, `numa::serve` the token). |
 | extraIngresses | list | `[]` | More Ingresses, for example DoT next to a DoH `ingress`. Each item takes the `ingress` keys (`port` defaults to `doh`) plus a required, unique `nameSuffix`: the object is named `<fullname>-<nameSuffix>`. `hosts` is required. |
 | extraVolumeMounts | list | `[]` | Extra volume mounts for the numa container. |
 | extraVolumes | list | `[]` | Extra volumes. |
@@ -316,7 +401,7 @@ Kubernetes: `>=1.33.0-0`
 | ingress.enabled | bool | `false` | Create an Ingress. Read [Remote access](#remote-access) first. |
 | ingress.hosts | list | `[]` | Host names. Required when enabled. |
 | ingress.labels | object | `{}` | Extra Ingress labels. |
-| ingress.port | string | `"doh"` | Service port the Ingress routes to. `doh`: path `/dns-query` (Exact) to the DNS-over-HTTPS port, TLS to the pod. `dns-tcp`: path `/` to DNS over TCP, for controllers that route TCP from an Ingress (DoT). |
+| ingress.port | string | `"doh"` | Service port the Ingress routes to. `doh`: path `/dns-query` (Exact) to the DNS-over-HTTPS port, TLS to the pod. `dns-tcp`: path `/` to DNS over TCP, for controllers that route TCP from an Ingress (DoT). `api`: path `/` (Prefix) to the dashboard and API, plain HTTP to the pod; requires `api.enabled`. |
 | ingress.tls | list | `[]` | Ingress TLS blocks (`secretName`, `hosts`). |
 | livenessProbe | object | `{"failureThreshold":3,"periodSeconds":10,"tcpSocket":{"port":"dns-tcp"}}` | Liveness probe: the DNS-over-TCP listener (8053). numa has no "alive" endpoint beyond the socket; an upstream outage does not close it. |
 | minReadySeconds | int | `5` | Seconds a new pod must be Ready before an old one is retired. |
@@ -324,8 +409,8 @@ Kubernetes: `>=1.33.0-0`
 | networkPolicy.egress.dns.to | list | `[{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"kube-system"}},"podSelector":{"matchLabels":{"k8s-app":"kube-dns"}}}]` | Cluster DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels. |
 | networkPolicy.egress.enabled | bool | `false` | Restrict egress (cluster DNS, upstreams). |
 | networkPolicy.egress.upstreams.to | list | `[{"ipBlock":{"cidr":"0.0.0.0/0"}}]` | Upstream and blocklist peers (53 TCP/UDP, 443 and 853 TCP). Narrow it to the resolvers in `config.upstream` and the hosts of `config.blocking`. |
-| networkPolicy.enabled | bool | `true` | Create a NetworkPolicy (ingress: DNS on 8053, DoH on 8443; the plain proxy port 8080 is never allowed). |
-| networkPolicy.ingress.from | list | `[]` | NetworkPolicyPeer list allowed to reach 8053 and 8443. Empty: any source, because an ingress controller on the host network cannot be selected by a `podSelector`. `config.server.allow_from` still filters by client address. |
+| networkPolicy.enabled | bool | `true` | Create a NetworkPolicy (ingress: DNS on 8053, DoH on 8443, the API port with `api.enabled`; the plain proxy port 8080 is never allowed). |
+| networkPolicy.ingress.from | list | `[]` | NetworkPolicyPeer list allowed to reach 8053, 8443 and, with `api.enabled`, the API port. Empty: any source, because an ingress controller on the host network cannot be selected by a `podSelector`. `config.server.allow_from` still filters DNS clients by address; the API relies on its token. |
 | nodeSelector | object | `{"kubernetes.io/os":"linux"}` | Node selector. Merged with (and cannot drop) the default `kubernetes.io/os: linux`. |
 | podAnnotations | object | `{}` | Pod annotations. |
 | podDisruptionBudget.enabled | bool | `false` | Create a PodDisruptionBudget (`unhealthyPodEvictionPolicy: AlwaysAllow`). |

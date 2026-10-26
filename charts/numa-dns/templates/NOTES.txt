@@ -14,11 +14,19 @@ Check that the pods are ready:
 {{- range .Values.extraIngresses }}
 {{ include "numa-dns.notesIngress" (dict "name" (printf "extraIngresses[%s]" .nameSuffix) "ing" .) }}
 {{- end }}
+{{- if .Values.api.enabled }}
+
+The dashboard and API listen on the pod network, Service port api (5380),
+plain HTTP. Peers outside the pod need the API token (Authorization: Bearer,
+or Basic with the token as password). State is per pod: use sticky sessions
+at the ingress controller.
+{{- else }}
 
 The dashboard and API listen on loopback in each pod and give full admin
 access without a token to anything that reaches them; reach one pod with:
 
   kubectl -n {{ .Release.Namespace }} port-forward deploy/{{ include "numa-dns.fullname" . }} 5380:5380
+{{- end }}
 {{- if not .Values.hostUsers }}
 
 hostUsers is false: pods run in a user namespace. Nodes without support
