@@ -5,7 +5,7 @@
 CustomResourceDefinitions for Flux (sources, kustomizations, Helm releases, notifications, image automation, artifact generators).
 
 CRDs are copied verbatim from [fluxcd/flux2](https://github.com/fluxcd/flux2)
-at tag [`v2.9.6`](https://github.com/fluxcd/flux2/tree/v2.9.6) (commit `b9c17924adb533d3617ec7de97a7b0f4acc07b39`),
+at tag [`v2.10.0`](https://github.com/fluxcd/flux2/tree/v2.10.0) (commit `3fa784edd773d56630bb9f62645e08f70c2cff0a`),
 path(s) `manifests/crds`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
@@ -50,7 +50,7 @@ Unknown keys are rejected (`values.schema.json`).
 
 | CRD | Kind | Group | Scope | Versions |
 |-----|------|-------|-------|----------|
-| `alerts.notification.toolkit.fluxcd.io` | Alert | notification.toolkit.fluxcd.io | Namespaced | **v1beta3** |
+| `alerts.notification.toolkit.fluxcd.io` | Alert | notification.toolkit.fluxcd.io | Namespaced | **v1**, v1beta3 |
 | `artifactgenerators.source.extensions.fluxcd.io` | ArtifactGenerator | source.extensions.fluxcd.io | Namespaced | **v1beta1** |
 | `buckets.source.toolkit.fluxcd.io` | Bucket | source.toolkit.fluxcd.io | Namespaced | **v1** |
 | `externalartifacts.source.toolkit.fluxcd.io` | ExternalArtifact | source.toolkit.fluxcd.io | Namespaced | **v1** |
@@ -63,7 +63,7 @@ Unknown keys are rejected (`values.schema.json`).
 | `imageupdateautomations.image.toolkit.fluxcd.io` | ImageUpdateAutomation | image.toolkit.fluxcd.io | Namespaced | **v1** |
 | `kustomizations.kustomize.toolkit.fluxcd.io` | Kustomization | kustomize.toolkit.fluxcd.io | Namespaced | **v1** |
 | `ocirepositories.source.toolkit.fluxcd.io` | OCIRepository | source.toolkit.fluxcd.io | Namespaced | **v1** |
-| `providers.notification.toolkit.fluxcd.io` | Provider | notification.toolkit.fluxcd.io | Namespaced | **v1beta3** |
+| `providers.notification.toolkit.fluxcd.io` | Provider | notification.toolkit.fluxcd.io | Namespaced | **v1**, v1beta3 |
 | `receivers.notification.toolkit.fluxcd.io` | Receiver | notification.toolkit.fluxcd.io | Namespaced | **v1** |
 
 Bold = storage version, ~~struck~~ = not served.

@@ -9,7 +9,7 @@ upstream:
 version:
   tagPattern: '^v(\d+\.\d+\.\d+)$'
   allow: all
-  current: v2.9.6
+  current: v2.10.0
 sources:
   # flux2 holds no CRDs in-tree: this kustomization pulls the
   # `<controller>.crds.yaml` release asset of every controller (source,
