@@ -1,0 +1,13 @@
+Configarr syncs on schedule "{{ .Values.schedule }}" (CronJob {{ include "configarr.fullname" . }}).
+
+Run a sync now and read its logs:
+
+  JOB={{ include "configarr.fullname" . }}-manual-$(date +%s)
+  kubectl -n {{ .Release.Namespace }} create job --from=cronjob/{{ include "configarr.fullname" . }} "$JOB"
+  kubectl -n {{ .Release.Namespace }} logs -f "job/$JOB"
+
+A manual Job ignores concurrencyPolicy: do not start one while a scheduled run is active.
+{{- if not (fromYaml .Values.config) }}
+
+config is empty: a run clones the TRaSH-Guides and Recyclarr repositories and syncs nothing.
+{{- end }}

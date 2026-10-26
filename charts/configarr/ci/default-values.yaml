@@ -1,0 +1,4 @@
+# Used by `ct lint` and `ct install` (kind). The CronJob installs without
+# running: no Servarr app is needed.
+# kind inside a CI runner cannot create user namespaces.
+hostUsers: true

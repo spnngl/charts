@@ -1,0 +1,192 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.description" . }}
+
+Runs [Configarr](https://github.com/raydak-labs/configarr) as a CronJob. Each
+run reads one `config.yml`, clones or updates the
+[TRaSH-Guides](https://github.com/TRaSH-Guides/Guides) and
+[Recyclarr templates](https://github.com/recyclarr/config-templates)
+repositories, syncs quality profiles, custom formats and settings into each
+configured instance (Sonarr, then Radarr, then Prowlarr), and exits. The image
+is built from [spnngl/images](https://github.com/spnngl/images): distroless,
+non-root, no shell.
+
+## Install
+
+```sh
+kubectl create namespace media
+helm install configarr oci://ghcr.io/spnngl/charts/configarr --version <version> -n media \
+  --set-file config=config.yml
+```
+
+The default `config` is `{}`: a run clones the repositories and syncs nothing.
+
+## Configuration
+
+`config` is the content of Configarr's
+[`config.yml`](https://configarr.de/docs/configuration/config-file), as a
+string. It is a string, not a map, because Helm would drop Configarr's YAML
+tags (`!env`, `!secret`, `!file`) from a map. The chart copies it verbatim into
+a ConfigMap and fails the install when it does not parse as a YAML mapping.
+
+```yaml
+config: |
+  radarr:
+    main:
+      base_url: http://radarr.media.svc:7878
+      api_key: !env RADARR_API_KEY
+      quality_profiles: []
+```
+
+Settings as code: each run reverts what `config` manages, and deletes
+unmanaged items (custom formats, quality profiles, tags) where a
+`delete_unmanaged_*` key is on. Change these settings in `config`, not in the
+Servarr UI.
+
+The chart sets two variables:
+
+- `STOP_ON_ERROR=true`: the run stops at the first instance that fails, and the
+  Job fails. Upstream only logs the failure and exits 0. `extraEnv` cannot
+  change it.
+- `CONFIGARR_ENFORCE_CONFIG_VALIDATION=true`: an unknown key or a wrong type in
+  `config` fails the run. Upstream only logs a warning, so a typo goes
+  unnoticed. An `extraEnv` entry with this name replaces the chart's value.
+
+Other upstream variables go in `extraEnv`: `LOG_LEVEL`, `LOG_FORMAT=json`,
+`DRY_RUN=true` (log the changes without applying them),
+`CONFIGARR_ENABLE_MERGE=true` (YAML `<<` merge keys), `TZ`.
+
+## Secrets
+
+Never write API keys in `config`: it is a ConfigMap. Two ways in:
+
+- `!env NAME` reads an environment variable. Set it with `extraEnv` from a
+  Secret. An unset or empty variable fails the run.
+
+  ```yaml
+  extraEnv:
+    - name: RADARR_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: radarr-api
+          key: api-key
+  ```
+
+- `!secret NAME` reads a key of Configarr's `secrets.yml`. Store that file in
+  a Secret and set `secrets.existingSecret.name` (and `key`, default
+  `secrets.yml`). The chart mounts it at `/app/config/secrets.yml`, and fails
+  the install when `config` uses `!secret` without it. A missing key resolves
+  to nothing: the run fails on validation or on the API call.
+
+  ```sh
+  kubectl -n media create secret generic configarr-secrets --from-file=secrets.yml
+  ```
+
+`!file PATH` reads a file: mount it with `extraVolumes` and
+`extraVolumeMounts`. The value keeps the file's trailing newline. The chart
+never creates a Secret.
+
+## Schedule and runs
+
+`schedule` is a cron expression in the time zone of kube-controller-manager
+(usually UTC), hourly by default. The CronJob is fixed:
+
+- `concurrencyPolicy: Forbid`: one run at a time, one writer of the Servarr
+  settings and of the repositories cache.
+- `activeDeadlineSeconds: 600`: a run that takes longer than 10 minutes is
+  killed, so a hung run cannot block every later one.
+- `backoffLimit: 1` with `restartPolicy: Never`: one retry, in a new pod; the
+  failed pod keeps its logs.
+- `startingDeadlineSeconds: 600`: a run the controller missed by up to 10
+  minutes still starts.
+- History: the last successful Job and the last 3 failed ones.
+
+A failed run is only a failed Job: alert on it. With kube-state-metrics,
+`kube_job_status_failed{job_name=~"configarr-.*"} > 0` catches a failed run and
+`time() - kube_cronjob_status_last_successful_time{cronjob="configarr"}` the time
+since the last success.
+
+Run a sync now and follow it:
+
+```sh
+JOB=configarr-manual-$(date +%s)
+kubectl -n media create job --from=cronjob/configarr "$JOB"
+kubectl -n media logs -f "job/$JOB"
+```
+
+A Job created by hand ignores `concurrencyPolicy`: do not start one while a
+scheduled run is active. Pause the schedule with
+`kubectl -n media patch cronjob configarr -p '{"spec":{"suspend":true}}'`
+(the next `helm upgrade` resumes it).
+
+## Storage
+
+- `/app/config`: a read-only projected volume with `config.yml` and, when set,
+  `secrets.yml`. Each run is a new pod: it reads the current ConfigMap and
+  Secret, no restart needed.
+- `/app/repos`: the TRaSH-Guides and Recyclarr clones, sparse by default
+  (about 11 MB; `enableFullGitClone: true` in `config` clones everything). An
+  `emptyDir` by default: each run clones again. `persistence.repos.enabled:
+  true` keeps them in a PVC between runs, so a run only pulls. The chart's PVC
+  is a cache: `helm uninstall` deletes it. `existingClaim` uses yours. Turning
+  it off leaves the PVC `Terminating` until the finished Job pods that mount
+  it are gone: delete those Jobs.
+
+Nothing else is writable: Configarr writes no temporary files.
+
+Local custom formats and templates (`localCustomFormatsPath`,
+`localConfigTemplatesPath`, conventionally `/app/cfs` and `/app/templates`) go
+in `extraVolumes` and `extraVolumeMounts`.
+
+## Image
+
+The default image is `appVersion`, pinned by the digest recorded in the
+`artifacthub.io/images` annotation of `Chart.yaml` (Renovate updates tag and
+digest together). Setting `image.tag` drops that digest; add `image.digest` to pin
+the tag again (a digest without a tag is an error).
+
+The image is signed with cosign (keyless, GitHub Actions OIDC) and carries SLSA
+provenance. See the repository README, "Verifying what you install".
+
+## Security
+
+Defaults satisfy the `restricted` Pod Security Standard: non-root uid/gid 65532,
+read-only root filesystem (writes go to `/app/repos` only), all
+capabilities dropped, no privilege escalation, `RuntimeDefault` seccomp, no
+ServiceAccount token, no Service environment variables.
+
+### User namespaces
+
+`hostUsers: false` (default) runs the pod in a user namespace: uid 65532 in the
+pod maps to an unprivileged host uid, which limits what a container escape
+gains. Nodes need a container runtime with user namespace support (containerd
+2.0+ or CRI-O), runc 1.2+ or crun, and a Linux kernel 6.3+. On other nodes the
+pod sandbox cannot be created: set `hostUsers: true`. Volumes without idmapped
+mounts (NFS, SMB) need it too.
+
+## Network
+
+- The NetworkPolicy (`networkPolicy.enabled`, on by default) denies all
+  ingress: the pod has no port.
+- `networkPolicy.egress.enabled` (off by default) allows DNS, `peers.to` (the
+  internet except private, CGNAT and link-local ranges: GitHub, so a
+  compromised process cannot move sideways) and `extraEgress`. Add
+  `extraEgress` rules for Sonarr, Radarr and Prowlarr: they sit in a private
+  range.
+
+Configarr sends no telemetry unless `telemetry: true` in `config` or
+`TELEMETRY_ENABLED`.
+
+## Compatibility
+
+The values schema is strict: unknown keys fail the install. A breaking change to
+values bumps the chart MAJOR version; deprecations are announced one MINOR
+version ahead. Requires Kubernetes 1.33 or later.
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}

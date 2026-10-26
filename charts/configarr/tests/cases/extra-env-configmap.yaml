@@ -1,0 +1,7 @@
+values:
+  extraEnv:
+    - name: TZ
+      valueFrom:
+        configMapKeyRef:
+          name: tz
+          key: tz

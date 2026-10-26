@@ -1,0 +1,451 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "affinity": {
+      "additionalProperties": true,
+      "description": "Affinity.",
+      "required": [],
+      "type": "object"
+    },
+    "config": {
+      "description": "Configarr's `config.yml`, as a string: Configarr's `!env`, `!secret` and `!file` tags would be dropped silently in a values map. Copied verbatim into a ConfigMap; the chart checks that it parses as a YAML mapping. The default `{}` syncs nothing. Never write API keys here: use `!env` with `extraEnv`, or `!secret` with `secrets.existingSecret`.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "dnsConfig": {
+      "additionalProperties": true,
+      "description": "DNS config.",
+      "properties": {
+        "options": {
+          "description": "DNS options (fewer search-list lookups for external host names such as github.com; Service names need their namespace or FQDN).",
+          "items": {
+            "additionalProperties": true,
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "extraEnv": {
+      "description": "Extra environment variables (`EnvVar` list) for the Configarr container: the variables `!env` tags read (API keys from a Secret by `secretKeyRef`), `LOG_LEVEL`, `LOG_FORMAT`, `DRY_RUN`, `CONFIGARR_ENABLE_MERGE`, `TZ`. `CONFIGARR_ENFORCE_CONFIG_VALIDATION` (the chart sets `true`: a typo in `config` fails the run) is overridden by this list. Names the chart sets are rejected: `STOP_ON_ERROR`, `CONFIG_LOCATION`, `SECRETS_LOCATION`, `ROOT_PATH`, `CUSTOM_REPO_ROOT`. Names are case-sensitive.",
+      "items": {
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraInitContainers": {
+      "description": "Extra init containers, rendered as given. The Configarr image has no shell: use another image.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumeMounts": {
+      "description": "Extra volume mounts for the Configarr container.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumes": {
+      "description": "Extra volumes: local custom formats and templates (`localCustomFormatsPath`, `localConfigTemplatesPath`, conventionally `/app/cfs` and `/app/templates`), files read by `!file`.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "fullnameOverride": {
+      "description": "Override the full resource name (default `\u003crelease\u003e-\u003cchart\u003e`).",
+      "type": "string"
+    },
+    "global": {
+      "description": "Global values are values that can be accessed from any chart or subchart by exactly the same name.",
+      "required": [],
+      "type": "object"
+    },
+    "hostUsers": {
+      "description": "Run the pod in a user namespace (`false`: uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) and idmapped mounts on every volume's file system (not NFS/SMB); pods fail to start otherwise. `true` uses host users.",
+      "type": "boolean"
+    },
+    "image": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "description": "Image digest, only valid together with `image.tag`.",
+          "pattern": "^(sha256:[a-f0-9]{64})?$",
+          "type": "string"
+        },
+        "pullPolicy": {
+          "description": "Image pull policy.",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ],
+          "type": "string"
+        },
+        "repository": {
+          "description": "Image repository.",
+          "type": "string"
+        },
+        "tag": {
+          "description": "Image tag. Empty: the tag and digest recorded for `image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "imagePullSecrets": {
+      "description": "Image pull secrets (list of `{name: \u003csecret\u003e}`).",
+      "items": {
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "nameOverride": {
+      "description": "yaml-language-server: $schema=values.schema.json\nOverride the chart name used in resource names and labels.",
+      "type": "string"
+    },
+    "networkPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "egress": {
+          "additionalProperties": false,
+          "properties": {
+            "dns": {
+              "additionalProperties": false,
+              "properties": {
+                "to": {
+                  "description": "DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Restrict egress (DNS, GitHub for the TRaSH-Guides and Recyclarr repositories, `extraEgress`).",
+              "type": "boolean"
+            },
+            "extraEgress": {
+              "description": "Extra `NetworkPolicyEgressRule`s: Sonarr, Radarr and Prowlarr (they are in the private ranges `peers` excludes).",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "peers": {
+              "additionalProperties": false,
+              "properties": {
+                "to": {
+                  "description": "GitHub and other internet hosts (any port). Default: the internet, not the private, CGNAT and link-local ranges, so a compromised process cannot move sideways.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "enabled": {
+          "description": "Create a NetworkPolicy. Ingress: none (the pod has no port).",
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "nodeSelector": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Node selector.",
+      "properties": {
+        "kubernetes.io/os": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "persistence": {
+      "additionalProperties": false,
+      "properties": {
+        "repos": {
+          "additionalProperties": false,
+          "properties": {
+            "accessModes": {
+              "description": "Access modes of the chart's PVC. `ReadWriteOnce` is enough: `concurrencyPolicy: Forbid` runs one Job at a time.",
+              "items": {
+                "enum": [
+                  "ReadWriteOnce",
+                  "ReadWriteOncePod",
+                  "ReadWriteMany"
+                ],
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "enabled": {
+              "description": "Keep the TRaSH-Guides and Recyclarr clones (`/app/repos`) in a PersistentVolumeClaim between runs. `false`: an `emptyDir`, each run clones again.",
+              "type": "boolean"
+            },
+            "existingClaim": {
+              "description": "Existing PVC to use when `enabled`. Empty: the chart creates one (deleted on uninstall: it is a cache).",
+              "type": "string"
+            },
+            "size": {
+              "description": "Size of the chart's PVC.",
+              "type": "string"
+            },
+            "storageClassName": {
+              "description": "StorageClass of the chart's PVC. Empty: the cluster default.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "podAnnotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Pod annotations.",
+      "required": [],
+      "type": "object"
+    },
+    "podLabels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Extra pod labels.",
+      "required": [],
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "additionalProperties": true,
+      "description": "Pod security context. Overrides are merged onto these defaults.",
+      "properties": {
+        "fsGroup": {
+          "type": "integer"
+        },
+        "fsGroupChangePolicy": {
+          "type": "string"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "priorityClassName": {
+      "description": "Priority class name.",
+      "type": "string"
+    },
+    "resources": {
+      "additionalProperties": true,
+      "description": "Resources of the Configarr container. No CPU limit on purpose.",
+      "properties": {
+        "limits": {
+          "additionalProperties": true,
+          "properties": {
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "requests": {
+          "additionalProperties": true,
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "schedule": {
+      "description": "Cron schedule of the sync, in the time zone of kube-controller-manager (usually UTC). Each run reverts what `config` manages.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "secrets": {
+      "additionalProperties": false,
+      "properties": {
+        "existingSecret": {
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "description": "Key of the Secret holding the `secrets.yml` content.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "name": {
+              "description": "Secret holding Configarr's `secrets.yml` (the values of `!secret` tags), mounted at `/app/config/secrets.yml`. Empty: none, and a `!secret` tag in `config` fails the install.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "securityContext": {
+      "additionalProperties": true,
+      "description": "Container security context of the Configarr container (read-only root filesystem: it writes only to the `/app/repos` volume). Overrides are merged onto these defaults.",
+      "properties": {
+        "allowPrivilegeEscalation": {
+          "type": "boolean"
+        },
+        "capabilities": {
+          "additionalProperties": true,
+          "properties": {
+            "drop": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ],
+                "required": []
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "privileged": {
+          "type": "boolean"
+        },
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "serviceAccount": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "ServiceAccount annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "create": {
+          "description": "Create the ServiceAccount.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "ServiceAccount name. Empty: `\u003cfullname\u003e` (or `default` when `create` is false).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "tolerations": {
+      "description": "Tolerations.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [],
+  "title": "configarr values",
+  "type": "object"
+}

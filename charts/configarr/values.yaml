@@ -1,0 +1,299 @@
+# yaml-language-server: $schema=values.schema.json
+# @schema.root
+# title: configarr values
+# @schema.root
+# -- Override the chart name used in resource names and labels.
+nameOverride: ""
+# -- Override the full resource name (default `<release>-<chart>`).
+fullnameOverride: ""
+
+image:
+  # -- Image repository.
+  repository: ghcr.io/spnngl/images/configarr
+  # -- Image tag. Empty: the tag and digest recorded for `image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.
+  tag: ""
+  # @schema
+  # type: string
+  # pattern: "^(sha256:[a-f0-9]{64})?$"
+  # @schema
+  # -- Image digest, only valid together with `image.tag`.
+  digest: ""
+  # @schema
+  # type: string
+  # enum: [Always, IfNotPresent, Never]
+  # @schema
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+# @schema
+# -- Image pull secrets (list of `{name: <secret>}`).
+imagePullSecrets: []
+
+# @schema
+# type: string
+# minLength: 1
+# @schema
+# -- Cron schedule of the sync, in the time zone of kube-controller-manager (usually UTC). Each run reverts what `config` manages.
+schedule: "0 * * * *"
+
+# @schema
+# type: string
+# minLength: 1
+# @schema
+# -- Configarr's `config.yml`, as a string: Configarr's `!env`, `!secret` and `!file` tags would be dropped silently in a values map. Copied verbatim into a ConfigMap; the chart checks that it parses as a YAML mapping. The default `{}` syncs nothing. Never write API keys here: use `!env` with `extraEnv`, or `!secret` with `secrets.existingSecret`.
+config: "{}"
+
+secrets:
+  existingSecret:
+    # -- Secret holding Configarr's `secrets.yml` (the values of `!secret` tags), mounted at `/app/config/secrets.yml`. Empty: none, and a `!secret` tag in `config` fails the install.
+    name: ""
+    # @schema
+    # type: string
+    # minLength: 1
+    # @schema
+    # -- Key of the Secret holding the `secrets.yml` content.
+    key: secrets.yml
+
+persistence:
+  repos:
+    # -- Keep the TRaSH-Guides and Recyclarr clones (`/app/repos`) in a PersistentVolumeClaim between runs. `false`: an `emptyDir`, each run clones again.
+    enabled: false
+    # -- Existing PVC to use when `enabled`. Empty: the chart creates one (deleted on uninstall: it is a cache).
+    existingClaim: ""
+    # -- StorageClass of the chart's PVC. Empty: the cluster default.
+    storageClassName: ""
+    # @schema
+    # type: array
+    # items:
+    #   type: string
+    #   enum: [ReadWriteOnce, ReadWriteOncePod, ReadWriteMany]
+    # minItems: 1
+    # @schema
+    # -- Access modes of the chart's PVC. `ReadWriteOnce` is enough: `concurrencyPolicy: Forbid` runs one Job at a time.
+    accessModes:
+      - ReadWriteOnce
+    # -- Size of the chart's PVC.
+    size: 1Gi
+
+serviceAccount:
+  # -- Create the ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false).
+  name: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- ServiceAccount annotations.
+  annotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Pod annotations.
+podAnnotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Extra pod labels.
+podLabels: {}
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Pod security context. Overrides are merged onto these defaults.
+podSecurityContext:
+  fsGroup: 65532
+  fsGroupChangePolicy: OnRootMismatch
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Container security context of the Configarr container (read-only root filesystem: it writes only to the `/app/repos` volume). Overrides are merged onto these defaults.
+securityContext:
+  allowPrivilegeEscalation: false
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: boolean
+# @schema
+# -- Run the pod in a user namespace (`false`: uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) and idmapped mounts on every volume's file system (not NFS/SMB); pods fail to start otherwise. `true` uses host users.
+hostUsers: false
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Resources of the Configarr container. No CPU limit on purpose.
+resources:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  limits:
+    memory: 1Gi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  requests:
+    cpu: 50m
+    memory: 128Mi
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- DNS config.
+dnsConfig:
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  #   additionalProperties: true
+  # @schema
+  # -- DNS options (fewer search-list lookups for external host names such as github.com; Service names need their namespace or FQDN).
+  options:
+    - name: ndots
+      value: "2"
+
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Node selector.
+nodeSelector:
+  kubernetes.io/os: linux
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Tolerations.
+tolerations: []
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Affinity.
+affinity: {}
+# -- Priority class name.
+priorityClassName: ""
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra init containers, rendered as given. The Configarr image has no shell: use another image.
+extraInitContainers: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volumes: local custom formats and templates (`localCustomFormatsPath`, `localConfigTemplatesPath`, conventionally `/app/cfs` and `/app/templates`), files read by `!file`.
+extraVolumes: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volume mounts for the Configarr container.
+extraVolumeMounts: []
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+#       minLength: 1
+# @schema
+# -- Extra environment variables (`EnvVar` list) for the Configarr container: the variables `!env` tags read (API keys from a Secret by `secretKeyRef`), `LOG_LEVEL`, `LOG_FORMAT`, `DRY_RUN`, `CONFIGARR_ENABLE_MERGE`, `TZ`. `CONFIGARR_ENFORCE_CONFIG_VALIDATION` (the chart sets `true`: a typo in `config` fails the run) is overridden by this list. Names the chart sets are rejected: `STOP_ON_ERROR`, `CONFIG_LOCATION`, `SECRETS_LOCATION`, `ROOT_PATH`, `CUSTOM_REPO_ROOT`. Names are case-sensitive.
+extraEnv: []
+
+networkPolicy:
+  # -- Create a NetworkPolicy. Ingress: none (the pod has no port).
+  enabled: true
+  egress:
+    # -- Restrict egress (DNS, GitHub for the TRaSH-Guides and Recyclarr repositories, `extraEgress`).
+    enabled: false
+    dns:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels.
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    peers:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- GitHub and other internet hosts (any port). Default: the internet, not the private, CGNAT and link-local ranges, so a compromised process cannot move sideways.
+      to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 100.64.0.0/10
+              - 127.0.0.0/8
+              - 169.254.0.0/16
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+              - fc00::/7
+              - fe80::/10
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Extra `NetworkPolicyEgressRule`s: Sonarr, Radarr and Prowlarr (they are in the private ranges `peers` excludes).
+    extraEgress: []

@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: STOP_ON_ERROR
+      value: x
+expect:
+  error: "extraEnv STOP_ON_ERROR is set by the chart"

@@ -1,0 +1,5 @@
+values:
+  config: |
+    - radarr
+expect:
+  error: "config must be a YAML mapping"

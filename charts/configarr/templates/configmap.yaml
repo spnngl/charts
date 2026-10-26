@@ -1,0 +1,10 @@
+apiVersion: v1
+data:
+  {{- /* Verbatim: Configarr's YAML tags (!env, !secret, !file) must reach it untouched. */}}
+  config.yml: {{ .Values.config | quote }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "configarr.labels" . | nindent 4 }}
+  name: {{ include "configarr.fullname" . }}
+  namespace: {{ .Release.Namespace }}

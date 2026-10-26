@@ -1,0 +1,4 @@
+values:
+  networkPolicy:
+    egress:
+      enabled: true

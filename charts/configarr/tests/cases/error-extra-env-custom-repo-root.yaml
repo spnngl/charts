@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: CUSTOM_REPO_ROOT
+      value: x
+expect:
+  error: "extraEnv CUSTOM_REPO_ROOT is set by the chart"
