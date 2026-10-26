@@ -1,0 +1,10 @@
+values:
+  extraVolumes:
+    - name: extra
+      configMap:
+        name: extra-assets
+  extraVolumeMounts:
+    - name: extra
+      mountPath: /app/assets/extra.json
+      subPath: extra.json
+      readOnly: true

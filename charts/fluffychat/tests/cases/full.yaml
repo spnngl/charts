@@ -1,0 +1,77 @@
+values:
+  config:
+    defaultHomeserver: matrix.example.com
+    presetHomeserver: matrix.example.com
+  server:
+    general:
+      grace-period: 10
+    advanced:
+      headers:
+        - source: "**/*.js"
+          headers:
+            Cache-Control: public, max-age=3600
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+      - chat.example.com
+    tls:
+      - secretName: chat-tls
+        hosts:
+          - chat.example.com
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: gw
+    hostnames:
+      - chat.example.org
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+  networkPolicy:
+    http:
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+    metrics:
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+  podDisruptionBudget:
+    enabled: true
+  verticalPodAutoscaler:
+    enabled: true
+  extraEnv:
+    - name: TZ
+      value: UTC
+  extraArgs:
+    - --log-level=debug
+  extraVolumes:
+    - name: extra
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: extra
+      mountPath: /tmp
+  priorityClassName: high
+  tolerations:
+    - operator: Exists
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values: [amd64]
+  topologySpreadConstraints:
+    - labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: fluffychat
+      maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule

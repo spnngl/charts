@@ -1,0 +1,7 @@
+values:
+  server:
+    advanced:
+      memory-cache:
+        capacity: 256
+expect:
+  error: additional properties 'memory-cache' not allowed

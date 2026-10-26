@@ -1,0 +1,9 @@
+values:
+  server:
+    advanced:
+      headers:
+        - source: /**
+          headers:
+            X-Flag: true
+expect:
+  error: "got boolean, want string"

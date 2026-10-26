@@ -1,0 +1,6 @@
+values:
+  metrics:
+    prometheusRule:
+      serverErrorsRatio: 0
+expect:
+  error: serverErrorsRatio

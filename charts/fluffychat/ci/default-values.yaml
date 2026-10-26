@@ -1,0 +1,4 @@
+# The app needs no backend, so the replicas run and the probes and the config
+# mounts are exercised. hostUsers is true because user namespaces fail on kind
+# inside GitHub runners.
+hostUsers: true

@@ -1,0 +1,14 @@
+values:
+  config:
+    applicationName: Chat
+    audioRecordingBitRate: 32000
+    checkForUpdates: false
+    colorSchemeSeedInt: 4283245242
+    defaultHomeserver: matrix.example.com
+    enableSoftLogout: false
+    fontSizeFactor: 1.2
+    logoUrl: https://chat.example.com/logo.png
+    presetHomeserver: matrix.example.com
+    sendOnEnter: true
+    textMessageMaxLength: 8192
+    welcomeText: "Welcome: \"quoted\""

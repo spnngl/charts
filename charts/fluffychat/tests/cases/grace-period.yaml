@@ -1,0 +1,5 @@
+values:
+  server:
+    general:
+      grace-period: 20
+  terminationGracePeriodSeconds: 60

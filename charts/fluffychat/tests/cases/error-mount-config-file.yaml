@@ -1,0 +1,9 @@
+values:
+  extraVolumes:
+    - name: x
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: x
+      mountPath: /sws.toml
+expect:
+  error: extraVolumeMounts

@@ -1,0 +1,13 @@
+{{- include "fluffychat.validate" . }}
+apiVersion: v1
+data:
+  config.json: |
+    {{- toPrettyJson .Values.config | nindent 4 }}
+  sws.toml: |
+    {{- include "fluffychat.swsToml" . | nindent 4 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "fluffychat.labels" . | nindent 4 }}
+  name: {{ include "fluffychat.fullname" . }}
+  namespace: {{ .Release.Namespace }}

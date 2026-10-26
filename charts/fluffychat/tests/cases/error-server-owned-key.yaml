@@ -1,0 +1,6 @@
+values:
+  server:
+    general:
+      port: 9090
+expect:
+  error: invalid propertyName 'port'

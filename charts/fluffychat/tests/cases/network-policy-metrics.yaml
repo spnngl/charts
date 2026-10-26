@@ -1,0 +1,14 @@
+values:
+  metrics:
+    enabled: true
+  networkPolicy:
+    http:
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+    metrics:
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring

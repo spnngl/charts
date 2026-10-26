@@ -1,0 +1,9 @@
+values:
+  ingress:
+    enabled: true
+    hosts:
+      - chat.example.com
+    tls:
+      - secretName: chat-tls
+        hosts:
+          - chat.example.com

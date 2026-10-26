@@ -1,0 +1,6 @@
+values:
+  metrics:
+    prometheusRule:
+      serverErrorsMinRate: -1
+expect:
+  error: serverErrorsMinRate

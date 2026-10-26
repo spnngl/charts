@@ -1,0 +1,11 @@
+values:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+      disabled: [FluffyChatDown]
+      serverErrorsWindow: 5m
+      serverErrorsRatio: 0.5
+      serverErrorsMinRate: 0

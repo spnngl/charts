@@ -1,0 +1,15 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    {{- include "fluffychat.labels" . | nindent 4 }}
+  name: {{ include "fluffychat.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "fluffychat.selectorLabels" . | nindent 6 }}
+  unhealthyPodEvictionPolicy: AlwaysAllow
+{{- end }}

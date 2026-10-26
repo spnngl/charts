@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: TZ
+      value: UTC
+  extraArgs:
+    - --log-level=debug

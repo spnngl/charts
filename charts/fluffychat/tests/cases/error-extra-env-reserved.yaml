@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: SERVER_PORT
+      value: "9090"
+expect:
+  error: extraEnv
