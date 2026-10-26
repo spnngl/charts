@@ -1,0 +1,11 @@
+values:
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    labels:
+      a: b
+    hosts:
+      - chat.example.com
+      - chat.example.org

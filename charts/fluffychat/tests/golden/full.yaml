@@ -1,0 +1,419 @@
+---
+# Source: fluffychat/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+spec:
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+      ports:
+      - port: 8080
+        protocol: TCP
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+      ports:
+      - port: 8080
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: fluffychat
+      app.kubernetes.io/name: fluffychat
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Source: fluffychat/templates/pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: fluffychat
+      app.kubernetes.io/name: fluffychat
+  unhealthyPodEvictionPolicy: AlwaysAllow
+---
+# Source: fluffychat/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+---
+# Source: fluffychat/templates/configmap.yaml
+apiVersion: v1
+data:
+  config.json: |
+    {
+      "defaultHomeserver": "matrix.example.com",
+      "presetHomeserver": "matrix.example.com"
+    }
+  sws.toml: |
+    [general]
+    compression-level = "fastest"
+    grace-period = 10
+    health = true
+    host = "::"
+    metrics = true
+    port = 8080
+    root = "/app"
+    security-headers = true
+    [advanced]
+    headers = [{ headers = { Cache-Control = "public, max-age=3600" }, source = "**/*.js" }]
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+---
+# Source: fluffychat/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/name: fluffychat
+  type: ClusterIP
+---
+# Source: fluffychat/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+spec:
+  minReadySeconds: 10
+  replicas: 3
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: fluffychat
+      app.kubernetes.io/name: fluffychat
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/config: 183f17e01f461a07cf0c5580f011f39e683a41b98087dd177599200a8a15e951
+      labels:
+        app.kubernetes.io/instance: fluffychat
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: fluffychat
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: fluffychat-0.0.0
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: fluffychat
+                  app.kubernetes.io/name: fluffychat
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      automountServiceAccountToken: false
+      containers:
+        - args:
+          - --log-level=debug
+          env:
+          - name: TZ
+            value: UTC
+          image: ghcr.io/spnngl/images/fluffychat:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          name: fluffychat
+          ports:
+          - containerPort: 8080
+            name: http
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+          - mountPath: /app/config.json
+            name: config
+            readOnly: true
+            subPath: config.json
+          - mountPath: /sws.toml
+            name: config
+            readOnly: true
+            subPath: sws.toml
+          - mountPath: /tmp
+            name: extra
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: high
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: fluffychat
+      terminationGracePeriodSeconds: 30
+      tolerations:
+        - operator: Exists
+      topologySpreadConstraints:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: fluffychat
+          maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+      volumes:
+        - configMap:
+            name: fluffychat
+          name: config
+        - emptyDir: {}
+          name: extra
+---
+# Source: fluffychat/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "chat.example.com"
+      http:
+        paths:
+          - backend:
+              service:
+                name: fluffychat
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+      - chat.example.com
+      secretName: chat-tls
+---
+# Source: fluffychat/templates/httproute.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+spec:
+  hostnames:
+    - chat.example.org
+  parentRefs:
+    - name: gw
+  rules:
+    - backendRefs:
+        - name: fluffychat
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
+# Source: fluffychat/templates/prometheusrule.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+spec:
+  groups:
+    - name: fluffychat
+      rules:
+        - alert: FluffyChatDown
+          annotations:
+            description: "fluffychat/fluffychat has been down or absent from the scrape targets for 5m: the pods are crashing, not running, or scaled to 0."
+            summary: FluffyChat is down.
+          expr: "absent(up{job=\"fluffychat\", namespace=\"fluffychat\"}) or max by (job, namespace) (up{job=\"fluffychat\", namespace=\"fluffychat\"}) < 1"
+          for: 5m
+          labels:
+            severity: warning
+        - alert: FluffyChatServerErrors
+          annotations:
+            description: "More than 0.05 of the responses of fluffychat/fluffychat were 5xx over the last 15m, at more than 0.1 requests per second."
+            summary: FluffyChat answers with server errors.
+          expr: "sum by (job, namespace) (rate(sws_http_requests_total{job=\"fluffychat\", namespace=\"fluffychat\", status=\"5xx\"}[15m])) / sum by (job, namespace) (rate(sws_http_requests_total{job=\"fluffychat\", namespace=\"fluffychat\"}[15m])) > 0.05 and sum by (job, namespace) (rate(sws_http_requests_total{job=\"fluffychat\", namespace=\"fluffychat\"}[15m])) > 0.1"
+          labels:
+            severity: warning
+---
+# Source: fluffychat/templates/servicemonitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+spec:
+  endpoints:
+    - path: /metrics
+      port: http
+  namespaceSelector:
+    matchNames:
+      - fluffychat
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: fluffychat
+      app.kubernetes.io/name: fluffychat
+---
+# Source: fluffychat/templates/vpa.yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+spec:
+  resourcePolicy:
+    containerPolicies:
+      - containerName: fluffychat
+        controlledResources:
+        - cpu
+        - memory
+        controlledValues: RequestsAndLimits
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: fluffychat
+  updatePolicy:
+    updateMode: "Off"

@@ -1,0 +1,73 @@
+# Defaults: downFor 5m, serverErrorsWindow 15m, ratio 0.05, min rate 0.1 req/s. promtool starts the clock at 0.
+values:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+ruleTests:
+  evaluation_interval: 1m
+  tests:
+    - name: down fires after downFor, not while a target is up
+      interval: 1m
+      input_series:
+        - series: up{job="fluffychat", namespace="fluffychat", pod="a"}
+          values: 1x10 0x10
+      alert_rule_test:
+        - {eval_time: 10m, alertname: FluffyChatDown, exp_alerts: []}
+        - {eval_time: 14m, alertname: FluffyChatDown, exp_alerts: []}
+        - eval_time: 16m
+          alertname: FluffyChatDown
+          exp_alerts:
+            - exp_labels: {severity: warning, job: fluffychat, namespace: fluffychat}
+              exp_annotations:
+                summary: FluffyChat is down.
+                description: "fluffychat/fluffychat has been down or absent from the scrape targets for 5m: the pods are crashing, not running, or scaled to 0."
+    - name: down fires when no target exists
+      interval: 1m
+      input_series:
+        - series: up{job="other", namespace="fluffychat", pod="b"}
+          values: 1x10
+      alert_rule_test:
+        - {eval_time: 4m, alertname: FluffyChatDown, exp_alerts: []}
+        - eval_time: 6m
+          alertname: FluffyChatDown
+          exp_alerts:
+            - exp_labels: {severity: warning, job: fluffychat, namespace: fluffychat}
+              exp_annotations:
+                summary: FluffyChat is down.
+                description: "fluffychat/fluffychat has been down or absent from the scrape targets for 5m: the pods are crashing, not running, or scaled to 0."
+    - name: server errors fire above the ratio at a busy rate (1 req/s, 10 % 5xx)
+      interval: 1m
+      input_series:
+        - series: sws_http_requests_total{job="fluffychat", namespace="fluffychat", pod="a", method="GET", status="2xx"}
+          values: "0+54x40"
+        - series: sws_http_requests_total{job="fluffychat", namespace="fluffychat", pod="a", method="GET", status="5xx"}
+          values: "0+6x40"
+      alert_rule_test:
+        - eval_time: 30m
+          alertname: FluffyChatServerErrors
+          exp_alerts:
+            - exp_labels: {severity: warning, job: fluffychat, namespace: fluffychat}
+              exp_annotations:
+                summary: FluffyChat answers with server errors.
+                description: "More than 0.05 of the responses of fluffychat/fluffychat were 5xx over the last 15m, at more than 0.1 requests per second."
+    - name: server errors stay silent below the ratio (1.6 % 5xx)
+      interval: 1m
+      input_series:
+        - series: sws_http_requests_total{job="fluffychat", namespace="fluffychat", pod="a", method="GET", status="2xx"}
+          values: "0+60x40"
+        - series: sws_http_requests_total{job="fluffychat", namespace="fluffychat", pod="a", method="GET", status="5xx"}
+          values: "0+1x40"
+      alert_rule_test:
+        - {eval_time: 30m, alertname: FluffyChatServerErrors, exp_alerts: []}
+    - name: server errors stay silent under the rate floor (33 % 5xx at 0.05 req/s)
+      interval: 1m
+      input_series:
+        - series: sws_http_requests_total{job="fluffychat", namespace="fluffychat", pod="a", method="GET", status="2xx"}
+          values: "0+2x40"
+        - series: sws_http_requests_total{job="fluffychat", namespace="fluffychat", pod="a", method="GET", status="5xx"}
+          values: "0+1x40"
+      alert_rule_test:
+        - {eval_time: 30m, alertname: FluffyChatServerErrors, exp_alerts: []}

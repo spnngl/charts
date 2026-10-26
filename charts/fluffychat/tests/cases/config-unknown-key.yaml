@@ -1,0 +1,5 @@
+values:
+  config:
+    defaultHomeserver: matrix.example.com
+    futureSetting: [a, b]
+# Keys the schema does not know pass through: upstream may add settings.

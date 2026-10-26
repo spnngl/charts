@@ -1,0 +1,6 @@
+values:
+  server:
+    general:
+      grace-period: 300
+expect:
+  error: grace-period

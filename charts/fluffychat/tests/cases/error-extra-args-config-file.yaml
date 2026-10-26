@@ -1,0 +1,6 @@
+values:
+  extraArgs:
+    - -w
+    - /other.toml
+expect:
+  error: extraArgs

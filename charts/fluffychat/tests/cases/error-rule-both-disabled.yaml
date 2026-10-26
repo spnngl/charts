@@ -1,0 +1,6 @@
+values:
+  metrics:
+    prometheusRule:
+      disabled: [FluffyChatDown, FluffyChatServerErrors]
+expect:
+  error: disabled

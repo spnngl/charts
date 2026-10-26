@@ -1,0 +1,6 @@
+values:
+  config:
+    defaultHomeserver: example.com
+    knownErrorHashes: []
+expect:
+  error: knownErrorHashes

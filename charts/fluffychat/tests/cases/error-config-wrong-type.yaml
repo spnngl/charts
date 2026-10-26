@@ -1,0 +1,6 @@
+values:
+  config:
+    defaultHomeserver: example.com
+    sendOnEnter: "yes"
+expect:
+  error: sendOnEnter

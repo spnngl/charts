@@ -1,0 +1,9 @@
+values:
+  server:
+    advanced:
+      redirects:
+        - source: /a
+          destination: /b
+          kind: 307
+expect:
+  error: "/server/advanced/redirects"

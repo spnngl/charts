@@ -1,0 +1,6 @@
+values:
+  metrics:
+    serviceMonitor:
+      enabled: true
+expect:
+  error: /metrics

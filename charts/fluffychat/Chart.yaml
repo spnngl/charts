@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: fluffychat
+description: FluffyChat, a Matrix web client, as a hardened Deployment serving static files
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/fluffychat
+appVersion: "2.11.3"
+kubeVersion: ">=1.33.0-0"
+home: https://fluffychat.im
+icon: https://raw.githubusercontent.com/krille-chan/fluffychat/v2.11.3/assets/logo/vector/logo.svg
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/krille-chan/fluffychat
+  - https://github.com/spnngl/images
+keywords:
+  - fluffychat
+  - matrix
+  - chat
+  - web client
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: AGPL-3.0-or-later
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # fluffychat.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: fluffychat
+      image: ghcr.io/spnngl/images/fluffychat:2.11.3@sha256:091f63d3cf8354cb4676bf04d9c1035cd5e2697a7b9a0f623c8e9f7c641084cb
+  artifacthub.io/links: |-
+    - name: Upstream project
+      url: https://fluffychat.im
+    - name: Upstream repository
+      url: https://github.com/krille-chan/fluffychat
+    - name: Images repository
+      url: https://github.com/spnngl/images
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/fluffychat
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

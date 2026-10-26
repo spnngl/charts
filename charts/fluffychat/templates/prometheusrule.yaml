@@ -1,0 +1,44 @@
+{{- if .Values.metrics.prometheusRule.enabled }}
+{{- $m := .Values.metrics.prometheusRule }}
+{{- $fullname := include "fluffychat.fullname" . }}
+{{- /* job label set by the Prometheus Operator: Service name (ServiceMonitor) or <namespace>/<name> (PodMonitor). */}}
+{{- $job := $fullname }}
+{{- if not .Values.metrics.serviceMonitor.enabled }}
+{{- $job = printf "%s/%s" .Release.Namespace $fullname }}
+{{- end }}
+{{- $sel := printf "job=%q, namespace=%q" $job .Release.Namespace }}
+{{- $requests := printf "sum by (job, namespace) (rate(sws_http_requests_total{%s}[%s]))" $sel $m.serverErrorsWindow }}
+{{- $errors := printf "sum by (job, namespace) (rate(sws_http_requests_total{%s, status=\"5xx\"}[%s]))" $sel $m.serverErrorsWindow }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    {{- toYaml (merge (include "fluffychat.labels" . | fromYaml) (deepCopy $m.labels)) | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: {{ $fullname }}
+      rules:
+        {{- if not (has "FluffyChatDown" $m.disabled) }}
+        - alert: FluffyChatDown
+          annotations:
+            description: {{ printf "%s/%s has been down or absent from the scrape targets for %s: the pods are crashing, not running, or scaled to 0." .Release.Namespace $fullname $m.downFor | quote }}
+            summary: FluffyChat is down.
+          {{- /* absent(): no pod (scaled to 0, unschedulable) leaves no target, hence no up series. */}}
+          expr: {{ printf "absent(up{%s}) or max by (job, namespace) (up{%s}) < 1" $sel $sel | quote }}
+          for: {{ $m.downFor }}
+          labels:
+            severity: warning
+        {{- end }}
+        {{- if not (has "FluffyChatServerErrors" $m.disabled) }}
+        - alert: FluffyChatServerErrors
+          annotations:
+            description: {{ printf "More than %v of the responses of %s/%s were 5xx over the last %s, at more than %v requests per second." $m.serverErrorsRatio .Release.Namespace $fullname $m.serverErrorsWindow $m.serverErrorsMinRate | quote }}
+            summary: FluffyChat answers with server errors.
+          {{- /* The rate floor keeps one 5xx among a handful of requests from firing. */}}
+          expr: {{ printf "%s / %s > %v and %s > %v" $errors $requests $m.serverErrorsRatio $requests $m.serverErrorsMinRate | quote }}
+          labels:
+            severity: warning
+        {{- end }}
+{{- end }}

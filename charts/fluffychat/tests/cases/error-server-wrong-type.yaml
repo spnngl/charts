@@ -1,0 +1,6 @@
+values:
+  server:
+    general:
+      security-headers: "no"
+expect:
+  error: security-headers

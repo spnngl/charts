@@ -1,0 +1,249 @@
+---
+# Source: fluffychat/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+spec:
+  ingress:
+    - ports:
+      - port: 8080
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: fluffychat
+      app.kubernetes.io/name: fluffychat
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Source: fluffychat/templates/pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+spec:
+  maxUnavailable: 50%
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: fluffychat
+      app.kubernetes.io/name: fluffychat
+  unhealthyPodEvictionPolicy: AlwaysAllow
+---
+# Source: fluffychat/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+---
+# Source: fluffychat/templates/configmap.yaml
+apiVersion: v1
+data:
+  config.json: |
+    {
+      "defaultHomeserver": "example.com"
+    }
+  sws.toml: |
+    [general]
+    compression-level = "fastest"
+    grace-period = 5
+    health = true
+    host = "::"
+    metrics = false
+    port = 8080
+    root = "/app"
+    security-headers = true
+    [advanced]
+    headers = [{ headers = { Cache-Control = "no-cache" }, source = "/**" }]
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+---
+# Source: fluffychat/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/name: fluffychat
+  type: ClusterIP
+---
+# Source: fluffychat/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/instance: fluffychat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluffychat
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: fluffychat-0.0.0
+  name: fluffychat
+  namespace: fluffychat
+spec:
+  minReadySeconds: 10
+  replicas: 3
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: fluffychat
+      app.kubernetes.io/name: fluffychat
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/config: 7315ab787de7b562be98a2006f9ec25421848352727598550a35c3e38c136088
+      labels:
+        app.kubernetes.io/instance: fluffychat
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: fluffychat
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: fluffychat-0.0.0
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: fluffychat
+                  app.kubernetes.io/name: fluffychat
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      automountServiceAccountToken: false
+      containers:
+        - image: ghcr.io/spnngl/images/fluffychat:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          name: fluffychat
+          ports:
+          - containerPort: 8080
+            name: http
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+          - mountPath: /app/config.json
+            name: config
+            readOnly: true
+            subPath: config.json
+          - mountPath: /sws.toml
+            name: config
+            readOnly: true
+            subPath: sws.toml
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: fluffychat
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: fluffychat
+              app.kubernetes.io/name: fluffychat
+          maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+      volumes:
+        - configMap:
+            name: fluffychat
+          name: config

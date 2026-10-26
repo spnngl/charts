@@ -1,0 +1,6 @@
+values:
+  server:
+    general:
+      grace-period: 30
+expect:
+  error: must exceed server.general.grace-period

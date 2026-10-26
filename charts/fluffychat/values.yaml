@@ -1,0 +1,819 @@
+# yaml-language-server: $schema=values.schema.json
+# @schema.root
+# title: fluffychat values
+# allOf:
+#   # a ServiceMonitor and a PodMonitor would scrape the pod twice
+#   - not:
+#       required: [metrics]
+#       properties:
+#         metrics:
+#           required: [serviceMonitor, podMonitor]
+#           properties:
+#             serviceMonitor:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+#             podMonitor:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+#   # a monitor scrapes /metrics, which the server serves only when metrics.enabled
+#   - if:
+#       required: [metrics]
+#       properties:
+#         metrics:
+#           anyOf:
+#             - required: [serviceMonitor]
+#               properties:
+#                 serviceMonitor:
+#                   required: [enabled]
+#                   properties:
+#                     enabled:
+#                       const: true
+#             - required: [podMonitor]
+#               properties:
+#                 podMonitor:
+#                   required: [enabled]
+#                   properties:
+#                     enabled:
+#                       const: true
+#     then:
+#       properties:
+#         metrics:
+#           required: [enabled]
+#           properties:
+#             enabled:
+#               const: true
+#   # the alert rules select the `job` label set by the ServiceMonitor or PodMonitor
+#   - if:
+#       required: [metrics]
+#       properties:
+#         metrics:
+#           required: [prometheusRule]
+#           properties:
+#             prometheusRule:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+#     then:
+#       properties:
+#         metrics:
+#           anyOf:
+#             - required: [serviceMonitor]
+#               properties:
+#                 serviceMonitor:
+#                   required: [enabled]
+#                   properties:
+#                     enabled:
+#                       const: true
+#             - required: [podMonitor]
+#               properties:
+#                 podMonitor:
+#                   required: [enabled]
+#                   properties:
+#                     enabled:
+#                       const: true
+# @schema.root
+# -- Override the chart name used in resource names and labels.
+nameOverride: ""
+# -- Override the full resource name (default `<release>-<chart>`).
+fullnameOverride: ""
+
+image:
+  # -- Image repository.
+  repository: ghcr.io/spnngl/images/fluffychat
+  # -- Image tag. Empty: the tag and digest recorded for `image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.
+  tag: ""
+  # @schema
+  # type: string
+  # pattern: "^(sha256:[a-f0-9]{64})?$"
+  # @schema
+  # -- Image digest, only valid together with `image.tag`.
+  digest: ""
+  # @schema
+  # type: string
+  # enum: [Always, IfNotPresent, Never]
+  # @schema
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+# @schema
+# -- Image pull secrets (list of `{name: <secret>}`).
+imagePullSecrets: []
+
+# @schema
+# type: object
+# required: [defaultHomeserver]
+# additionalProperties: true
+# propertyNames:
+#   not:
+#     enum:
+#       - autoSendErrorReports
+#       - knownErrorHashes
+#       - lastUpdateCheckDate
+#       - noEncryptionWarningShown
+#       - unifiedPushEndpoint
+#       - unifiedPushRegistered
+# properties:
+#   applicationName:
+#     type: string
+#   audioRecordingAutoGain:
+#     type: boolean
+#   audioRecordingBitRate:
+#     type: integer
+#   audioRecordingEchoCancel:
+#     type: boolean
+#   audioRecordingNoiseSuppress:
+#     type: boolean
+#   audioRecordingNumChannels:
+#     type: integer
+#   audioRecordingSamplingRate:
+#     type: integer
+#   autoplayImages:
+#     type: boolean
+#   benchmarksInLogs:
+#     type: boolean
+#   checkForUpdates:
+#     type: boolean
+#   chatFilter:
+#     type: string
+#   colorSchemeSeedInt:
+#     type: integer
+#   defaultHomeserver:
+#     type: string
+#     minLength: 1
+#   displayNavigationRail:
+#     type: boolean
+#   doubleTapReaction:
+#     type: string
+#   doubleTapToReact:
+#     type: boolean
+#   emojiSuggestionLocale:
+#     type: string
+#   enableMatrixNativeOIDC:
+#     type: boolean
+#   enableSoftLogout:
+#     type: boolean
+#   fallbackLiveKitInstance:
+#     type: string
+#   fontSizeFactor:
+#     type: number
+#   hideRedactedEvents:
+#     type: boolean
+#   hideRoomsInSpaces:
+#     type: boolean
+#   hideUnknownEvents:
+#     type: boolean
+#   logoUrl:
+#     type: string
+#   messagePreviewMaxLines:
+#     type: integer
+#   presetHomeserver:
+#     type: string
+#   privacyPolicy:
+#     type: string
+#   pushNotificationsGatewayUrl:
+#     type: string
+#   pushNotificationsPusherFormat:
+#     type: string
+#   renderHtml:
+#     type: boolean
+#   sendOnEnter:
+#     type: boolean
+#   sendPublicReadReceipts:
+#     type: boolean
+#   sendTimelineEventTimeout:
+#     type: integer
+#   sendTypingNotifications:
+#     type: boolean
+#   shareKeysWith:
+#     type: string
+#   showNoGoogle:
+#     type: boolean
+#   showThumbnailsInTimeline:
+#     type: boolean
+#   swipeRightToLeftToReply:
+#     type: boolean
+#   textMessageMaxLength:
+#     type: integer
+#   tos:
+#     type: string
+#   webNotificationSound:
+#     type: boolean
+#   website:
+#     type: string
+# @schema
+# -- Contents of `config.json`, which the browser fetches next to the page. Keys are the names of the `AppSettings` enum in `lib/config/setting_keys.dart` (not the sample file, which is stale). They set defaults only: a setting a user changed in the browser wins, and a value of the wrong type is ignored silently, so the schema types the known keys and lets others through (`additionalProperties`). `defaultHomeserver` is required: the homeserver pre-filled on the login page (`presetHomeserver` also locks it). The file is public: no secrets. The state keys the app writes itself (`autoSendErrorReports`, `knownErrorHashes`, `lastUpdateCheckDate`, `noEncryptionWarningShown`, `unifiedPushEndpoint`, `unifiedPushRegistered`) are rejected.
+config:
+  defaultHomeserver: example.com
+
+server:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # propertyNames:
+  #   not:
+  #     enum: [health, host, metrics, port, root]
+  # properties:
+  #   compression-level:
+  #     type: string
+  #     enum: [best, default, fastest]
+  #   grace-period:
+  #     type: integer
+  #     minimum: 0
+  #     maximum: 255
+  #   security-headers:
+  #     type: boolean
+  # @schema
+  # -- The `[general]` table of the static-web-server configuration file (`sws.toml`, mounted at `/sws.toml`): upstream option names (kebab-case), see the [options](https://static-web-server.net/configuration/config-file/). The file beats the image's `SERVER_*` variables and the command line, so a key set here always wins. `health`, `host`, `metrics`, `port` and `root` belong to the chart and are rejected (`metrics` follows `metrics.enabled`).
+  general:
+    # -- Compression level of the responses the server compresses on the fly (the app's own files ship precompressed; this covers the rest, such as the 7.5 MB `main.dart.js.map`). `fastest` bounds memory and CPU: at `default` (brotli quality 11) one request for that file with `Accept-Encoding: br` exceeds the `64Mi` limit and kills the container, and any visitor can send it.
+    compression-level: fastest
+    # -- Send the security headers: `Strict-Transport-Security` (`max-age=63072000; includeSubDomains; preload`), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` and `Content-Security-Policy: frame-ancestors 'self'`. Turn off when another layer sets them, or to embed the client in a page of another origin.
+    security-headers: true
+    # -- Seconds the server keeps serving after SIGTERM before it drains (0 to 255). It covers the delay before endpoint removal reaches the proxies in front, so a rolling update drops no request. `terminationGracePeriodSeconds` must exceed it.
+    grace-period: 5
+  # @schema
+  # type: object
+  # additionalProperties: false
+  # properties:
+  #   headers:
+  #     type: array
+  #     items:
+  #       type: object
+  #       additionalProperties: false
+  #       required: [headers, source]
+  #       properties:
+  #         headers:
+  #           type: object
+  #           additionalProperties:
+  #             anyOf:
+  #               - type: string
+  #               - type: array
+  #                 items:
+  #                   type: string
+  #         source:
+  #           type: string
+  #           minLength: 1
+  #   redirects:
+  #     type: array
+  #     items:
+  #       type: object
+  #       additionalProperties: false
+  #       required: [destination, kind, source]
+  #       properties:
+  #         destination:
+  #           type: string
+  #           minLength: 1
+  #         host:
+  #           type: string
+  #         kind:
+  #           type: integer
+  #           enum: [301, 302]
+  #         source:
+  #           type: string
+  #           minLength: 1
+  #   rewrites:
+  #     type: array
+  #     items:
+  #       type: object
+  #       additionalProperties: false
+  #       required: [destination, source]
+  #       properties:
+  #         destination:
+  #           type: string
+  #           minLength: 1
+  #         redirect:
+  #           type: integer
+  #           enum: [301, 302]
+  #         source:
+  #           type: string
+  #           minLength: 1
+  #   virtual-hosts:
+  #     type: array
+  #     items:
+  #       type: object
+  #       additionalProperties: false
+  #       required: [host]
+  #       properties:
+  #         host:
+  #           type: string
+  #           minLength: 1
+  #         root:
+  #           type: string
+  # @schema
+  # -- The `[advanced]` table of `sws.toml`, reachable through the file only: `headers`, `redirects`, `rewrites`, `virtual-hosts` (shapes as in the [documentation](https://static-web-server.net/configuration/config-file/); `memory-cache` is not built into the image). Header values are strings: quote `yes`, `true` and numbers, which the server rejects otherwise and the pod crash-loops. A list you set replaces the default one. Default: revalidate every file on each load (`no-cache`: a `304` when unchanged). The app files keep their names across releases (`index.html`, `main.dart.js`, `flutter_service_worker.js`, `config.json`), so a cached copy would serve a stale app after an upgrade or a `config` change. Example: `headers: [{source: "/**", headers: {Cache-Control: "no-cache"}}, {source: "/assets/**", headers: {Cache-Control: "public, max-age=3600"}}]` (later entries win).
+  advanced:
+    headers:
+      - headers:
+          Cache-Control: no-cache
+        source: /**
+
+service:
+  # @schema
+  # type: string
+  # enum: [ClusterIP, LoadBalancer, NodePort]
+  # @schema
+  # -- Service type.
+  type: ClusterIP
+  # @schema
+  # type: integer
+  # minimum: 1
+  # maximum: 65535
+  # @schema
+  # -- Service port (the container listens on 8080).
+  port: 8080
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Service annotations.
+  annotations: {}
+
+ingress:
+  # -- Create an Ingress (path `/`). FluffyChat needs a host root: sub-paths break asset loading. `/metrics` is served on the same port: see the README.
+  enabled: false
+  # -- Ingress class name (empty: cluster default).
+  className: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Ingress annotations.
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra Ingress labels (for example the label an external-dns `--label-filter` selects).
+  labels: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   minLength: 1
+  # @schema
+  # -- Host names. Required when enabled.
+  hosts: []
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Ingress TLS blocks (`secretName`, `hosts`).
+  tls: []
+
+httpRoute:
+  # -- Create a Gateway API HTTPRoute (path prefix `/`). FluffyChat needs a host root: sub-paths break asset loading. `/metrics` is served on the same port: see the README.
+  enabled: false
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- HTTPRoute annotations.
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra HTTPRoute labels.
+  labels: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Gateways (`parentRefs`). Required when enabled.
+  parentRefs: []
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   minLength: 1
+  # @schema
+  # -- Host names (empty: any host of the Gateway listener).
+  hostnames: []
+
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Replicas. The app is stateless: three keep a rolling update and a node loss gap-free. `0` stops the app (maintenance).
+replicaCount: 3
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Seconds a new pod must stay ready before the rollout moves on (the readiness probe only sees the port open).
+minReadySeconds: 10
+# -- Old ReplicaSets to keep.
+revisionHistoryLimit: 3
+
+serviceAccount:
+  # -- Create the ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false).
+  name: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- ServiceAccount annotations.
+  annotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Pod annotations.
+podAnnotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Extra pod labels.
+podLabels: {}
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Pod security context. Overrides are merged onto these defaults.
+podSecurityContext:
+  fsGroup: 65532
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Container security context. Overrides are merged onto these defaults.
+securityContext:
+  allowPrivilegeEscalation: false
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: boolean
+# @schema
+# -- Run the pod in a user namespace (`false`: uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+); pods fail to start otherwise. `true` uses host users.
+hostUsers: false
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Seconds the pod gets to stop. Must exceed `server.general.grace-period`: the server keeps serving that long before it drains.
+terminationGracePeriodSeconds: 30
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Resources. A scheduling floor, not a sizing (VPA in `Off` mode gives recommendations). No CPU limit on purpose.
+resources:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  limits:
+    memory: 64Mi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  requests:
+    cpu: 10m
+    memory: 16Mi
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- DNS config.
+dnsConfig:
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  #   additionalProperties: true
+  # @schema
+  # -- DNS options.
+  options:
+    - name: ndots
+      value: "2"
+
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Startup probe (`GET /health`).
+startupProbe:
+  failureThreshold: 30
+  periodSeconds: 2
+  timeoutSeconds: 2
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Readiness probe (`GET /health`).
+readinessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+  timeoutSeconds: 2
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Liveness probe (`GET /health`).
+livenessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+  timeoutSeconds: 2
+
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Node selector.
+nodeSelector:
+  kubernetes.io/os: linux
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Tolerations.
+tolerations: []
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Affinity, merged over the chart default: a preferred pod anti-affinity that spreads the replicas over nodes (set `podAntiAffinity` to replace it).
+affinity: {}
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Topology spread constraints. Empty: the chart spreads the replicas over zones (`topology.kubernetes.io/zone`, `ScheduleAnyway`). A list you set replaces it and needs its own `labelSelector`.
+topologySpreadConstraints: []
+# -- Priority class name.
+priorityClassName: ""
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+#       minLength: 1
+#       not:
+#         pattern: "^SERVER_"
+# @schema
+# -- Extra environment variables (`EnvVar` list). `SERVER_*` names are rejected: they configure the server, which reads `/sws.toml` first (use `server`).
+extraEnv: []
+# @schema
+# type: array
+# items:
+#   type: string
+#   minLength: 1
+#   not:
+#     pattern: "^(-[apdqw]|--(host|port|root|health|metrics|config-file)(=|$))"
+# @schema
+# -- Extra `static-web-server` command-line flags. Flags the chart owns (`-a`, `-p`, `-d`, `-q`, `-w`, `--host`, `--port`, `--root`, `--health`, `--metrics`, `--config-file`) are rejected. A flag whose option is also set in `sws.toml` loses to the file.
+extraArgs: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volumes.
+extraVolumes: []
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [mountPath, name]
+#   properties:
+#     mountPath:
+#       type: string
+#       not:
+#         enum: [/config.toml, /sws.toml]
+# @schema
+# -- Extra volume mounts. `/sws.toml` and `/config.toml` are rejected: the server reads them as its configuration file, which belongs to the chart. `/app` is the published site root: mounting there serves the files to everyone.
+extraVolumeMounts: []
+
+metrics:
+  # -- Serve Prometheus metrics (`GET /metrics`) on the app port, without authentication: an Ingress or HTTPRoute that forwards `/` exposes them. See the README.
+  enabled: false
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor (needs `metrics.enabled`). Exclusive with `podMonitor`.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels (for example `release: kube-prometheus-stack`).
+    labels: {}
+    # -- Scrape interval (empty: Prometheus default).
+    interval: ""
+    # -- Scrape timeout (empty: Prometheus default).
+    scrapeTimeout: ""
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Relabelings.
+    relabelings: []
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Metric relabelings.
+    metricRelabelings: []
+  podMonitor:
+    # -- Create a Prometheus Operator PodMonitor (needs `metrics.enabled`). Exclusive with `serviceMonitor`.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels.
+    labels: {}
+    # -- Scrape interval (empty: Prometheus default).
+    interval: ""
+    # -- Scrape timeout (empty: Prometheus default).
+    scrapeTimeout: ""
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Relabelings.
+    relabelings: []
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Metric relabelings.
+    metricRelabelings: []
+  prometheusRule:
+    # -- Create a Prometheus Operator PrometheusRule (alerts `FluffyChatDown`, `FluffyChatServerErrors`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels (for example `release: kube-prometheus-stack`).
+    labels: {}
+    # @schema
+    # type: array
+    # uniqueItems: true
+    # maxItems: 1
+    # items:
+    #   type: string
+    #   enum: [FluffyChatDown, FluffyChatServerErrors]
+    # @schema
+    # -- Alerts to leave out, at most one (to drop both, disable `prometheusRule`).
+    disabled: []
+    # @schema
+    # type: string
+    # pattern: "^[0-9]+[smh]$"
+    # @schema
+    # -- How long the target may be down or absent before `FluffyChatDown` fires.
+    downFor: 5m
+    # @schema
+    # type: string
+    # pattern: "^[0-9]+[smh]$"
+    # @schema
+    # -- Window over which `FluffyChatServerErrors` compares 5xx responses to all responses.
+    serverErrorsWindow: 15m
+    # @schema
+    # type: number
+    # exclusiveMinimum: 0
+    # maximum: 1
+    # @schema
+    # -- Share of 5xx responses above which `FluffyChatServerErrors` fires (`0.05`: 5 %).
+    serverErrorsRatio: 0.05
+    # @schema
+    # type: number
+    # minimum: 0
+    # @schema
+    # -- Requests per second below which `FluffyChatServerErrors` stays silent: one 5xx among a handful of requests is no incident. `0`: no floor.
+    serverErrorsMinRate: 0.1
+
+networkPolicy:
+  # -- Create a NetworkPolicy (ingress: the HTTP port; no egress at all: the pod serves files and calls nothing; the browser talks to the homeserver).
+  enabled: true
+  http:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach the HTTP port (your ingress controller or Gateway). Empty: any source.
+    from: []
+  metrics:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach the HTTP port besides `http.from`, for your Prometheus. Used only with `metrics.enabled` and a non-empty `http.from` (the port is shared with the app: with an empty `http.from`, every source already reaches it). It opens the whole app to those peers, not `/metrics` alone.
+    from: []
+
+podDisruptionBudget:
+  # -- Create a PodDisruptionBudget (`unhealthyPodEvictionPolicy: AlwaysAllow`).
+  enabled: false
+  # @schema
+  # type: [integer, string]
+  # @schema
+  # -- Pods that may be unavailable at once (a number or a percentage).
+  maxUnavailable: 1
+
+verticalPodAutoscaler:
+  # -- Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).
+  enabled: false
+  # @schema
+  # type: string
+  # enum: ["Off", Initial, Recreate, InPlaceOrRecreate]
+  # @schema
+  # -- VPA update mode.
+  updateMode: "Off"
+  # @schema
+  # type: string
+  # @schema
+  # -- Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`. Set it when the cluster's recommender runs under another `--recommender-name`: a VPA nobody serves gets no recommendation.
+  recommender: ""
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   enum: [cpu, memory]
+  # @schema
+  # -- Resources VPA controls.
+  controlledResources:
+    - cpu
+    - memory
+  # @schema
+  # type: string
+  # enum: [RequestsAndLimits, RequestsOnly]
+  # @schema
+  # -- Whether VPA also scales limits.
+  controlledValues: RequestsAndLimits
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Lower bound of recommendations (for example `{cpu: 25m, memory: 32Mi}`).
+  minAllowed: {}
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Upper bound of recommendations.
+  maxAllowed: {}

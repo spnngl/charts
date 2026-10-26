@@ -1,0 +1,11 @@
+values:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+      labels:
+        release: kube-prometheus-stack
+      disabled: [FluffyChatServerErrors]
+      downFor: 10m

@@ -1,0 +1,25 @@
+values:
+  server:
+    general:
+      log-level: debug
+      compression-level: default
+      cache-control-headers: true
+      threads-multiplier: 2
+    advanced:
+      headers:
+        - source: "**/*.js"
+          headers:
+            Cache-Control: public, max-age=3600
+            X-Custom.Header: a "b"
+      redirects:
+        - source: /old
+          destination: /
+          kind: 301
+      rewrites:
+        - source: /a
+          destination: /b
+          redirect: 302
+      virtual-hosts:
+        - host: example.org
+          root: /app
+# Integers stay integers, header names that are not bare keys are quoted.

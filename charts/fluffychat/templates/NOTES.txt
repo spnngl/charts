@@ -1,0 +1,33 @@
+{{ include "fluffychat.fullname" . }} serves FluffyChat as static files ({{ .Values.replicaCount }} replicas, no state).
+
+Open it on a host root: sub-paths break asset loading. The app needs HTTPS for its
+encryption features, except on localhost.
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+  https://{{ . }}/
+{{- end }}
+{{- end }}
+{{- if .Values.httpRoute.enabled }}
+{{- range .Values.httpRoute.hostnames }}
+  https://{{ . }}/
+{{- end }}
+{{- end }}
+
+Or, from your machine:
+
+  kubectl -n {{ .Release.Namespace }} port-forward service/{{ include "fluffychat.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+  then open http://localhost:{{ .Values.service.port }}/
+
+The login page offers the homeserver {{ .Values.config.defaultHomeserver }} (config.defaultHomeserver). The homeserver
+must allow CORS from the host serving the client: the browser talks to it directly.
+{{- if and .Values.metrics.enabled (or .Values.ingress.enabled .Values.httpRoute.enabled) }}
+
+metrics.enabled is true: /metrics is served on the same port as the app, so the route above
+exposes it without authentication.
+{{- end }}
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: the pod runs in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) cannot start it; set
+hostUsers=true to use host users.
+{{- end }}

@@ -1,0 +1,5 @@
+values:
+  config:
+    defaultHomeserver: null
+expect:
+  error: defaultHomeserver

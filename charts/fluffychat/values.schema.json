@@ -1,0 +1,1301 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "not": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "podMonitor": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              },
+              "serviceMonitor": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "serviceMonitor",
+              "podMonitor"
+            ]
+          }
+        },
+        "required": [
+          "metrics"
+        ]
+      },
+      "required": []
+    },
+    {
+      "if": {
+        "properties": {
+          "metrics": {
+            "anyOf": [
+              {
+                "properties": {
+                  "serviceMonitor": {
+                    "properties": {
+                      "enabled": {
+                        "const": true,
+                        "required": []
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  }
+                },
+                "required": [
+                  "serviceMonitor"
+                ]
+              },
+              {
+                "properties": {
+                  "podMonitor": {
+                    "properties": {
+                      "enabled": {
+                        "const": true,
+                        "required": []
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  }
+                },
+                "required": [
+                  "podMonitor"
+                ]
+              }
+            ],
+            "required": []
+          }
+        },
+        "required": [
+          "metrics"
+        ]
+      },
+      "required": [],
+      "then": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "enabled": {
+                "const": true,
+                "required": []
+              }
+            },
+            "required": [
+              "enabled"
+            ]
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "prometheusRule": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "prometheusRule"
+            ]
+          }
+        },
+        "required": [
+          "metrics"
+        ]
+      },
+      "required": [],
+      "then": {
+        "properties": {
+          "metrics": {
+            "anyOf": [
+              {
+                "properties": {
+                  "serviceMonitor": {
+                    "properties": {
+                      "enabled": {
+                        "const": true,
+                        "required": []
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  }
+                },
+                "required": [
+                  "serviceMonitor"
+                ]
+              },
+              {
+                "properties": {
+                  "podMonitor": {
+                    "properties": {
+                      "enabled": {
+                        "const": true,
+                        "required": []
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  }
+                },
+                "required": [
+                  "podMonitor"
+                ]
+              }
+            ],
+            "required": []
+          }
+        },
+        "required": []
+      }
+    }
+  ],
+  "properties": {
+    "affinity": {
+      "additionalProperties": true,
+      "description": "Affinity, merged over the chart default: a preferred pod anti-affinity that spreads the replicas over nodes (set `podAntiAffinity` to replace it).",
+      "required": [],
+      "type": "object"
+    },
+    "config": {
+      "additionalProperties": true,
+      "description": "Contents of `config.json`, which the browser fetches next to the page. Keys are the names of the `AppSettings` enum in `lib/config/setting_keys.dart` (not the sample file, which is stale). They set defaults only: a setting a user changed in the browser wins, and a value of the wrong type is ignored silently, so the schema types the known keys and lets others through (`additionalProperties`). `defaultHomeserver` is required: the homeserver pre-filled on the login page (`presetHomeserver` also locks it). The file is public: no secrets. The state keys the app writes itself (`autoSendErrorReports`, `knownErrorHashes`, `lastUpdateCheckDate`, `noEncryptionWarningShown`, `unifiedPushEndpoint`, `unifiedPushRegistered`) are rejected.",
+      "properties": {
+        "applicationName": {
+          "type": "string"
+        },
+        "audioRecordingAutoGain": {
+          "type": "boolean"
+        },
+        "audioRecordingBitRate": {
+          "type": "integer"
+        },
+        "audioRecordingEchoCancel": {
+          "type": "boolean"
+        },
+        "audioRecordingNoiseSuppress": {
+          "type": "boolean"
+        },
+        "audioRecordingNumChannels": {
+          "type": "integer"
+        },
+        "audioRecordingSamplingRate": {
+          "type": "integer"
+        },
+        "autoplayImages": {
+          "type": "boolean"
+        },
+        "benchmarksInLogs": {
+          "type": "boolean"
+        },
+        "chatFilter": {
+          "type": "string"
+        },
+        "checkForUpdates": {
+          "type": "boolean"
+        },
+        "colorSchemeSeedInt": {
+          "type": "integer"
+        },
+        "defaultHomeserver": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "displayNavigationRail": {
+          "type": "boolean"
+        },
+        "doubleTapReaction": {
+          "type": "string"
+        },
+        "doubleTapToReact": {
+          "type": "boolean"
+        },
+        "emojiSuggestionLocale": {
+          "type": "string"
+        },
+        "enableMatrixNativeOIDC": {
+          "type": "boolean"
+        },
+        "enableSoftLogout": {
+          "type": "boolean"
+        },
+        "fallbackLiveKitInstance": {
+          "type": "string"
+        },
+        "fontSizeFactor": {
+          "type": "number"
+        },
+        "hideRedactedEvents": {
+          "type": "boolean"
+        },
+        "hideRoomsInSpaces": {
+          "type": "boolean"
+        },
+        "hideUnknownEvents": {
+          "type": "boolean"
+        },
+        "logoUrl": {
+          "type": "string"
+        },
+        "messagePreviewMaxLines": {
+          "type": "integer"
+        },
+        "presetHomeserver": {
+          "type": "string"
+        },
+        "privacyPolicy": {
+          "type": "string"
+        },
+        "pushNotificationsGatewayUrl": {
+          "type": "string"
+        },
+        "pushNotificationsPusherFormat": {
+          "type": "string"
+        },
+        "renderHtml": {
+          "type": "boolean"
+        },
+        "sendOnEnter": {
+          "type": "boolean"
+        },
+        "sendPublicReadReceipts": {
+          "type": "boolean"
+        },
+        "sendTimelineEventTimeout": {
+          "type": "integer"
+        },
+        "sendTypingNotifications": {
+          "type": "boolean"
+        },
+        "shareKeysWith": {
+          "type": "string"
+        },
+        "showNoGoogle": {
+          "type": "boolean"
+        },
+        "showThumbnailsInTimeline": {
+          "type": "boolean"
+        },
+        "swipeRightToLeftToReply": {
+          "type": "boolean"
+        },
+        "textMessageMaxLength": {
+          "type": "integer"
+        },
+        "tos": {
+          "type": "string"
+        },
+        "webNotificationSound": {
+          "type": "boolean"
+        },
+        "website": {
+          "type": "string"
+        }
+      },
+      "propertyNames": {
+        "not": {
+          "enum": [
+            "autoSendErrorReports",
+            "knownErrorHashes",
+            "lastUpdateCheckDate",
+            "noEncryptionWarningShown",
+            "unifiedPushEndpoint",
+            "unifiedPushRegistered"
+          ],
+          "required": []
+        },
+        "required": []
+      },
+      "required": [
+        "defaultHomeserver"
+      ],
+      "type": "object"
+    },
+    "dnsConfig": {
+      "additionalProperties": true,
+      "description": "DNS config.",
+      "properties": {
+        "options": {
+          "description": "DNS options.",
+          "items": {
+            "additionalProperties": true,
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "extraArgs": {
+      "description": "Extra `static-web-server` command-line flags. Flags the chart owns (`-a`, `-p`, `-d`, `-q`, `-w`, `--host`, `--port`, `--root`, `--health`, `--metrics`, `--config-file`) are rejected. A flag whose option is also set in `sws.toml` loses to the file.",
+      "items": {
+        "minLength": 1,
+        "not": {
+          "pattern": "^(-[apdqw]|--(host|port|root|health|metrics|config-file)(=|$))",
+          "required": []
+        },
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "extraEnv": {
+      "description": "Extra environment variables (`EnvVar` list). `SERVER_*` names are rejected: they configure the server, which reads `/sws.toml` first (use `server`).",
+      "items": {
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "not": {
+              "pattern": "^SERVER_",
+              "required": []
+            },
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumeMounts": {
+      "description": "Extra volume mounts. `/sws.toml` and `/config.toml` are rejected: the server reads them as its configuration file, which belongs to the chart. `/app` is the published site root: mounting there serves the files to everyone.",
+      "items": {
+        "properties": {
+          "mountPath": {
+            "not": {
+              "enum": [
+                "/config.toml",
+                "/sws.toml"
+              ],
+              "required": []
+            },
+            "type": "string"
+          }
+        },
+        "required": [
+          "mountPath",
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumes": {
+      "description": "Extra volumes.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "fullnameOverride": {
+      "description": "Override the full resource name (default `\u003crelease\u003e-\u003cchart\u003e`).",
+      "type": "string"
+    },
+    "global": {
+      "description": "Global values are values that can be accessed from any chart or subchart by exactly the same name.",
+      "required": [],
+      "type": "object"
+    },
+    "hostUsers": {
+      "description": "Run the pod in a user namespace (`false`: uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+); pods fail to start otherwise. `true` uses host users.",
+      "type": "boolean"
+    },
+    "httpRoute": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "HTTPRoute annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "enabled": {
+          "description": "Create a Gateway API HTTPRoute (path prefix `/`). FluffyChat needs a host root: sub-paths break asset loading. `/metrics` is served on the same port: see the README.",
+          "type": "boolean"
+        },
+        "hostnames": {
+          "description": "Host names (empty: any host of the Gateway listener).",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Extra HTTPRoute labels.",
+          "required": [],
+          "type": "object"
+        },
+        "parentRefs": {
+          "description": "Gateways (`parentRefs`). Required when enabled.",
+          "items": {
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "image": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "description": "Image digest, only valid together with `image.tag`.",
+          "pattern": "^(sha256:[a-f0-9]{64})?$",
+          "type": "string"
+        },
+        "pullPolicy": {
+          "description": "Image pull policy.",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ],
+          "type": "string"
+        },
+        "repository": {
+          "description": "Image repository.",
+          "type": "string"
+        },
+        "tag": {
+          "description": "Image tag. Empty: the tag and digest recorded for `image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "imagePullSecrets": {
+      "description": "Image pull secrets (list of `{name: \u003csecret\u003e}`).",
+      "items": {
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "ingress": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Ingress annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "className": {
+          "description": "Ingress class name (empty: cluster default).",
+          "type": "string"
+        },
+        "enabled": {
+          "description": "Create an Ingress (path `/`). FluffyChat needs a host root: sub-paths break asset loading. `/metrics` is served on the same port: see the README.",
+          "type": "boolean"
+        },
+        "hosts": {
+          "description": "Host names. Required when enabled.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Extra Ingress labels (for example the label an external-dns `--label-filter` selects).",
+          "required": [],
+          "type": "object"
+        },
+        "tls": {
+          "description": "Ingress TLS blocks (`secretName`, `hosts`).",
+          "items": {
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "livenessProbe": {
+      "additionalProperties": true,
+      "description": "Liveness probe (`GET /health`).",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        },
+        "timeoutSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "metrics": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Serve Prometheus metrics (`GET /metrics`) on the app port, without authentication: an Ingress or HTTPRoute that forwards `/` exposes them. See the README.",
+          "type": "boolean"
+        },
+        "podMonitor": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Create a Prometheus Operator PodMonitor (needs `metrics.enabled`). Exclusive with `serviceMonitor`.",
+              "type": "boolean"
+            },
+            "interval": {
+              "description": "Scrape interval (empty: Prometheus default).",
+              "type": "string"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels.",
+              "required": [],
+              "type": "object"
+            },
+            "metricRelabelings": {
+              "description": "Metric relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "relabelings": {
+              "description": "Relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "scrapeTimeout": {
+              "description": "Scrape timeout (empty: Prometheus default).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "prometheusRule": {
+          "additionalProperties": false,
+          "properties": {
+            "disabled": {
+              "description": "Alerts to leave out, at most one (to drop both, disable `prometheusRule`).",
+              "items": {
+                "enum": [
+                  "FluffyChatDown",
+                  "FluffyChatServerErrors"
+                ],
+                "type": "string"
+              },
+              "maxItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "downFor": {
+              "description": "How long the target may be down or absent before `FluffyChatDown` fires.",
+              "pattern": "^[0-9]+[smh]$",
+              "type": "string"
+            },
+            "enabled": {
+              "description": "Create a Prometheus Operator PrometheusRule (alerts `FluffyChatDown`, `FluffyChatServerErrors`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.",
+              "type": "boolean"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels (for example `release: kube-prometheus-stack`).",
+              "required": [],
+              "type": "object"
+            },
+            "serverErrorsMinRate": {
+              "description": "Requests per second below which `FluffyChatServerErrors` stays silent: one 5xx among a handful of requests is no incident. `0`: no floor.",
+              "minimum": 0,
+              "type": "number"
+            },
+            "serverErrorsRatio": {
+              "description": "Share of 5xx responses above which `FluffyChatServerErrors` fires (`0.05`: 5 %).",
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "type": "number"
+            },
+            "serverErrorsWindow": {
+              "description": "Window over which `FluffyChatServerErrors` compares 5xx responses to all responses.",
+              "pattern": "^[0-9]+[smh]$",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "serviceMonitor": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Create a Prometheus Operator ServiceMonitor (needs `metrics.enabled`). Exclusive with `podMonitor`.",
+              "type": "boolean"
+            },
+            "interval": {
+              "description": "Scrape interval (empty: Prometheus default).",
+              "type": "string"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels (for example `release: kube-prometheus-stack`).",
+              "required": [],
+              "type": "object"
+            },
+            "metricRelabelings": {
+              "description": "Metric relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "relabelings": {
+              "description": "Relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "scrapeTimeout": {
+              "description": "Scrape timeout (empty: Prometheus default).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "minReadySeconds": {
+      "description": "Seconds a new pod must stay ready before the rollout moves on (the readiness probe only sees the port open).",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "nameOverride": {
+      "description": "yaml-language-server: $schema=values.schema.json\nOverride the chart name used in resource names and labels.",
+      "type": "string"
+    },
+    "networkPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Create a NetworkPolicy (ingress: the HTTP port; no egress at all: the pod serves files and calls nothing; the browser talks to the homeserver).",
+          "type": "boolean"
+        },
+        "http": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to reach the HTTP port (your ingress controller or Gateway). Empty: any source.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "metrics": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to reach the HTTP port besides `http.from`, for your Prometheus. Used only with `metrics.enabled` and a non-empty `http.from` (the port is shared with the app: with an empty `http.from`, every source already reaches it). It opens the whole app to those peers, not `/metrics` alone.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "nodeSelector": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Node selector.",
+      "properties": {
+        "kubernetes.io/os": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "podAnnotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Pod annotations.",
+      "required": [],
+      "type": "object"
+    },
+    "podDisruptionBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Create a PodDisruptionBudget (`unhealthyPodEvictionPolicy: AlwaysAllow`).",
+          "type": "boolean"
+        },
+        "maxUnavailable": {
+          "description": "Pods that may be unavailable at once (a number or a percentage).",
+          "required": [],
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "podLabels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Extra pod labels.",
+      "required": [],
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "additionalProperties": true,
+      "description": "Pod security context. Overrides are merged onto these defaults.",
+      "properties": {
+        "fsGroup": {
+          "type": "integer"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "priorityClassName": {
+      "description": "Priority class name.",
+      "type": "string"
+    },
+    "readinessProbe": {
+      "additionalProperties": true,
+      "description": "Readiness probe (`GET /health`).",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        },
+        "timeoutSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "replicaCount": {
+      "description": "Replicas. The app is stateless: three keep a rolling update and a node loss gap-free. `0` stops the app (maintenance).",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "resources": {
+      "additionalProperties": true,
+      "description": "Resources. A scheduling floor, not a sizing (VPA in `Off` mode gives recommendations). No CPU limit on purpose.",
+      "properties": {
+        "limits": {
+          "additionalProperties": true,
+          "properties": {
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "requests": {
+          "additionalProperties": true,
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "revisionHistoryLimit": {
+      "description": "Old ReplicaSets to keep.",
+      "type": "integer"
+    },
+    "securityContext": {
+      "additionalProperties": true,
+      "description": "Container security context. Overrides are merged onto these defaults.",
+      "properties": {
+        "allowPrivilegeEscalation": {
+          "type": "boolean"
+        },
+        "capabilities": {
+          "additionalProperties": true,
+          "properties": {
+            "drop": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ],
+                "required": []
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "privileged": {
+          "type": "boolean"
+        },
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "server": {
+      "additionalProperties": false,
+      "properties": {
+        "advanced": {
+          "additionalProperties": false,
+          "description": "The `[advanced]` table of `sws.toml`, reachable through the file only: `headers`, `redirects`, `rewrites`, `virtual-hosts` (shapes as in the [documentation](https://static-web-server.net/configuration/config-file/); `memory-cache` is not built into the image). Header values are strings: quote `yes`, `true` and numbers, which the server rejects otherwise and the pod crash-loops. A list you set replaces the default one. Default: revalidate every file on each load (`no-cache`: a `304` when unchanged). The app files keep their names across releases (`index.html`, `main.dart.js`, `flutter_service_worker.js`, `config.json`), so a cached copy would serve a stale app after an upgrade or a `config` change. Example: `headers: [{source: \"/**\", headers: {Cache-Control: \"no-cache\"}}, {source: \"/assets/**\", headers: {Cache-Control: \"public, max-age=3600\"}}]` (later entries win).",
+          "properties": {
+            "headers": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "headers": {
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "required": [],
+                    "type": "object"
+                  },
+                  "source": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "headers",
+                  "source"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "redirects": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "destination": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "host": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": [
+                      301,
+                      302
+                    ],
+                    "type": "integer"
+                  },
+                  "source": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "destination",
+                  "kind",
+                  "source"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "rewrites": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "destination": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "redirect": {
+                    "enum": [
+                      301,
+                      302
+                    ],
+                    "type": "integer"
+                  },
+                  "source": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "destination",
+                  "source"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "virtual-hosts": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "host": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "root": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "host"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "general": {
+          "additionalProperties": true,
+          "description": "The `[general]` table of the static-web-server configuration file (`sws.toml`, mounted at `/sws.toml`): upstream option names (kebab-case), see the [options](https://static-web-server.net/configuration/config-file/). The file beats the image's `SERVER_*` variables and the command line, so a key set here always wins. `health`, `host`, `metrics`, `port` and `root` belong to the chart and are rejected (`metrics` follows `metrics.enabled`).",
+          "properties": {
+            "compression-level": {
+              "enum": [
+                "best",
+                "default",
+                "fastest"
+              ],
+              "type": "string"
+            },
+            "grace-period": {
+              "maximum": 255,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "security-headers": {
+              "type": "boolean"
+            }
+          },
+          "propertyNames": {
+            "not": {
+              "enum": [
+                "health",
+                "host",
+                "metrics",
+                "port",
+                "root"
+              ],
+              "required": []
+            },
+            "required": []
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "service": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Service annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "port": {
+          "description": "Service port (the container listens on 8080).",
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "type": {
+          "description": "Service type.",
+          "enum": [
+            "ClusterIP",
+            "LoadBalancer",
+            "NodePort"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "serviceAccount": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "ServiceAccount annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "create": {
+          "description": "Create the ServiceAccount.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "ServiceAccount name. Empty: `\u003cfullname\u003e` (or `default` when `create` is false).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "startupProbe": {
+      "additionalProperties": true,
+      "description": "Startup probe (`GET /health`).",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        },
+        "timeoutSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "terminationGracePeriodSeconds": {
+      "description": "Seconds the pod gets to stop. Must exceed `server.general.grace-period`: the server keeps serving that long before it drains.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "tolerations": {
+      "description": "Tolerations.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "topologySpreadConstraints": {
+      "description": "Topology spread constraints. Empty: the chart spreads the replicas over zones (`topology.kubernetes.io/zone`, `ScheduleAnyway`). A list you set replaces it and needs its own `labelSelector`.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "verticalPodAutoscaler": {
+      "additionalProperties": false,
+      "properties": {
+        "controlledResources": {
+          "description": "Resources VPA controls.",
+          "items": {
+            "enum": [
+              "cpu",
+              "memory"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "controlledValues": {
+          "description": "Whether VPA also scales limits.",
+          "enum": [
+            "RequestsAndLimits",
+            "RequestsOnly"
+          ],
+          "type": "string"
+        },
+        "enabled": {
+          "description": "Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).",
+          "type": "boolean"
+        },
+        "maxAllowed": {
+          "additionalProperties": true,
+          "description": "Upper bound of recommendations.",
+          "required": [],
+          "type": "object"
+        },
+        "minAllowed": {
+          "additionalProperties": true,
+          "description": "Lower bound of recommendations (for example `{cpu: 25m, memory: 32Mi}`).",
+          "required": [],
+          "type": "object"
+        },
+        "recommender": {
+          "description": "Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`. Set it when the cluster's recommender runs under another `--recommender-name`: a VPA nobody serves gets no recommendation.",
+          "type": "string"
+        },
+        "updateMode": {
+          "description": "VPA update mode.",
+          "enum": [
+            "Off",
+            "Initial",
+            "Recreate",
+            "InPlaceOrRecreate"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    }
+  },
+  "required": [],
+  "title": "fluffychat values",
+  "type": "object"
+}
