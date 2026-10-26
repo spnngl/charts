@@ -1,0 +1,6 @@
+values:
+  persistence:
+    data:
+      mountPropagation: Bidirectional
+expect:
+  error: mountPropagation

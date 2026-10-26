@@ -1,0 +1,337 @@
+---
+# Source: sabnzbd/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: sabnzbd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sabnzbd
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sabnzbd-0.0.0
+  name: sabnzbd
+  namespace: sabnzbd
+spec:
+  ingress:
+    - ports:
+      - port: 8080
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: sabnzbd
+      app.kubernetes.io/name: sabnzbd
+  policyTypes:
+    - Ingress
+---
+# Source: sabnzbd/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: sabnzbd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sabnzbd
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sabnzbd-0.0.0
+  name: sabnzbd
+  namespace: sabnzbd
+---
+# Source: sabnzbd/templates/configmap.yaml
+apiVersion: v1
+data:
+  config.json: "{\"misc\":{\"complete_dir\":\"/data/usenet/complete\",\"download_dir\":\"/data/usenet/incomplete\"}}"
+  merge.py: |
+    """Merge the chart's settings into sabnzbd.ini before SABnzbd starts.
+    Runs in the init container, with the SABnzbd image's own Python and configobj.
+    Order: the saved ini, then the `config` value (config.json), then the Secret's
+    ini fragment when mounted. A listed key wins, an unlisted key keeps its saved
+    value, nothing is deleted. SABnzbd accepts a partial ini: a missing key keeps
+    its default (sabnzbd/config.py, _read_config).
+    """
+    import json
+    import os
+    import sys
+    import tempfile
+    import configobj
+    INI = "/config/sabnzbd.ini"
+    CONFIG = "/etc/sabnzbd-chart/config.json"
+    SECRET = "/etc/sabnzbd-secret/sabnzbd.ini"
+    def load(path):
+        return configobj.ConfigObj(path, encoding="utf-8", default_encoding="utf-8", file_error=True)
+    def saved():
+        """The saved ini, else its backup (as SABnzbd does), else nothing on a first start."""
+        paths = [path for path in (INI, INI + ".bak") if os.path.exists(path)]
+        for path in paths:
+            try:
+                return load(path)
+            except configobj.ConfigObjError as error:
+                print(f"{path}: {error}", file=sys.stderr)
+        if paths:
+            sys.exit("no readable sabnzbd.ini: repair or delete it, then restart the pod")
+        return configobj.ConfigObj(encoding="utf-8", default_encoding="utf-8")
+    def ini_value(value, path):
+        """configobj stores strings: SABnzbd reads booleans as 1/0, lists as comma-separated."""
+        if isinstance(value, dict):
+            return {key: ini_value(item, f"{path}.{key}") for key, item in value.items()}
+        if isinstance(value, list):
+            return [ini_value(item, path) for item in value]
+        if isinstance(value, bool):
+            return "1" if value else "0"
+        if value is None:
+            sys.exit(f"{path} is null: give a value or remove the key")
+        return str(value)
+    def main():
+        ini = saved()
+        with open(CONFIG, encoding="utf-8") as f:
+            ini.merge(ini_value(json.load(f), "config"))
+        if os.path.exists(SECRET):
+            ini.merge(load(SECRET))
+        ini.filename = None
+        # Mode 0600, as SABnzbd creates it; os.replace keeps a crash from truncating it.
+        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(INI), prefix=".sabnzbd.ini.")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                ini.write(f)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, INI)
+        except BaseException:
+            os.unlink(tmp)
+            raise
+    main()
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: sabnzbd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sabnzbd
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sabnzbd-0.0.0
+  name: sabnzbd
+  namespace: sabnzbd
+---
+# Source: sabnzbd/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: sabnzbd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sabnzbd
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sabnzbd-0.0.0
+  name: sabnzbd
+  namespace: sabnzbd
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: sabnzbd
+    app.kubernetes.io/name: sabnzbd
+  type: ClusterIP
+---
+# Source: sabnzbd/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: SABnzbd is the single writer of /config and of its download folders."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/instance: sabnzbd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sabnzbd
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sabnzbd-0.0.0
+  name: sabnzbd
+  namespace: sabnzbd
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: sabnzbd
+      app.kubernetes.io/name: sabnzbd
+  template:
+    metadata:
+      annotations:
+        checksum/config: bdbc315eb817c1cc791b18aca7155a6d7b66732a2bd3d62b67dca9032dd23a4b
+      labels:
+        app.kubernetes.io/instance: sabnzbd
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: sabnzbd
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: sabnzbd-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        -
+          image: "ghcr.io/spnngl/images/sabnzbd:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api?mode=auth&output=json
+              port: http
+            periodSeconds: 10
+          name: sabnzbd
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api?mode=auth&output=json
+              port: http
+            periodSeconds: 10
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /api?mode=auth&output=json
+              port: http
+            periodSeconds: 5
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /config
+              name: config
+            - mountPath: /data
+              mountPropagation: None
+              name: data
+            - mountPath: /tmp
+              name: tmp
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      initContainers:
+        - command:
+            - /usr/bin/python3
+            - /etc/sabnzbd-chart/merge.py
+          image: "ghcr.io/spnngl/images/sabnzbd:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          name: config
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /config
+              name: config
+            - mountPath: /etc/sabnzbd-chart
+              name: settings
+              readOnly: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: sabnzbd
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - emptyDir:
+          name: data
+        - configMap:
+            name: sabnzbd
+          name: settings
+        - emptyDir: {}
+          name: tmp
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+    - metadata:
+        name: config
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+---
+# Source: sabnzbd/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    app.kubernetes.io/instance: sabnzbd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sabnzbd
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: sabnzbd-0.0.0
+  name: sabnzbd
+  namespace: sabnzbd
+spec:
+  rules:
+    - host: "a.example.com"
+      http:
+        paths:
+          - backend:
+              service:
+                name: sabnzbd
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+    - host: "b.example.com"
+      http:
+        paths:
+          - backend:
+              service:
+                name: sabnzbd
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+      - a.example.com
+      - b.example.com
+      secretName: sabnzbd-tls

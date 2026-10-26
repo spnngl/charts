@@ -1,0 +1,7 @@
+# Used by `ct lint` and `ct install` (kind). No Secret needed.
+# kind inside a CI runner cannot create user namespaces.
+hostUsers: true
+persistence:
+  config:
+    volumeClaimTemplate:
+      size: 100Mi

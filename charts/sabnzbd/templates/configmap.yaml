@@ -1,0 +1,12 @@
+{{- /* Read by the config init container only: merge.py merges config.json into /config/sabnzbd.ini. */}}
+apiVersion: v1
+data:
+  config.json: {{ toJson .Values.config | quote }}
+  merge.py: |
+    {{- .Files.Get "files/merge.py" | nindent 4 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "sabnzbd.labels" . | nindent 4 }}
+  name: {{ include "sabnzbd.fullname" . }}
+  namespace: {{ .Release.Namespace }}

@@ -1,0 +1,9 @@
+values:
+  hostUsers: true
+  persistence:
+    data:
+      type: nfs
+      nfs:
+        server: nas.example.com
+expect:
+  error: /persistence/data/nfs/path
