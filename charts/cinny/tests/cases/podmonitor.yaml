@@ -1,0 +1,13 @@
+values:
+  metrics:
+    enabled: true
+    podMonitor:
+      enabled: true
+      relabelings:
+      - action: labeldrop
+        regex: pod_template_hash
+      metricRelabelings:
+      - action: drop
+        sourceLabels:
+        - __name__
+        regex: sws_http_response_bytes_total

@@ -1,0 +1,6 @@
+values:
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: abc
+expect:
+  error: at '/podDisruptionBudget/maxUnavailable'

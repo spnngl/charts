@@ -1,0 +1,6 @@
+values:
+  metrics:
+    podMonitor:
+      enabled: true
+expect:
+  error: at '/metrics/enabled'

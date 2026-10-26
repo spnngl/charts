@@ -1,0 +1,7 @@
+values:
+  metrics:
+    enabled: true
+  ingress:
+    enabled: true
+    hosts:
+    - chat.example.com

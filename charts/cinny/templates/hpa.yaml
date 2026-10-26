@@ -1,0 +1,24 @@
+{{- if .Values.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/hpa-minimum-three-replicas: "Cinny is a stateless static server: two replicas keep a rolling update gap-free."
+  labels:
+    {{- include "cinny.labels" . | nindent 4 }}
+  name: {{ include "cinny.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- with .Values.autoscaling.behavior }}
+  behavior:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+    {{- toYaml .Values.autoscaling.metrics | nindent 4 }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "cinny.fullname" . }}
+{{- end }}

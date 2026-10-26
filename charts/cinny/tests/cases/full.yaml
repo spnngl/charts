@@ -1,0 +1,63 @@
+values:
+  nameOverride: web
+  imagePullSecrets:
+  - name: regcred
+  serviceAccount:
+    annotations:
+      a: b
+  service:
+    annotations:
+      a: b
+  podAnnotations:
+    a: b
+  podLabels:
+    c: d
+  priorityClassName: low
+  tolerations:
+  - key: k
+    operator: Exists
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: disk
+            operator: In
+            values:
+            - ssd
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+    - chat.example.com
+    tls:
+    - secretName: chat-tls
+      hosts:
+      - chat.example.com
+  httpRoute:
+    enabled: true
+    parentRefs:
+    - name: gw
+    hostnames:
+    - chat.example.com
+  extraEnv:
+  - name: SERVER_LOG_LEVEL
+    value: warn
+  podDisruptionBudget:
+    enabled: true
+  autoscaling:
+    enabled: true
+  verticalPodAutoscaler:
+    enabled: true
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+  networkPolicy:
+    http:
+      from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress
+    egress:
+      enabled: true

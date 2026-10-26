@@ -1,0 +1,4 @@
+# ct install: Cinny needs no backend, so the pods start and must become
+# ready. hostUsers: kind inside GitHub runners cannot create user-namespaced
+# pod sandboxes (mounting sysfs fails); the default stays false.
+hostUsers: true

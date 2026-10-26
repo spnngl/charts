@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+  - name: SERVER_LOG_LEVEL
+    value: warn
+  - name: SERVER_COMPRESSION
+    value: "false"
