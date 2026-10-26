@@ -1,0 +1,39 @@
+{{ include "mjolnir.fullname" . }} runs one Mjolnir moderation bot (StatefulSet, downtime on every upgrade).
+{{- if not .Values.replicaCount }}
+
+replicaCount is 0: the bot is paused.
+{{- end }}
+
+Before the bot can start:
+
+1. Create its Matrix account and an access token (Synapse admin rights are needed for the bot's account to deactivate users, shut down rooms and poll reports).
+2. Create the Secret with the credentials, as a YAML fragment under the key {{ .Values.existingSecret.key }}:
+
+  kubectl -n {{ .Release.Namespace }} create secret generic {{ default (include "mjolnir.fullname" .) .Values.existingSecret.name }} --from-file={{ .Values.existingSecret.key }}=<file holding "accessToken: <token>">
+
+   With encryption, the fragment holds `encryption: {username: <user>, password: <password>}` instead of the token, and config.encryption.use is true.
+3. Set config.homeserverUrl and config.managementRoom, then invite the bot's account to the management room.
+{{- if or (eq .Values.config.homeserverUrl "https://matrix.example.com") (eq .Values.config.managementRoom "#moderators:example.com") }}
+
+WARNING: config.homeserverUrl or config.managementRoom is still a placeholder. The bot cannot start until both are yours.
+{{- end }}
+
+Mjolnir reads its settings and the Secret at start only. After you edit the Secret, restart the pod:
+
+  kubectl -n {{ .Release.Namespace }} rollout restart statefulset/{{ include "mjolnir.fullname" . }}
+
+or set existingSecret.revision.
+{{- if include "mjolnir.webEnabled" . }}
+
+The web API listens on service/{{ include "mjolnir.fullname" . }}:{{ .Values.service.port }}. Its rule server has no access control: set networkPolicy.enabled and networkPolicy.web.from, and expose it deliberately.
+{{- end }}
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: the pod runs in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) or volumes without idmapped
+mounts (NFS/SMB) cannot start it; set hostUsers=true to use host users.
+{{- end }}
+{{- if eq .Values.persistence.data.type "emptyDir" }}
+
+persistence.data.type is emptyDir: the sync token is lost with the pod.
+{{- end }}

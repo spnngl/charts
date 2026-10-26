@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: mjolnir
+description: Mjolnir Matrix moderation bot as a hardened single-replica StatefulSet
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/mjolnir
+appVersion: "2.0.1"
+kubeVersion: ">=1.33.0-0"
+home: https://github.com/matrix-org/mjolnir
+icon: https://matrix.org/images/matrix-logo.svg
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/matrix-org/mjolnir
+  - https://github.com/spnngl/images
+keywords:
+  - mjolnir
+  - matrix
+  - moderation
+  - bot
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: Apache-2.0
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # mjolnir.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: mjolnir
+      image: ghcr.io/spnngl/images/mjolnir:2.0.1@sha256:ddb1842137b2f2d5590b44df937a566d8d784420882b4b4bd02309a158ea951d
+  artifacthub.io/links: |-
+    - name: Upstream repository
+      url: https://github.com/matrix-org/mjolnir
+    - name: Images repository
+      url: https://github.com/spnngl/images
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/mjolnir
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

@@ -1,0 +1,159 @@
+{{- $fullname := include "mjolnir.fullname" . }}
+{{- $p := .Values.persistence.data }}
+{{- $health := dict "httpGet" (dict "path" "/healthz" "port" "health") }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: two bots on one account act twice and share one crypto device."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    {{- if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: isolation is the user's choice."
+    {{- end }}
+  labels:
+    {{- include "mjolnir.labels" . | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "mjolnir.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- $annotations := dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum) }}
+        {{- with .Values.existingSecret.revision }}{{ $_ := set $annotations "checksum/secret" . }}{{ end }}
+        {{- toYaml (merge $annotations (deepCopy .Values.podAnnotations)) | nindent 8 }}
+      labels:
+        {{- toYaml (merge (include "mjolnir.labels" . | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        - args:{{ if .Values.extraArgs }}{{ toYaml .Values.extraArgs | nindent 12 }}{{ else }} []{{ end }}
+          env:
+            - name: NODE_CONFIG_DIR
+              value: /etc/mjolnir/config:/etc/mjolnir/secret
+            - name: NODE_ENV
+              value: production
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          image: {{ include "mjolnir.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            {{- toYaml (merge (deepCopy $health) (deepCopy .Values.livenessProbe)) | nindent 12 }}
+          name: mjolnir
+          ports:
+            - containerPort: 8080
+              name: health
+              protocol: TCP
+            {{- if .Values.metrics.enabled }}
+            - containerPort: 9090
+              name: metrics
+              protocol: TCP
+            {{- end }}
+            {{- if include "mjolnir.webEnabled" . }}
+            - containerPort: 8081
+              name: http
+              protocol: TCP
+            {{- end }}
+          readinessProbe:
+            {{- toYaml (merge (deepCopy $health) (deepCopy .Values.readinessProbe)) | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- toYaml (merge (deepCopy $health) (deepCopy .Values.startupProbe)) | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /data
+              name: data
+              {{- if and (eq $p.type "existingClaim") $p.existingClaim.subPath }}
+              subPath: {{ $p.existingClaim.subPath }}
+              {{- end }}
+            - mountPath: /etc/mjolnir/config
+              name: config
+              readOnly: true
+            - mountPath: /etc/mjolnir/secret
+              name: secret
+              readOnly: true
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      enableServiceLinks: false
+      hostUsers: {{ .Values.hostUsers }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "mjolnir.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - configMap:
+            name: {{ $fullname }}
+          name: config
+        - name: secret
+          secret:
+            defaultMode: 288
+            items:
+              - key: {{ .Values.existingSecret.key }}
+                path: local.yaml
+            secretName: {{ default $fullname .Values.existingSecret.name }}
+        {{- with include "mjolnir.volume" $ }}
+        {{- . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+  updateStrategy:
+    type: RollingUpdate
+  {{- /* Template metadata carries no chart labels: a volumeClaimTemplate is immutable, a version label would fail every upgrade. */}}
+  {{- if eq $p.type "volumeClaimTemplate" }}
+  {{- $t := $p.volumeClaimTemplate }}
+  volumeClaimTemplates:
+    - metadata:
+        {{- with $t.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with $t.labels }}
+        labels:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        name: data
+      spec:
+        accessModes:
+          {{- toYaml $t.accessModes | nindent 10 }}
+        resources:
+          requests:
+            storage: {{ $t.size }}
+        {{- with $t.storageClassName }}
+        storageClassName: {{ . }}
+        {{- end }}
+  {{- end }}

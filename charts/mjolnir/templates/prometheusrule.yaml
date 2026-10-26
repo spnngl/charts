@@ -1,0 +1,43 @@
+{{- if .Values.metrics.prometheusRule.enabled }}
+{{- $m := .Values.metrics.prometheusRule }}
+{{- $fullname := include "mjolnir.fullname" . }}
+{{- /* job label set by the Prometheus Operator: Service name (ServiceMonitor) or <namespace>/<name> (PodMonitor). */}}
+{{- $job := "" }}
+{{- if .Values.metrics.serviceMonitor.enabled }}
+{{- $job = include "mjolnir.metricsServiceName" . }}
+{{- else }}
+{{- $job = printf "%s/%s" .Release.Namespace $fullname }}
+{{- end }}
+{{- $sel := printf "job=%q, namespace=%q" $job .Release.Namespace }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    {{- toYaml (merge (include "mjolnir.labels" . | fromYaml) (deepCopy $m.labels)) | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: {{ $fullname }}
+      rules:
+        {{- if not (has "MjolnirDown" $m.disabled) }}
+        - alert: MjolnirDown
+          annotations:
+            description: {{ printf "No mjolnir target of %s/%s has been up for 5m (pod not running or not scraped; also fires when replicaCount is 0)." .Release.Namespace $fullname | quote }}
+            summary: Mjolnir is down.
+          expr: {{ printf "absent(up{%s}) or max by (job, namespace) (up{%s}) < 1" $sel $sel | quote }}
+          for: 5m
+          labels:
+            severity: critical
+        {{- end }}
+        {{- if not (has "MjolnirHomeserverUnreachable" $m.disabled) }}
+        - alert: MjolnirHomeserverUnreachable
+          annotations:
+            description: {{ printf "Mjolnir on %s cannot reach its homeserver: more than %v of its requests failed at the transport level (DNS, connection refused, timeout) over 5m, for 10m. Check config.homeserverUrl, the NetworkPolicy and the homeserver." "{{ $labels.namespace }}/{{ $labels.pod }}" $m.apiFailureRatio | quote }}
+            summary: Mjolnir cannot reach its homeserver.
+          expr: {{ printf "sum by (namespace, pod) (rate(mjolnir_status_api_request_fail{%s}[5m])) / sum by (namespace, pod) (rate(mjolnir_status_api_request_pass{%s}[5m]) + rate(mjolnir_status_api_request_fail{%s}[5m])) > %v" $sel $sel $sel $m.apiFailureRatio | quote }}
+          for: 10m
+          labels:
+            severity: warning
+        {{- end }}
+{{- end }}

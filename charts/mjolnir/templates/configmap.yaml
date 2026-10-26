@@ -1,0 +1,11 @@
+{{- include "mjolnir.validate" . }}
+apiVersion: v1
+data:
+  production.yaml: |
+    {{- include "mjolnir.config" . | nindent 4 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "mjolnir.labels" . | nindent 4 }}
+  name: {{ include "mjolnir.fullname" . }}
+  namespace: {{ .Release.Namespace }}

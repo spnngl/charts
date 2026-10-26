@@ -1,0 +1,16 @@
+values:
+  config:
+    web:
+      enabled: true
+      ruleServer:
+        enabled: true
+  service:
+    type: ClusterIP
+    port: 8081
+  networkPolicy:
+    enabled: true
+    web:
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress

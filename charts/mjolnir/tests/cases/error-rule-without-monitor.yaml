@@ -1,0 +1,7 @@
+values:
+  metrics:
+    enabled: true
+    prometheusRule:
+      enabled: true
+expect:
+  error: /metrics/serviceMonitor/enabled

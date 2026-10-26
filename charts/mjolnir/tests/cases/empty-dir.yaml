@@ -1,0 +1,6 @@
+values:
+  persistence:
+    data:
+      type: emptyDir
+      emptyDir:
+        sizeLimit: 1Gi

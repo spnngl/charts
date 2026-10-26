@@ -1,0 +1,187 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.description" . }}
+
+Runs [Mjolnir](https://github.com/matrix-org/mjolnir), a moderation bot for
+Matrix, as a single-replica StatefulSet. The image is built from
+[spnngl/images](https://github.com/spnngl/images): distroless, non-root, no shell.
+
+One replica only: two bots on one account act twice on every event and share one
+crypto device. Every upgrade or reschedule is a short downtime: the StatefulSet
+stops the old pod before it starts the new one. `replicaCount: 0` pauses the bot.
+
+## Install
+
+Mjolnir needs a Matrix account of its own, a management room and a Secret with its
+credentials. The chart creates none of them.
+
+1. Register the bot's account on your homeserver. Give it Synapse **admin rights**
+   if you want the commands that need them (deactivate users, shut down rooms,
+   move aliases) or `pollReports`.
+2. Create the management room with a moderator, and invite the bot's account to it.
+3. Create the Secret: one key holding a YAML fragment, merged over `config`.
+   Mjolnir takes either an access token or, for
+   [encrypted rooms](#encryption), a username and password:
+
+   ```sh
+   # access token
+   kubectl -n moderation create secret generic mjolnir-credentials \
+     --from-literal=config.yaml='accessToken: <token>'
+
+   # username and password (with config.encryption.use: true)
+   kubectl -n moderation create secret generic mjolnir-credentials \
+     --from-literal=config.yaml=$'encryption:\n  username: mjolnir\n  password: <password>'
+   ```
+4. Install with your homeserver and management room:
+
+   ```sh
+   helm install mjolnir oci://ghcr.io/spnngl/charts/mjolnir --version <version> -n moderation --create-namespace \
+     --set existingSecret.name=mjolnir-credentials \
+     --set config.homeserverUrl=https://matrix.example.com \
+     --set config.managementRoom='#moderators:example.com'
+   ```
+
+`config.homeserverUrl` and `config.managementRoom` default to placeholders that
+only let the chart render without values: change both, or the bot cannot start.
+The startup probe turns Ready once Mjolnir has synced its lists and checked its
+permissions in every protected room (up to 10 minutes are allowed).
+
+### Settings
+
+Everything else goes in `config`: Mjolnir's `config/default.yaml`
+([upstream](https://github.com/matrix-org/mjolnir/blob/main/config/default.yaml)).
+The chart renders it into a ConfigMap (`production.yaml`) and the Secret becomes
+`local.yaml` in a second directory; Mjolnir (node-config) merges both over its
+defaults, the Secret last. `rawHomeserverUrl` (the address of the admin API,
+which Mjolnir otherwise assumes is `http://localhost:8008`) defaults to
+`config.homeserverUrl`: set it when Synapse has an internal address.
+
+Keys the chart owns are rejected in `config`: `dataPath`, `health.healthz`,
+`health.openMetrics` (turned on with `metrics.enabled`), `web.port` and
+`web.address`. So are the secrets, which belong in the Secret and not in a
+ConfigMap, Helm release history and Git: `accessToken`, `encryption.password`,
+`pantalaimon.password`, `MAS.clientSecret`,
+`web.synapseHTTPAntispam.authorization` and `health.sentry.dsn`. `extraEnv`
+rejects `NODE_CONFIG_DIR` and `NODE_ENV`, and `extraArgs` rejects
+`--mjolnir-config`, which makes Mjolnir ignore both directories.
+
+Mjolnir reads its settings and the Secret **at start only**. After editing the
+Secret, restart the pod (`kubectl rollout restart statefulset/<fullname>`), or
+change `existingSecret.revision` (any string, a hash of the Secret from CI for
+instance) to roll it. A change to `config` rolls the pod by itself.
+
+### Encryption
+
+With `config.encryption.use: true` Mjolnir logs in with a password and keeps an
+end-to-end encryption device in `/data`. Losing that volume means a new login and a
+new device on every restart: the chart refuses `emptyDir` together with
+`config.encryption.use`.
+
+## Web API
+
+`config.web.enabled: true` serves, on port 8081 (the chart owns it: upstream's
+default collides with the health endpoint), the abuse report API
+(`config.web.abuseReporting`), the Synapse antispam hooks
+(`config.web.synapseHTTPAntispam`) and the rule server
+(`config.web.ruleServer`). The chart then adds a Service (`service.type`,
+`service.port`) and a NetworkPolicy rule.
+
+**The rule server has no access control** upstream: anyone who can reach the
+port reads your ban lists. Turn on the NetworkPolicy (`networkPolicy.enabled`,
+off by default), restrict the sources with `networkPolicy.web.from`, and expose
+the Service with care.
+
+## Metrics
+
+`metrics.enabled` serves Prometheus metrics on 9090 (port `metrics`):
+`mjolnir_status_api_request_pass` and `_fail`, `mjolnir_performance_http_request`
+and Node's defaults. `metrics.service`, `metrics.serviceMonitor` and
+`metrics.podMonitor` (the last two are exclusive) render a Service and Prometheus
+Operator objects; the ServiceMonitor needs no other Service.
+
+`metrics.prometheusRule.enabled` adds two alerts (list names in
+`metrics.prometheusRule.disabled` to drop one):
+
+- `MjolnirDown`: no target `up` for 5 minutes. It also fires when `replicaCount`
+  is `0`.
+- `MjolnirHomeserverUnreachable`: more than `apiFailureRatio` of the bot's
+  requests failed for 10 minutes. Mjolnir counts only transport errors (DNS,
+  refused, timeout) as failures: an HTTP 4xx or 5xx reply is a success, so a
+  broken homeserver that answers is not caught.
+
+The `/healthz` endpoint (the probes) stays 200 once the bot has started, even if the
+homeserver is down: the alerts, not the probes, tell you.
+
+## Storage
+
+`/data` (the sync token, and the encryption device with `encryption.use`) takes
+one of three types in `persistence.data.type`:
+
+- `volumeClaimTemplate` (default): a PVC from the StatefulSet, `1Gi`. The
+  StatefulSet keeps it when it is deleted or scaled down
+  (`persistentVolumeClaimRetentionPolicy: Retain`): delete it by hand.
+- `existingClaim`: a PVC of yours (`existingClaim.name`, optional `subPath`).
+- `emptyDir`: lost with the pod, fine without encryption (see
+  [Encryption](#encryption)).
+
+Protected rooms and watched lists live in your Matrix account data, not on the
+volume.
+
+## Security
+
+The pod follows the Pod Security `restricted` standard: user and group `65532`,
+no capabilities, a read-only root filesystem (Mjolnir writes only to `/data`,
+`fsGroup: 65532`), the `RuntimeDefault` seccomp profile and no service account
+token. `hostUsers: false` runs it in a user namespace; nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+), or volumes without idmapped
+mounts (NFS, SMB), cannot start it: set `hostUsers: true`.
+
+Mjolnir does not handle `SIGTERM` (Node as PID 1 ignores it), so a stop always
+ends in `SIGKILL`: `terminationGracePeriodSeconds` (`5`) only delays it. Its
+state is SQLite and a sync token, which a kill does not corrupt.
+
+## Network
+
+- The NetworkPolicy (`networkPolicy.enabled`, **off by default**: a CNI without
+  support ignores it, and egress to an in-cluster homeserver needs a peer you
+  write yourself) allows only the
+  metrics port (with `metrics.enabled`) and the web port (with `config.web.enabled`).
+  Restrict the sources with `networkPolicy.metrics.from` and `networkPolicy.web.from`;
+  empty means any source. Kubelet probes are not affected.
+- `networkPolicy.egress.enabled` (off by default) allows DNS, `peers.to` (the
+  internet except private, CGNAT and link-local ranges) and `extraEgress`. A
+  homeserver inside the cluster or on your LAN sits on a private range: add its
+  pods or address to `peers.to` or `extraEgress`, or the bot cannot reach it.
+  Allow `config.homeserverUrl`, `config.rawHomeserverUrl`, `config.MAS.url` and
+  Sentry if you use them.
+
+## Rollouts
+
+If a rollout produces a pod that never becomes Ready (bad Secret, wrong homeserver),
+a StatefulSet does not replace it when you fix the values or roll back: delete the
+pod, and the StatefulSet recreates it from the current revision.
+
+## Autoscaling and resources
+
+There is no HPA and no PodDisruptionBudget (one replica).
+`verticalPodAutoscaler` supports `Off`, `Initial`, `Recreate` and
+`InPlaceOrRecreate`. Idle, Mjolnir takes about 210Mi. The default requests (`50m`
+CPU, `256Mi` memory) are scheduling floors and the memory limit is `1Gi`: Node
+sizes its heap at about half the limit, and `NsfwProtection` decodes every image
+posted in a protected room. A burst of large images ran a `512Mi` limit out of heap
+(the pod crash-looped while the backlog replayed); `1Gi` held, with a peak of about
+600Mi. Measure with your rooms, then tune.
+
+## Compatibility
+
+The values schema is strict: unknown keys fail the install. A breaking change
+to values bumps the chart MAJOR version; deprecations are announced one MINOR
+version ahead. Requires Kubernetes 1.33 or later.
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}

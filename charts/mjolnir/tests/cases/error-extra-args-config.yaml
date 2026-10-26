@@ -1,0 +1,4 @@
+values:
+  extraArgs: ["--mjolnir-config=/x"]
+expect:
+  error: /extraArgs/0

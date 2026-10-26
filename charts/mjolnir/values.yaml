@@ -1,0 +1,672 @@
+# yaml-language-server: $schema=values.schema.json
+# @schema.root
+# title: mjolnir values
+# allOf:
+#   # a ServiceMonitor and a PodMonitor would scrape Mjolnir twice
+#   - not:
+#       required: [metrics]
+#       properties:
+#         metrics:
+#           required: [serviceMonitor, podMonitor]
+#           properties:
+#             serviceMonitor:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+#             podMonitor:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+#   # the metrics Service and the monitors need the metrics listener
+#   - if:
+#       required: [metrics]
+#       properties:
+#         metrics:
+#           anyOf:
+#             - required: [service]
+#               properties:
+#                 service:
+#                   required: [enabled]
+#                   properties:
+#                     enabled:
+#                       const: true
+#             - required: [serviceMonitor]
+#               properties:
+#                 serviceMonitor:
+#                   required: [enabled]
+#                   properties:
+#                     enabled:
+#                       const: true
+#             - required: [podMonitor]
+#               properties:
+#                 podMonitor:
+#                   required: [enabled]
+#                   properties:
+#                     enabled:
+#                       const: true
+#     then:
+#       properties:
+#         metrics:
+#           required: [enabled]
+#           properties:
+#             enabled:
+#               const: true
+#   # the alert rules select the `job` label set by the ServiceMonitor or PodMonitor
+#   - if:
+#       required: [metrics]
+#       properties:
+#         metrics:
+#           required: [prometheusRule]
+#           properties:
+#             prometheusRule:
+#               required: [enabled]
+#               properties:
+#                 enabled:
+#                   const: true
+#     then:
+#       properties:
+#         metrics:
+#           anyOf:
+#             - required: [serviceMonitor]
+#               properties:
+#                 serviceMonitor:
+#                   required: [enabled]
+#                   properties:
+#                     enabled:
+#                       const: true
+#             - required: [podMonitor]
+#               properties:
+#                 podMonitor:
+#                   required: [enabled]
+#                   properties:
+#                     enabled:
+#                       const: true
+# @schema.root
+# -- Override the chart name used in resource names and labels.
+nameOverride: ""
+# -- Override the full resource name (default `<release>-<chart>`).
+fullnameOverride: ""
+
+image:
+  # -- Image repository.
+  repository: ghcr.io/spnngl/images/mjolnir
+  # -- Image tag. Empty: the tag and digest recorded for `image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.
+  tag: ""
+  # @schema
+  # type: string
+  # pattern: "^(sha256:[a-f0-9]{64})?$"
+  # @schema
+  # -- Image digest, only valid together with `image.tag`.
+  digest: ""
+  # @schema
+  # type: string
+  # enum: [Always, IfNotPresent, Never]
+  # @schema
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+# @schema
+# -- Image pull secrets (list of `{name: <secret>}`).
+imagePullSecrets: []
+
+existingSecret:
+  # -- Name of the Secret holding the credentials of the bot. Empty: `<fullname>`. The pod cannot start until it exists. The chart never creates it.
+  name: ""
+  # -- Key of the Secret that holds a YAML fragment with the credentials, for example `accessToken: <token>`. Mounted as `local.yaml`, read after the chart's own settings (mode 0440). Upstream reads credentials from the config file only (no `*_file` option, no environment variable). Credential keys: `accessToken`, `encryption.password`, `pantalaimon.password`, `MAS.clientSecret`, `web.synapseHTTPAntispam.authorization`, `health.sentry.dsn`.
+  key: config.yaml
+  # -- Opaque string added to the pod as the `checksum/secret` annotation: change it when you rotate the Secret to restart the pod (Mjolnir reads the file at start only). The chart cannot hash a Secret it does not own, so it is yours to set, for example from CI: `--set-string existingSecret.revision=$(kubectl get secret mjolnir -o json | sha256sum | cut -c1-12)`. Empty: no annotation.
+  revision: ""
+
+# @schema
+# type: object
+# additionalProperties: true
+# required: [homeserverUrl, managementRoom]
+# propertyNames:
+#   not:
+#     enum: [dataPath, accessToken]
+# properties:
+#   homeserverUrl:
+#     type: string
+#     minLength: 1
+#   managementRoom:
+#     type: string
+#     minLength: 1
+#   encryption:
+#     type: object
+#     propertyNames:
+#       not:
+#         enum: [password]
+#   pantalaimon:
+#     type: object
+#     propertyNames:
+#       not:
+#         enum: [password]
+#   MAS:
+#     type: object
+#     propertyNames:
+#       not:
+#         enum: [clientSecret]
+#   health:
+#     type: object
+#     propertyNames:
+#       not:
+#         enum: [healthz, openMetrics]
+#     properties:
+#       sentry:
+#         type: object
+#         propertyNames:
+#           not:
+#             enum: [dsn]
+#   web:
+#     type: object
+#     propertyNames:
+#       not:
+#         enum: [port, address]
+#     properties:
+#       synapseHTTPAntispam:
+#         type: object
+#         propertyNames:
+#           not:
+#             enum: [authorization]
+# @schema
+# -- Mjolnir settings (see `config/default.yaml` upstream), rendered into a ConfigMap as `production.yaml`. **Set `homeserverUrl` and `managementRoom` before the first install**: the defaults are placeholders, only there so the chart renders without values. `rawHomeserverUrl` (the URL of Synapse's admin API) defaults to `homeserverUrl`. Chart-owned keys (`dataPath`, `health.healthz`, `health.openMetrics`, `web.port`, `web.address`) are rejected. So are the credential keys listed at `existingSecret.key`: they go through `existingSecret`, never here. `web.enabled` turns the web API on (abuse reports, rule server, spam checker) and adds its Service port and NetworkPolicy rule. Settings are read at start: a change restarts the pod.
+config:
+  homeserverUrl: https://matrix.example.com
+  managementRoom: "#moderators:example.com"
+
+# @schema
+# type: integer
+# minimum: 0
+# maximum: 1
+# @schema
+# -- Replicas: `1`, or `0` to pause the bot. Two bots on one account would act twice and share one crypto device, so more than one is rejected.
+replicaCount: 1
+
+persistence:
+  data:
+    # @schema
+    # type: string
+    # enum: [volumeClaimTemplate, existingClaim, emptyDir]
+    # @schema
+    # -- Where `/data` (sync token, and with `config.encryption.use` the crypto store and its device) lives. `volumeClaimTemplate` creates a PVC and keeps it on uninstall; the other types use the matching sub-section. `emptyDir` loses the state with the pod and is rejected with `config.encryption.use` (every restart would create a new device).
+    type: volumeClaimTemplate
+    volumeClaimTemplate:
+      # -- StorageClass (empty: cluster default).
+      storageClassName: ""
+      # @schema
+      # type: array
+      # items:
+      #   type: string
+      # @schema
+      # -- Access modes.
+      accessModes:
+        - ReadWriteOnce
+      # -- Requested size. The template is immutable once installed: resize the PVC, see the README.
+      size: 1Gi
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- PVC annotations.
+      annotations: {}
+      # @schema
+      # type: object
+      # additionalProperties:
+      #   type: string
+      # @schema
+      # -- PVC labels.
+      labels: {}
+    existingClaim:
+      # -- Name of an existing PVC (`type: existingClaim`).
+      name: ""
+      # -- Sub-path inside the claim.
+      subPath: ""
+    emptyDir:
+      # -- Size limit (`type: emptyDir`, everything is lost with the pod). Empty: none.
+      sizeLimit: ""
+
+service:
+  # @schema
+  # type: string
+  # enum: [ClusterIP, LoadBalancer, NodePort]
+  # @schema
+  # -- Service type. The Service exists only with `config.web.enabled`.
+  type: ClusterIP
+  # @schema
+  # type: integer
+  # minimum: 1
+  # maximum: 65535
+  # @schema
+  # -- Service port (the container listens on 8081).
+  port: 8081
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Service annotations.
+  annotations: {}
+
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Seconds the bot gets to stop. Mjolnir handles no signal and runs as PID 1, so SIGTERM is ignored and the kernel kills it when this expires: a long value only delays every restart. Nothing needs flushing (SQLite is crash-safe).
+terminationGracePeriodSeconds: 5
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Resources of the mjolnir container. Idle, Mjolnir takes about 210Mi. Node derives its heap limit from the memory limit (about half of it), and `NsfwProtection` decodes every image posted in a protected room: a burst of large images ran a `512Mi` limit out of heap (crash loop), where `1Gi` held (peak about 600Mi). Measure, then tune; VPA in `Off` mode gives recommendations. No CPU limit on purpose.
+resources:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  limits:
+    memory: 1Gi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  requests:
+    cpu: 50m
+    memory: 256Mi
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Startup probe (`/healthz`, which answers 418 until startup completes). 10 minutes: the bot syncs its lists and checks its permissions in every protected room before it is ready, and a failed startup exits the process.
+startupProbe:
+  failureThreshold: 60
+  periodSeconds: 10
+  timeoutSeconds: 5
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Readiness probe (`/healthz`). The bot serves no traffic of its own: this only reports the state.
+readinessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+  timeoutSeconds: 5
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Liveness probe (`/healthz`). The endpoint answers 200 for the life of the process once started, even when the homeserver is down: a homeserver outage never restarts the pod. It fails when the event loop is stuck.
+livenessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+  timeoutSeconds: 5
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Affinity.
+affinity: {}
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Tolerations.
+tolerations: []
+# -- Priority class name.
+priorityClassName: ""
+
+verticalPodAutoscaler:
+  # -- Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).
+  enabled: false
+  # @schema
+  # type: string
+  # enum: ["Off", Initial, Recreate, InPlaceOrRecreate]
+  # @schema
+  # -- VPA update mode.
+  updateMode: "Off"
+  # @schema
+  # type: string
+  # @schema
+  # -- Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`. Set it when the cluster's recommender runs under another `--recommender-name`: a VPA nobody serves gets no recommendation.
+  recommender: ""
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   enum: [cpu, memory]
+  # @schema
+  # -- Resources VPA controls.
+  controlledResources:
+    - cpu
+    - memory
+  # @schema
+  # type: string
+  # enum: [RequestsAndLimits, RequestsOnly]
+  # @schema
+  # -- Whether VPA also scales limits.
+  controlledValues: RequestsAndLimits
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Lower bound of recommendations (for example `{cpu: 25m, memory: 64Mi}`).
+  minAllowed: {}
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Upper bound of recommendations.
+  maxAllowed: {}
+
+metrics:
+  # -- Serve Prometheus metrics (`health.openMetrics`, port 9090, path `/metrics`). Needed by the metrics Service, the monitors and the rule.
+  enabled: false
+  service:
+    # -- Render the metrics Service (also rendered when `serviceMonitor.enabled`).
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Service annotations.
+    annotations: {}
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor. Exclusive with `podMonitor`.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels (for example `release: kube-prometheus-stack`).
+    labels: {}
+    # -- Scrape interval (empty: Prometheus default).
+    interval: ""
+    # -- Scrape timeout (empty: Prometheus default).
+    scrapeTimeout: ""
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Relabelings.
+    relabelings: []
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Metric relabelings.
+    metricRelabelings: []
+  podMonitor:
+    # -- Create a Prometheus Operator PodMonitor (no Service needed). Exclusive with `serviceMonitor`.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels.
+    labels: {}
+    # -- Scrape interval (empty: Prometheus default).
+    interval: ""
+    # -- Scrape timeout (empty: Prometheus default).
+    scrapeTimeout: ""
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Relabelings.
+    relabelings: []
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Metric relabelings.
+    metricRelabelings: []
+  prometheusRule:
+    # -- Create a Prometheus Operator PrometheusRule (alerts `MjolnirDown`, `MjolnirHomeserverUnreachable`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.
+    enabled: false
+    # @schema
+    # type: object
+    # additionalProperties:
+    #   type: string
+    # @schema
+    # -- Extra labels (for example `release: kube-prometheus-stack`).
+    labels: {}
+    # @schema
+    # type: array
+    # uniqueItems: true
+    # maxItems: 1
+    # items:
+    #   type: string
+    #   enum: [MjolnirDown, MjolnirHomeserverUnreachable]
+    # @schema
+    # -- Alerts to leave out (at most one: disable `prometheusRule` instead). `MjolnirDown` also fires when no target exists (pod Pending) and with `replicaCount: 0`.
+    disabled: []
+    # @schema
+    # type: number
+    # exclusiveMinimum: 0
+    # maximum: 1
+    # @schema
+    # -- `MjolnirHomeserverUnreachable` threshold: the share of the bot's requests to the homeserver that fail at the transport level (DNS, connection refused, timeout) over 5 minutes, for 10 minutes. HTTP error replies (4xx, 5xx) do not count: Mjolnir counts them as successes.
+    apiFailureRatio: 0.05
+
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+#       minLength: 1
+#       not:
+#         enum: [NODE_CONFIG_DIR, NODE_ENV]
+# @schema
+# -- Extra environment variables (`EnvVar` list) for the mjolnir container. The config directories and the Node environment are chart-owned: such variables are rejected. Settings go through `config`.
+extraEnv: []
+# @schema
+# type: array
+# items:
+#   type: string
+#   minLength: 1
+#   not:
+#     pattern: '^--mjolnir-config(=.*)?$'
+# @schema
+# -- Extra arguments for Mjolnir, after the chart's own (none). `--mjolnir-config` is rejected: it makes Mjolnir ignore the config directories, and with them the Secret.
+extraArgs: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volumes.
+extraVolumes: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volume mounts for the mjolnir container.
+extraVolumeMounts: []
+
+# -- Old ControllerRevisions to keep.
+revisionHistoryLimit: 3
+
+serviceAccount:
+  # -- Create the ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false).
+  name: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- ServiceAccount annotations.
+  annotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Pod annotations.
+podAnnotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Extra pod labels.
+podLabels: {}
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Pod security context. Overrides are merged onto these defaults. `fsGroup` does not apply to NFS/SMB volumes.
+podSecurityContext:
+  fsGroup: 65532
+  fsGroupChangePolicy: OnRootMismatch
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Container security context of the mjolnir container. Overrides are merged onto these defaults.
+securityContext:
+  allowPrivilegeEscalation: false
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: boolean
+# @schema
+# -- Run the pod in a user namespace (`false`: uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) and idmapped mounts on the volume's file system (not NFS/SMB); the pod fails to start otherwise. `true` uses host users.
+hostUsers: false
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Node selector.
+nodeSelector:
+  kubernetes.io/os: linux
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- DNS config.
+dnsConfig:
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  #   additionalProperties: true
+  # @schema
+  # -- DNS options (fewer search-list lookups for the homeserver name).
+  options:
+    - name: ndots
+      value: "2"
+
+networkPolicy:
+  # -- Create a NetworkPolicy (ingress: the metrics port with `metrics.enabled`, the web API port with `config.web.enabled`; nothing else listens for other pods, kubelet probes are not filtered). Off by default: egress to an in-cluster homeserver needs a peer you write yourself, and a CNI without NetworkPolicy support ignores it. Turn it on when `config.web.enabled` is set: the rule server has no access control.
+  enabled: false
+  web:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach the web API port (8081). Empty: any source (the homeserver and the clients that file abuse reports can be anywhere).
+    from: []
+  metrics:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to scrape the metrics port (9090). Empty: any source.
+    from: []
+  egress:
+    # -- Restrict egress (DNS, internet peers, `extraEgress`). A homeserver inside the cluster needs a peer in `extraEgress`: the default peers exclude the private ranges.
+    enabled: false
+    dns:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels. Empty allows any destination.
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    peers:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- Internet peers (any port): the homeserver, an OIDC provider, Sentry. Default: the internet, not the private, CGNAT and link-local ranges, so a compromised pod cannot move sideways. Remove an `except` entry to reach a server there. Empty allows any destination.
+      to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 100.64.0.0/10
+              - 127.0.0.0/8
+              - 169.254.0.0/16
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+              - fc00::/7
+              - fe80::/10
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Extra `NetworkPolicyEgressRule`s.
+    extraEgress: []
