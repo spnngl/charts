@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: sabnzbd
+description: SABnzbd Usenet downloader as a hardened single-replica StatefulSet, with settings as code
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/sabnzbd
+appVersion: "5.1.3"
+kubeVersion: ">=1.33.0-0"
+home: https://sabnzbd.org
+icon: https://raw.githubusercontent.com/sabnzbd/sabnzbd/5.1.3/icons/logo-arrow.svg
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/sabnzbd/sabnzbd
+  - https://github.com/spnngl/images
+keywords:
+  - sabnzbd
+  - usenet
+  - nzb
+  - downloader
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: GPL-2.0-or-later
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # sabnzbd.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: sabnzbd
+      image: ghcr.io/spnngl/images/sabnzbd:5.1.3@sha256:6ff5df5f29ef84a704513cc3da5205887278f75a97f86dbe56edbc6703614a8a
+  artifacthub.io/links: |-
+    - name: Upstream project
+      url: https://sabnzbd.org
+    - name: Upstream repository
+      url: https://github.com/sabnzbd/sabnzbd
+    - name: Images repository
+      url: https://github.com/spnngl/images
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/sabnzbd
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

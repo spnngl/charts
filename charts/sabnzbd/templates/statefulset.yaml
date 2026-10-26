@@ -1,0 +1,183 @@
+{{- include "sabnzbd.validate" . }}
+{{- $fullname := include "sabnzbd.fullname" . }}
+{{- $config := .Values.persistence.config }}
+{{- $probe := dict "httpGet" (dict "path" "/api?mode=auth&output=json" "port" "http") }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    {{- if include "sabnzbd.envRefs" . }}
+    ignore-check.kube-linter.io/env-value-from: "The Secrets and ConfigMaps the env reads are created by the user, outside the chart."
+    {{- end }}
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: SABnzbd is the single writer of /config and of its download folders."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+    {{- if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: isolation is the user's choice."
+    {{- end }}
+    {{- if contains "secret" (include "sabnzbd.envRefs" .) }}
+    ignore-check.kube-linter.io/read-secret-from-env-var: "An extraEnv entry reads a Secret: the user's choice."
+    {{- end }}
+    {{- if or (eq $config.type "hostPath") (eq .Values.persistence.data.type "hostPath") }}
+    ignore-check.kube-linter.io/writable-host-mount: "A hostPath volume is the user's choice (persistence.config.type or persistence.data.type: hostPath)."
+    {{- end }}
+  labels:
+    {{- include "sabnzbd.labels" . | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "sabnzbd.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- toYaml (merge (dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum)) (deepCopy .Values.podAnnotations)) | nindent 8 }}
+      labels:
+        {{- toYaml (merge (include "sabnzbd.labels" . | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        {{- /* No args: the image CMD (--config-file /config/sabnzbd.ini --server 0.0.0.0:8080 --browser 0) matches the Service and the probes.
+          A bare "-": env is optional and sorts first. */}}
+        -
+          {{- with .Values.extraEnv }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: {{ include "sabnzbd.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            {{- toYaml (merge (deepCopy $probe) (deepCopy .Values.livenessProbe)) | nindent 12 }}
+          name: sabnzbd
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            {{- toYaml (merge (deepCopy $probe) (deepCopy .Values.readinessProbe)) | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- toYaml (merge (deepCopy $probe) (deepCopy .Values.startupProbe)) | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            {{- include "sabnzbd.configMount" . | nindent 12 }}
+            - mountPath: {{ .Values.persistence.data.mountPath }}
+              mountPropagation: {{ .Values.persistence.data.mountPropagation }}
+              name: data
+              {{- if and (eq .Values.persistence.data.type "existingClaim") .Values.persistence.data.existingClaim.subPath }}
+              subPath: {{ .Values.persistence.data.existingClaim.subPath }}
+              {{- end }}
+            - mountPath: /tmp
+              name: tmp
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      enableServiceLinks: false
+      hostUsers: {{ .Values.hostUsers }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        {{- /* Merges config and the Secret into sabnzbd.ini: SABnzbd reads its settings from the ini only. The Secret is mounted here, never in the SABnzbd container. */}}
+        - command:
+            - /usr/bin/python3
+            - /etc/sabnzbd-chart/merge.py
+          image: {{ include "sabnzbd.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          name: config
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            {{- include "sabnzbd.configMount" . | nindent 12 }}
+            - mountPath: /etc/sabnzbd-chart
+              name: settings
+              readOnly: true
+            {{- if .Values.secretConfig.existingSecret.name }}
+            - mountPath: /etc/sabnzbd-secret
+              name: secret-config
+              readOnly: true
+            {{- end }}
+        {{- with .Values.extraInitContainers }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "sabnzbd.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 30
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        {{- with include "sabnzbd.configVolume" . }}
+        {{- . | nindent 8 }}
+        {{- end }}
+        {{- include "sabnzbd.dataVolume" . | nindent 8 }}
+        - configMap:
+            name: {{ $fullname }}
+          name: settings
+        {{- with .Values.secretConfig.existingSecret.name }}
+        - name: secret-config
+          secret:
+            items:
+              - key: {{ $.Values.secretConfig.existingSecret.key }}
+                path: sabnzbd.ini
+            secretName: {{ . }}
+        {{- end }}
+        - emptyDir: {}
+          name: tmp
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+  updateStrategy:
+    type: RollingUpdate
+  {{- /* Template metadata carries no chart labels: a volumeClaimTemplate is immutable, a version label would fail every upgrade. */}}
+  {{- if eq $config.type "volumeClaimTemplate" }}
+  {{- $t := $config.volumeClaimTemplate }}
+  volumeClaimTemplates:
+    - metadata:
+        {{- with $t.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with $t.labels }}
+        labels:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        name: config
+      spec:
+        accessModes:
+          {{- toYaml $t.accessModes | nindent 10 }}
+        resources:
+          requests:
+            storage: {{ $t.size }}
+        {{- with $t.storageClassName }}
+        storageClassName: {{ . }}
+        {{- end }}
+  {{- end }}

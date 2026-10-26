@@ -1,0 +1,47 @@
+{{- $fullname := include "sabnzbd.fullname" . }}
+{{ $fullname }} runs one SABnzbd (StatefulSet, downtime on every upgrade).
+
+Settings: the config init container merges config{{ with .Values.secretConfig.existingSecret.name }}, then the Secret {{ . }}{{ end }}, into
+/config/sabnzbd.ini at every start. A listed key reverts a UI edit at the next
+start; nothing is ever removed from the ini.
+{{- if .Values.secretConfig.existingSecret.name }}
+A change to the Secret applies at the next start only:
+
+  kubectl -n {{ .Release.Namespace }} rollout restart statefulset/{{ $fullname }}
+{{- else }}
+
+No secretConfig Secret: SABnzbd has no login unless one is set in its UI, and
+its UI shows the API key to whoever reaches it. Set misc.username and
+misc.password (secretConfig) before exposing the Service.
+{{- end }}
+
+Radarr and Sonarr: use the host {{ $fullname }}.{{ .Release.Namespace }}.svc.cluster.local, port {{ .Values.service.port }}.
+SABnzbd refuses short host names (host check) unless listed in
+config.misc.host_whitelist.
+{{- if or .Values.ingress.enabled .Values.httpRoute.enabled }}
+
+Ingress or HTTPRoute: SABnzbd answers 403 to a public client (X-Forwarded-For)
+until config.misc.inet_exposure is 4 (full web UI) or 5 (web UI, login for
+external clients), and to its host names until they are listed in
+config.misc.host_whitelist or a login is set.
+{{- end }}
+
+Web UI:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+  https://{{ . }}/
+{{- end }}
+{{- end }}
+{{- if .Values.httpRoute.enabled }}
+{{- range .Values.httpRoute.hostnames }}
+  https://{{ . }}/
+{{- end }}
+{{- end }}
+  kubectl -n {{ .Release.Namespace }} port-forward service/{{ $fullname }} {{ .Values.service.port }}:{{ .Values.service.port }}
+  then open http://127.0.0.1:{{ .Values.service.port }}/
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: the pod runs in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) or volumes without idmapped
+mounts (NFS/SMB) cannot start it; set hostUsers=true to use host users.
+{{- end }}

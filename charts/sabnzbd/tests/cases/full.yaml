@@ -1,0 +1,46 @@
+values:
+  hostUsers: true
+  config:
+    misc:
+      host_whitelist: [sabnzbd.example.com]
+      inet_exposure: 4
+      config_lock: true
+    categories:
+      movies:
+        dir: movies
+  secretConfig:
+    existingSecret:
+      name: sabnzbd-ini
+  service:
+    annotations:
+      a: b
+  ingress:
+    enabled: true
+    hosts: [sabnzbd.example.com]
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: gw
+  podAnnotations:
+    a: b
+  podLabels:
+    team: media
+  extraEnv:
+    - name: TZ
+      value: Europe/Paris
+  extraVolumes:
+    - name: x
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: x
+      mountPath: /x
+  networkPolicy:
+    http:
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+    egress:
+      enabled: true
+  verticalPodAutoscaler:
+    enabled: true

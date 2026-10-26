@@ -1,0 +1,13 @@
+values:
+  config:
+    misc:
+      download_dir: null
+      complete_dir: /downloads/done
+      host_whitelist: [a.example, b.example]
+      enable_https: false
+    servers:
+      news.example.com:
+        host: news.example.com
+        port: 563
+        ssl: true
+        connections: 20

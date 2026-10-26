@@ -1,0 +1,5 @@
+values:
+  config:
+    misc: [a]
+expect:
+  error: config.misc

@@ -1,0 +1,12 @@
+values:
+  extraEnv:
+    - name: TZ
+      valueFrom:
+        configMapKeyRef:
+          name: locale
+          key: tz
+    - name: NOTIFY_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: notify
+          key: token
