@@ -1,6 +1,9 @@
 {{- if .Values.networkPolicy.enabled }}
 {{- $np := .Values.networkPolicy }}
 {{- $ports := list (dict "port" 8053 "protocol" "UDP") (dict "port" 8053 "protocol" "TCP") (dict "port" 8443 "protocol" "TCP") }}
+{{- if .Values.api.enabled }}
+{{- $ports = append $ports (dict "port" (include "numa-dns.apiPort" . | int) "protocol" "TCP") }}
+{{- end }}
 {{- $ingress := dict "ports" $ports }}
 {{- with $np.ingress.from }}{{ $_ := set $ingress "from" . }}{{ end }}
 apiVersion: networking.k8s.io/v1

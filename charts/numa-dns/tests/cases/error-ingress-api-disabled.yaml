@@ -1,0 +1,8 @@
+values:
+  ingress:
+    enabled: true
+    port: api
+    hosts:
+      - numa.example.com
+expect:
+  error: ingress.port api requires api.enabled

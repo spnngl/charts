@@ -1,0 +1,16 @@
+# Empty values are no token (numa ignores them); another variable does not count.
+values:
+  api:
+    enabled: true
+  config:
+    server:
+      allow_from:
+        - 10.0.0.0/8
+      api_token: ""
+  extraEnv:
+    - name: NUMA_API_TOKEN
+      value: ""
+    - name: RUST_LOG
+      value: warn
+expect:
+  error: api.enabled requires a token shared by every replica

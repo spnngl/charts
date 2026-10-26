@@ -1,0 +1,8 @@
+values:
+  extraIngresses:
+    - nameSuffix: dashboard
+      port: api
+      hosts:
+        - numa.example.com
+expect:
+  error: extraIngresses[dashboard].port api requires api.enabled

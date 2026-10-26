@@ -58,6 +58,11 @@ spec:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           name: numa-dns
           ports:
+            {{- if .Values.api.enabled }}
+            - containerPort: {{ include "numa-dns.apiPort" . }}
+              name: api
+              protocol: TCP
+            {{- end }}
             - containerPort: 8053
               name: dns-udp
               protocol: UDP

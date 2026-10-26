@@ -11,6 +11,13 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   ports:
+    {{- if .Values.api.enabled }}
+    - appProtocol: http
+      name: api
+      port: 5380
+      protocol: TCP
+      targetPort: api
+    {{- end }}
     - name: dns
       port: 53
       protocol: UDP

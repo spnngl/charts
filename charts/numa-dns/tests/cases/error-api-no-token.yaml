@@ -1,0 +1,5 @@
+values:
+  api:
+    enabled: true
+expect:
+  error: api.enabled requires a token shared by every replica
