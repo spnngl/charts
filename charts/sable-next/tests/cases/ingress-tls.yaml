@@ -1,0 +1,9 @@
+values:
+  ingress:
+    enabled: true
+    hosts:
+    - sable.example.com
+    tls:
+    - secretName: sable-tls
+      hosts:
+      - sable.example.com

@@ -1,0 +1,6 @@
+values:
+  extraVolumes:
+  - name: config
+    emptyDir: {}
+expect:
+  error: extraVolumes

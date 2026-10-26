@@ -1,0 +1,6 @@
+values:
+  config:
+    homeserverList:
+    - example.org
+    defaultHomeserver: 0
+    allowCustomHomeservers: false

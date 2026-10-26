@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: sable-next
+description: Sable, a Matrix web client, as a hardened stateless Deployment serving its static app
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/sable-next
+appVersion: "2.1.6"
+kubeVersion: ">=1.33.0-0"
+home: https://github.com/SableClient/sable-next
+icon: https://raw.githubusercontent.com/SableClient/sable-next/v2.1.6/static/icons/logo-512x512.png
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/SableClient/sable-next
+  - https://github.com/spnngl/images
+keywords:
+  - sable
+  - matrix
+  - chat
+  - web-client
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: AGPL-3.0-or-later
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # sable-next.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: sable-next
+      image: ghcr.io/spnngl/images/sable-next:2.1.6@sha256:fc25a139820d175e54e6594b1d5da22fdc676673e9320bf807536580c853bf9c
+  artifacthub.io/links: |-
+    - name: Upstream repository
+      url: https://github.com/SableClient/sable-next
+    - name: Images repository
+      url: https://github.com/spnngl/images
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/sable-next
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

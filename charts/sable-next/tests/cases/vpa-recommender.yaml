@@ -1,0 +1,6 @@
+values:
+  verticalPodAutoscaler:
+    enabled: true
+    recommender: custom
+    updateMode: Initial
+    controlledValues: RequestsOnly

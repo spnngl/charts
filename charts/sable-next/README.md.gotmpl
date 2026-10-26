@@ -1,0 +1,147 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.description" . }}
+
+Runs [Sable](https://github.com/SableClient/sable-next) (a Matrix web client, a
+single-page app) as a stateless, highly available Deployment: three replicas of
+[static-web-server](https://static-web-server.net/) serving the built app. The
+image is built from [spnngl/images](https://github.com/spnngl/images): `scratch`,
+non-root, no shell, nothing written at runtime.
+
+The chart ships no Matrix homeserver: Sable is a client, the browser talks to the
+homeserver directly. To run a homeserver too, see the `tuwunel` chart.
+
+## Install
+
+```sh
+helm install sable oci://ghcr.io/spnngl/charts/sable-next --version <version> -n sable --create-namespace
+```
+
+With no values, the app starts with the `config.json` of the image: upstream's
+homeserver list (matrix.org and five others, custom homeservers allowed) and
+upstream's push, GIF and supporter-award services. Set [`config`](#configuration)
+to choose your own.
+
+## Configuration
+
+`config` is the content of Sable's `config.json` (see `static/config.json`
+upstream). The browser fetches it at startup. Empty (default), the image's own
+file serves. Set, the chart renders it into a ConfigMap and mounts it as
+`/app/config.json` (a `subPath` mount, read-only), which **replaces the image's
+file whole**: a key you leave out gets the app's built-in default, not the image's
+value (the built-in homeserver list, no push gateway, no GIF provider, no embeds,
+no supporter awards, no calls). A change rolls the pods (`checksum/config`).
+
+```yaml
+config:
+  homeserverList:
+    - example.org
+  defaultHomeserver: 0
+  allowCustomHomeservers: false
+```
+
+Every value is public: the browser downloads the file, so do not put a secret in
+it. A GIF provider API key is readable by every visitor.
+
+The image's file also points at services run by the Sable project (push gateway,
+GIF proxy, supporter awards). Browsers contact them while the file lists them:
+replace `config` entirely to avoid that.
+
+## Access
+
+Open the app on `/`:
+
+```sh
+kubectl -n sable port-forward service/sable-sable-next 8080:8080
+```
+
+then <http://localhost:8080/>. `ingress` (Ingress) and `httpRoute` (Gateway API
+HTTPRoute) expose it publicly; both need explicit hosts (and `parentRefs` for the
+route).
+
+- **HTTPS is mandatory.** The app needs a secure context (service worker,
+  WebCrypto for end-to-end encryption): browsers only provide one on HTTPS (and
+  `localhost`). The image serves plain HTTP: terminate TLS in front.
+- **Single-page app.** Unknown paths answer `index.html` with status 200, so the
+  client router handles them.
+- **Homeserver.** Use another host name than the homeserver's, unless you route
+  paths yourself: both serve `/`.
+
+## Image
+
+The default image is `appVersion`, pinned by the digest recorded in the
+`artifacthub.io/images` annotation of `Chart.yaml` (Renovate updates tag and
+digest together). Setting `image.tag` drops that digest; add `image.digest` to
+pin the tag again (a digest without a tag is an error).
+
+The image is signed with cosign (keyless, GitHub Actions OIDC). Verify a digest with:
+
+```sh
+cosign verify \
+  --certificate-identity-regexp 'https://github.com/spnngl/images/.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ghcr.io/spnngl/images/sable-next@sha256:<digest>
+```
+
+## Security
+
+Defaults satisfy the `restricted` Pod Security Standard: non-root uid/gid 65532,
+read-only root filesystem, all capabilities dropped, no privilege escalation,
+`RuntimeDefault` seccomp, no ServiceAccount token, no Service environment
+variables. The server only reads files, so no writable volume is mounted.
+
+### User namespaces
+
+`hostUsers: false` (default) runs the pod in a user namespace: uid 65532 in
+the pod maps to an unprivileged host uid, which limits what a container escape
+gains. Nodes need a container runtime with user namespace support
+(containerd 2.0+ or CRI-O), runc 1.2+ or crun, and a Linux kernel 6.3+. On other
+nodes the pod sandbox cannot be created: set `hostUsers: true`.
+
+## Availability
+
+Three replicas, spread over nodes (preferred pod anti-affinity) and zones
+(`topologySpreadConstraints`, `ScheduleAnyway`): a pod that cannot be spread
+still schedules. A rolling update surges one pod and never drops below
+`replicaCount` (`maxUnavailable: 0`, `minReadySeconds`). On shutdown, the pod
+waits 5 seconds (`preStop`) for the endpoints to drop it before the server stops
+accepting connections; `terminationGracePeriodSeconds` covers that wait and the
+drain.
+
+`podDisruptionBudget.enabled` creates a PodDisruptionBudget (`maxUnavailable`,
+`unhealthyPodEvictionPolicy: AlwaysAllow`); it is off by default so a node drain
+never blocks on a single-node cluster. Setting `affinity` merges over the default
+anti-affinity (set `podAntiAffinity` to replace it); a
+`topologySpreadConstraints` list replaces the default and needs its own
+`labelSelector`.
+
+## Network
+
+The NetworkPolicy (`networkPolicy.enabled`, on by default) allows the HTTP port
+(8080). Restrict the sources with `networkPolicy.http.from` (your ingress
+controller or Gateway); empty means any source. `networkPolicy.egress.enabled`
+(off by default) blocks all egress except `extraEgress`: the server makes no
+outbound connection, so it needs no rule, not even DNS.
+
+## Autoscaling and resources
+
+There is no HPA: the server uses a few MiB and the replica count is an
+availability setting. `verticalPodAutoscaler` supports `Off`, `Initial`,
+`Recreate` and `InPlaceOrRecreate` (in-place resize needs Kubernetes 1.33+). A
+recommender started with another `--recommender-name` than `default` ignores the
+VPA unless `verticalPodAutoscaler.recommender` names it. The default requests
+(`10m` CPU, `16Mi` memory) are scheduling floors, not a sizing.
+
+## Compatibility
+
+The values schema is strict: unknown keys fail the install. A breaking change
+to values bumps the chart MAJOR version; deprecations are announced one MINOR
+version ahead. Requires Kubernetes 1.33 or later.
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}

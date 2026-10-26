@@ -1,0 +1,9 @@
+values:
+  extraVolumes:
+  - name: x
+    emptyDir: {}
+  extraVolumeMounts:
+  - name: x
+    mountPath: /app/config.json
+expect:
+  error: extraVolumeMounts

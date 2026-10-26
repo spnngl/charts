@@ -1,0 +1,71 @@
+values:
+  nameOverride: sable
+  imagePullSecrets:
+  - name: regcred
+  config:
+    homeserverList:
+    - example.org
+    defaultHomeserver: 0
+    allowCustomHomeservers: false
+  serviceAccount:
+    annotations:
+      a: b
+  service:
+    annotations:
+      a: b
+  podAnnotations:
+    a: b
+  podLabels:
+    c: d
+  priorityClassName: low
+  tolerations:
+  - key: k
+    operator: Exists
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+    - sable.example.com
+    tls:
+    - secretName: sable-tls
+      hosts:
+      - sable.example.com
+  httpRoute:
+    enabled: true
+    parentRefs:
+    - name: gw
+    hostnames:
+    - sable.example.com
+  extraEnv:
+  - name: SERVER_LOG_LEVEL
+    value: debug
+  extraVolumes:
+  - name: tmp
+    emptyDir: {}
+  extraVolumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  podDisruptionBudget:
+    enabled: true
+  networkPolicy:
+    http:
+      from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress
+    egress:
+      enabled: true
+      extraEgress:
+      - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+        ports:
+        - port: 443
+          protocol: TCP
+  verticalPodAutoscaler:
+    enabled: true
+    minAllowed:
+      cpu: 10m
+      memory: 16Mi
+    maxAllowed:
+      memory: 128Mi

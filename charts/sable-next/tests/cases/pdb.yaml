@@ -1,0 +1,3 @@
+values:
+  podDisruptionBudget:
+    enabled: true

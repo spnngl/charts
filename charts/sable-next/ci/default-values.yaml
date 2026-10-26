@@ -1,0 +1,4 @@
+# ct install: hostUsers false needs node support GitHub's runners (kind) lack:
+# the pod cannot mount sysfs in a user namespace. The app needs nothing else
+# to start, so the pods run, and helm's readiness wait proves the probes.
+hostUsers: true
