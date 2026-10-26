@@ -1,0 +1,88 @@
+values:
+  nameOverride: bot
+  fullnameOverride: mjolnir-full
+  image:
+    tag: 2.0.1
+    digest: sha256:ddb1842137b2f2d5590b44df937a566d8d784420882b4b4bd02309a158ea951d
+    pullPolicy: Always
+  imagePullSecrets:
+    - name: registry
+  existingSecret:
+    name: mjolnir-credentials
+    key: credentials.yaml
+    revision: "7"
+  config:
+    homeserverUrl: https://matrix.example.org
+    rawHomeserverUrl: http://synapse.matrix.svc:8008
+    managementRoom: "!room:example.org"
+    encryption:
+      use: true
+      username: mjolnir
+    web:
+      enabled: true
+      ruleServer:
+        enabled: true
+  terminationGracePeriodSeconds: 10
+  persistence:
+    data:
+      volumeClaimTemplate:
+        size: 5Gi
+        storageClassName: fast
+        accessModes: [ReadWriteOnce]
+        annotations:
+          a: b
+        labels:
+          c: d
+  service:
+    type: ClusterIP
+    port: 80
+    annotations:
+      s: t
+  metrics:
+    enabled: true
+    service:
+      annotations:
+        m: x
+    podMonitor:
+      enabled: true
+      interval: 15s
+      labels:
+        release: prometheus
+    prometheusRule:
+      enabled: true
+      apiFailureRatio: 0.1
+      labels:
+        release: prometheus
+  verticalPodAutoscaler:
+    enabled: true
+  extraEnv:
+    - name: TZ
+      value: UTC
+  extraArgs: ["--foo"]
+  extraVolumes:
+    - name: extra
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: extra
+      mountPath: /extra
+  priorityClassName: high
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution: []
+  tolerations:
+    - operator: Exists
+  nodeSelector:
+    kubernetes.io/os: linux
+  podAnnotations:
+    p: q
+  podLabels:
+    r: s
+  serviceAccount:
+    annotations:
+      sa: x
+  hostUsers: true
+  revisionHistoryLimit: 1
+  networkPolicy:
+    enabled: true
+    egress:
+      enabled: true

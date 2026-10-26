@@ -1,0 +1,248 @@
+---
+# Source: mjolnir/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: mjolnir
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mjolnir
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mjolnir-0.0.0
+  name: mjolnir
+  namespace: mjolnir
+spec:
+  ingress:
+    - ports:
+      - port: 9090
+        protocol: TCP
+    - ports:
+      - port: 8081
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: mjolnir
+      app.kubernetes.io/name: mjolnir
+  policyTypes:
+    - Ingress
+---
+# Source: mjolnir/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: mjolnir
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mjolnir
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mjolnir-0.0.0
+  name: mjolnir
+  namespace: mjolnir
+---
+# Source: mjolnir/templates/configmap.yaml
+apiVersion: v1
+data:
+  production.yaml: |
+    dataPath: /data/storage
+    health:
+      healthz:
+        address: 0.0.0.0
+        enabled: true
+        endpoint: /healthz
+        healthyStatus: 200
+        port: 8080
+        unhealthyStatus: 418
+      openMetrics:
+        address: 0.0.0.0
+        enabled: true
+        endpoint: /metrics
+        port: 9090
+    homeserverUrl: https://matrix.example.com
+    managementRoom: '#moderators:example.com'
+    rawHomeserverUrl: https://matrix.example.com
+    web:
+      address: 0.0.0.0
+      enabled: true
+      port: 8081
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: mjolnir
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mjolnir
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mjolnir-0.0.0
+  name: mjolnir
+  namespace: mjolnir
+---
+# Source: mjolnir/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: mjolnir
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mjolnir
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mjolnir-0.0.0
+  name: mjolnir
+  namespace: mjolnir
+spec:
+  ports:
+    - name: http
+      port: 8081
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: mjolnir
+    app.kubernetes.io/name: mjolnir
+  type: ClusterIP
+---
+# Source: mjolnir/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: two bots on one account act twice and share one crypto device."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/instance: mjolnir
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mjolnir
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mjolnir-0.0.0
+  name: mjolnir
+  namespace: mjolnir
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: mjolnir
+      app.kubernetes.io/name: mjolnir
+  template:
+    metadata:
+      annotations:
+        checksum/config: da7ea70b341fee9d5ff1477b5d22364321127e77a029befcd62a9c4bbe1baca8
+      labels:
+        app.kubernetes.io/instance: mjolnir
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: mjolnir
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: mjolnir-0.0.0
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - args: []
+          env:
+            - name: NODE_CONFIG_DIR
+              value: /etc/mjolnir/config:/etc/mjolnir/secret
+            - name: NODE_ENV
+              value: production
+          image: "ghcr.io/spnngl/images/mjolnir:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 10
+            timeoutSeconds: 5
+          name: mjolnir
+          ports:
+            - containerPort: 8080
+              name: health
+              protocol: TCP
+            - containerPort: 9090
+              name: metrics
+              protocol: TCP
+            - containerPort: 8081
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 50m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 60
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 10
+            timeoutSeconds: 5
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /data
+              name: data
+            - mountPath: /etc/mjolnir/config
+              name: config
+              readOnly: true
+            - mountPath: /etc/mjolnir/secret
+              name: secret
+              readOnly: true
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: mjolnir
+      terminationGracePeriodSeconds: 5
+      volumes:
+        - configMap:
+            name: mjolnir
+          name: config
+        - name: secret
+          secret:
+            defaultMode: 288
+            items:
+              - key: config.yaml
+                path: local.yaml
+            secretName: mjolnir
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi

@@ -1,0 +1,4 @@
+values:
+  config:
+    homeserverUrl: https://matrix.example.com
+    rawHomeserverUrl: http://synapse.matrix.svc:8008

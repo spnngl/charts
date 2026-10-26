@@ -1,0 +1,22 @@
+{{- if include "mjolnir.metricsService" . }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- with .Values.metrics.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "mjolnir.labels" . | nindent 4 }}
+  name: {{ include "mjolnir.metricsServiceName" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: metrics
+      port: 9090
+      protocol: TCP
+      targetPort: metrics
+  selector:
+    {{- include "mjolnir.selectorLabels" . | nindent 4 }}
+  type: ClusterIP
+{{- end }}

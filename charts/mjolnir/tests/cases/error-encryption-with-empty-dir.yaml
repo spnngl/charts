@@ -1,0 +1,9 @@
+values:
+  config:
+    encryption:
+      use: true
+  persistence:
+    data:
+      type: emptyDir
+expect:
+  error: config.encryption.use requires persistent storage

@@ -1,0 +1,15 @@
+values:
+  networkPolicy:
+    enabled: true
+    egress:
+      enabled: true
+      dns:
+        to:
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: kube-system
+      peers:
+        to:
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: matrix

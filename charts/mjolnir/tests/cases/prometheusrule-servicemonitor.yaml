@@ -1,0 +1,65 @@
+values:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+# Defaults: apiFailureRatio 0.05. promtool starts the clock at 0.
+ruleTests:
+  evaluation_interval: 1m
+  tests:
+    - name: down fires after 5m, not while a target is up
+      interval: 1m
+      input_series:
+        - series: up{job="mjolnir-metrics", namespace="mjolnir", pod="a"}
+          values: 1x10 0x10
+      alert_rule_test:
+        - {eval_time: 10m, alertname: MjolnirDown, exp_alerts: []}
+        - {eval_time: 14m, alertname: MjolnirDown, exp_alerts: []}
+        - eval_time: 16m
+          alertname: MjolnirDown
+          exp_alerts:
+            - exp_labels: {severity: critical, job: mjolnir-metrics, namespace: mjolnir}
+              exp_annotations:
+                summary: Mjolnir is down.
+                description: "No mjolnir target of mjolnir/mjolnir has been up for 5m (pod not running or not scraped; also fires when replicaCount is 0)."
+    - name: down fires when no target exists
+      interval: 1m
+      input_series:
+        - series: up{job="other", namespace="mjolnir", pod="b"}
+          values: 1x10
+      alert_rule_test:
+        - {eval_time: 4m, alertname: MjolnirDown, exp_alerts: []}
+        - eval_time: 6m
+          alertname: MjolnirDown
+          exp_alerts:
+            - exp_labels: {severity: critical, job: mjolnir-metrics, namespace: mjolnir}
+              exp_annotations:
+                summary: Mjolnir is down.
+                description: "No mjolnir target of mjolnir/mjolnir has been up for 5m (pod not running or not scraped; also fires when replicaCount is 0)."
+    - name: homeserver unreachable fires when half of the requests fail for 10m
+      interval: 1m
+      input_series:
+        - series: mjolnir_status_api_request_pass{job="mjolnir-metrics", namespace="mjolnir", pod="a"}
+          values: 0+1x40
+        - series: mjolnir_status_api_request_fail{job="mjolnir-metrics", namespace="mjolnir", pod="a"}
+          values: 0+1x40
+      alert_rule_test:
+        - {eval_time: 8m, alertname: MjolnirHomeserverUnreachable, exp_alerts: []}
+        - eval_time: 20m
+          alertname: MjolnirHomeserverUnreachable
+          exp_alerts:
+            - exp_labels: {severity: warning, namespace: mjolnir, pod: a}
+              exp_annotations:
+                summary: Mjolnir cannot reach its homeserver.
+                description: "Mjolnir on mjolnir/a cannot reach its homeserver: more than 0.05 of its requests failed at the transport level (DNS, connection refused, timeout) over 5m, for 10m. Check config.homeserverUrl, the NetworkPolicy and the homeserver."
+    - name: homeserver unreachable stays quiet without failures
+      interval: 1m
+      input_series:
+        - series: mjolnir_status_api_request_pass{job="mjolnir-metrics", namespace="mjolnir", pod="a"}
+          values: 0+1x40
+        - series: mjolnir_status_api_request_fail{job="mjolnir-metrics", namespace="mjolnir", pod="a"}
+          values: 0x40
+      alert_rule_test:
+        - {eval_time: 30m, alertname: MjolnirHomeserverUnreachable, exp_alerts: []}

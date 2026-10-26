@@ -1,0 +1,5 @@
+values:
+  config:
+    accessToken: abc
+expect:
+  error: accessToken

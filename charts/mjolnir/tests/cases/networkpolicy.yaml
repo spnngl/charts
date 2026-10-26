@@ -1,0 +1,8 @@
+values:
+  config:
+    web:
+      enabled: true
+  metrics:
+    enabled: true
+  networkPolicy:
+    enabled: true

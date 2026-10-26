@@ -1,0 +1,1155 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "not": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "podMonitor": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              },
+              "serviceMonitor": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "serviceMonitor",
+              "podMonitor"
+            ]
+          }
+        },
+        "required": [
+          "metrics"
+        ]
+      },
+      "required": []
+    },
+    {
+      "if": {
+        "properties": {
+          "metrics": {
+            "anyOf": [
+              {
+                "properties": {
+                  "service": {
+                    "properties": {
+                      "enabled": {
+                        "const": true,
+                        "required": []
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  }
+                },
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "properties": {
+                  "serviceMonitor": {
+                    "properties": {
+                      "enabled": {
+                        "const": true,
+                        "required": []
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  }
+                },
+                "required": [
+                  "serviceMonitor"
+                ]
+              },
+              {
+                "properties": {
+                  "podMonitor": {
+                    "properties": {
+                      "enabled": {
+                        "const": true,
+                        "required": []
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  }
+                },
+                "required": [
+                  "podMonitor"
+                ]
+              }
+            ],
+            "required": []
+          }
+        },
+        "required": [
+          "metrics"
+        ]
+      },
+      "required": [],
+      "then": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "enabled": {
+                "const": true,
+                "required": []
+              }
+            },
+            "required": [
+              "enabled"
+            ]
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "prometheusRule": {
+                "properties": {
+                  "enabled": {
+                    "const": true,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "prometheusRule"
+            ]
+          }
+        },
+        "required": [
+          "metrics"
+        ]
+      },
+      "required": [],
+      "then": {
+        "properties": {
+          "metrics": {
+            "anyOf": [
+              {
+                "properties": {
+                  "serviceMonitor": {
+                    "properties": {
+                      "enabled": {
+                        "const": true,
+                        "required": []
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  }
+                },
+                "required": [
+                  "serviceMonitor"
+                ]
+              },
+              {
+                "properties": {
+                  "podMonitor": {
+                    "properties": {
+                      "enabled": {
+                        "const": true,
+                        "required": []
+                      }
+                    },
+                    "required": [
+                      "enabled"
+                    ]
+                  }
+                },
+                "required": [
+                  "podMonitor"
+                ]
+              }
+            ],
+            "required": []
+          }
+        },
+        "required": []
+      }
+    }
+  ],
+  "properties": {
+    "affinity": {
+      "additionalProperties": true,
+      "description": "Affinity.",
+      "required": [],
+      "type": "object"
+    },
+    "config": {
+      "additionalProperties": true,
+      "description": "Mjolnir settings (see `config/default.yaml` upstream), rendered into a ConfigMap as `production.yaml`. **Set `homeserverUrl` and `managementRoom` before the first install**: the defaults are placeholders, only there so the chart renders without values. `rawHomeserverUrl` (the URL of Synapse's admin API) defaults to `homeserverUrl`. Chart-owned keys (`dataPath`, `health.healthz`, `health.openMetrics`, `web.port`, `web.address`) are rejected. So are the credential keys listed at `existingSecret.key`: they go through `existingSecret`, never here. `web.enabled` turns the web API on (abuse reports, rule server, spam checker) and adds its Service port and NetworkPolicy rule. Settings are read at start: a change restarts the pod.",
+      "properties": {
+        "MAS": {
+          "propertyNames": {
+            "not": {
+              "enum": [
+                "clientSecret"
+              ],
+              "required": []
+            },
+            "required": []
+          },
+          "required": [],
+          "type": "object"
+        },
+        "encryption": {
+          "propertyNames": {
+            "not": {
+              "enum": [
+                "password"
+              ],
+              "required": []
+            },
+            "required": []
+          },
+          "required": [],
+          "type": "object"
+        },
+        "health": {
+          "properties": {
+            "sentry": {
+              "propertyNames": {
+                "not": {
+                  "enum": [
+                    "dsn"
+                  ],
+                  "required": []
+                },
+                "required": []
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "propertyNames": {
+            "not": {
+              "enum": [
+                "healthz",
+                "openMetrics"
+              ],
+              "required": []
+            },
+            "required": []
+          },
+          "required": [],
+          "type": "object"
+        },
+        "homeserverUrl": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "managementRoom": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "pantalaimon": {
+          "propertyNames": {
+            "not": {
+              "enum": [
+                "password"
+              ],
+              "required": []
+            },
+            "required": []
+          },
+          "required": [],
+          "type": "object"
+        },
+        "web": {
+          "properties": {
+            "synapseHTTPAntispam": {
+              "propertyNames": {
+                "not": {
+                  "enum": [
+                    "authorization"
+                  ],
+                  "required": []
+                },
+                "required": []
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "propertyNames": {
+            "not": {
+              "enum": [
+                "port",
+                "address"
+              ],
+              "required": []
+            },
+            "required": []
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "propertyNames": {
+        "not": {
+          "enum": [
+            "dataPath",
+            "accessToken"
+          ],
+          "required": []
+        },
+        "required": []
+      },
+      "required": [
+        "homeserverUrl",
+        "managementRoom"
+      ],
+      "type": "object"
+    },
+    "dnsConfig": {
+      "additionalProperties": true,
+      "description": "DNS config.",
+      "properties": {
+        "options": {
+          "description": "DNS options (fewer search-list lookups for the homeserver name).",
+          "items": {
+            "additionalProperties": true,
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "existingSecret": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "description": "Key of the Secret that holds a YAML fragment with the credentials, for example `accessToken: \u003ctoken\u003e`. Mounted as `local.yaml`, read after the chart's own settings (mode 0440). Upstream reads credentials from the config file only (no `*_file` option, no environment variable). Credential keys: `accessToken`, `encryption.password`, `pantalaimon.password`, `MAS.clientSecret`, `web.synapseHTTPAntispam.authorization`, `health.sentry.dsn`.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name of the Secret holding the credentials of the bot. Empty: `\u003cfullname\u003e`. The pod cannot start until it exists. The chart never creates it.",
+          "type": "string"
+        },
+        "revision": {
+          "description": "Opaque string added to the pod as the `checksum/secret` annotation: change it when you rotate the Secret to restart the pod (Mjolnir reads the file at start only). The chart cannot hash a Secret it does not own, so it is yours to set, for example from CI: `--set-string existingSecret.revision=$(kubectl get secret mjolnir -o json | sha256sum | cut -c1-12)`. Empty: no annotation.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "extraArgs": {
+      "description": "Extra arguments for Mjolnir, after the chart's own (none). `--mjolnir-config` is rejected: it makes Mjolnir ignore the config directories, and with them the Secret.",
+      "items": {
+        "minLength": 1,
+        "not": {
+          "pattern": "^--mjolnir-config(=.*)?$",
+          "required": []
+        },
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "extraEnv": {
+      "description": "Extra environment variables (`EnvVar` list) for the mjolnir container. The config directories and the Node environment are chart-owned: such variables are rejected. Settings go through `config`.",
+      "items": {
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "not": {
+              "enum": [
+                "NODE_CONFIG_DIR",
+                "NODE_ENV"
+              ],
+              "required": []
+            },
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumeMounts": {
+      "description": "Extra volume mounts for the mjolnir container.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumes": {
+      "description": "Extra volumes.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "fullnameOverride": {
+      "description": "Override the full resource name (default `\u003crelease\u003e-\u003cchart\u003e`).",
+      "type": "string"
+    },
+    "global": {
+      "description": "Global values are values that can be accessed from any chart or subchart by exactly the same name.",
+      "required": [],
+      "type": "object"
+    },
+    "hostUsers": {
+      "description": "Run the pod in a user namespace (`false`: uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) and idmapped mounts on the volume's file system (not NFS/SMB); the pod fails to start otherwise. `true` uses host users.",
+      "type": "boolean"
+    },
+    "image": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "description": "Image digest, only valid together with `image.tag`.",
+          "pattern": "^(sha256:[a-f0-9]{64})?$",
+          "type": "string"
+        },
+        "pullPolicy": {
+          "description": "Image pull policy.",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ],
+          "type": "string"
+        },
+        "repository": {
+          "description": "Image repository.",
+          "type": "string"
+        },
+        "tag": {
+          "description": "Image tag. Empty: the tag and digest recorded for `image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "imagePullSecrets": {
+      "description": "Image pull secrets (list of `{name: \u003csecret\u003e}`).",
+      "items": {
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "livenessProbe": {
+      "additionalProperties": true,
+      "description": "Liveness probe (`/healthz`). The endpoint answers 200 for the life of the process once started, even when the homeserver is down: a homeserver outage never restarts the pod. It fails when the event loop is stuck.",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        },
+        "timeoutSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "metrics": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Serve Prometheus metrics (`health.openMetrics`, port 9090, path `/metrics`). Needed by the metrics Service, the monitors and the rule.",
+          "type": "boolean"
+        },
+        "podMonitor": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Create a Prometheus Operator PodMonitor (no Service needed). Exclusive with `serviceMonitor`.",
+              "type": "boolean"
+            },
+            "interval": {
+              "description": "Scrape interval (empty: Prometheus default).",
+              "type": "string"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels.",
+              "required": [],
+              "type": "object"
+            },
+            "metricRelabelings": {
+              "description": "Metric relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "relabelings": {
+              "description": "Relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "scrapeTimeout": {
+              "description": "Scrape timeout (empty: Prometheus default).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "prometheusRule": {
+          "additionalProperties": false,
+          "properties": {
+            "apiFailureRatio": {
+              "description": "`MjolnirHomeserverUnreachable` threshold: the share of the bot's requests to the homeserver that fail at the transport level (DNS, connection refused, timeout) over 5 minutes, for 10 minutes. HTTP error replies (4xx, 5xx) do not count: Mjolnir counts them as successes.",
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "type": "number"
+            },
+            "disabled": {
+              "description": "Alerts to leave out (at most one: disable `prometheusRule` instead). `MjolnirDown` also fires when no target exists (pod Pending) and with `replicaCount: 0`.",
+              "items": {
+                "enum": [
+                  "MjolnirDown",
+                  "MjolnirHomeserverUnreachable"
+                ],
+                "type": "string"
+              },
+              "maxItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "enabled": {
+              "description": "Create a Prometheus Operator PrometheusRule (alerts `MjolnirDown`, `MjolnirHomeserverUnreachable`). Needs `serviceMonitor` or `podMonitor`: the rules select the `job` label it sets.",
+              "type": "boolean"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels (for example `release: kube-prometheus-stack`).",
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "service": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Service annotations.",
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Render the metrics Service (also rendered when `serviceMonitor.enabled`).",
+              "type": "boolean"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "serviceMonitor": {
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Create a Prometheus Operator ServiceMonitor. Exclusive with `podMonitor`.",
+              "type": "boolean"
+            },
+            "interval": {
+              "description": "Scrape interval (empty: Prometheus default).",
+              "type": "string"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Extra labels (for example `release: kube-prometheus-stack`).",
+              "required": [],
+              "type": "object"
+            },
+            "metricRelabelings": {
+              "description": "Metric relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "relabelings": {
+              "description": "Relabelings.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "scrapeTimeout": {
+              "description": "Scrape timeout (empty: Prometheus default).",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "nameOverride": {
+      "description": "yaml-language-server: $schema=values.schema.json\nOverride the chart name used in resource names and labels.",
+      "type": "string"
+    },
+    "networkPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "egress": {
+          "additionalProperties": false,
+          "properties": {
+            "dns": {
+              "additionalProperties": false,
+              "properties": {
+                "to": {
+                  "description": "DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels. Empty allows any destination.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Restrict egress (DNS, internet peers, `extraEgress`). A homeserver inside the cluster needs a peer in `extraEgress`: the default peers exclude the private ranges.",
+              "type": "boolean"
+            },
+            "extraEgress": {
+              "description": "Extra `NetworkPolicyEgressRule`s.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "peers": {
+              "additionalProperties": false,
+              "properties": {
+                "to": {
+                  "description": "Internet peers (any port): the homeserver, an OIDC provider, Sentry. Default: the internet, not the private, CGNAT and link-local ranges, so a compromised pod cannot move sideways. Remove an `except` entry to reach a server there. Empty allows any destination.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "enabled": {
+          "description": "Create a NetworkPolicy (ingress: the metrics port with `metrics.enabled`, the web API port with `config.web.enabled`; nothing else listens for other pods, kubelet probes are not filtered). Off by default: egress to an in-cluster homeserver needs a peer you write yourself, and a CNI without NetworkPolicy support ignores it. Turn it on when `config.web.enabled` is set: the rule server has no access control.",
+          "type": "boolean"
+        },
+        "metrics": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to scrape the metrics port (9090). Empty: any source.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "web": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to reach the web API port (8081). Empty: any source (the homeserver and the clients that file abuse reports can be anywhere).",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "nodeSelector": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Node selector.",
+      "properties": {
+        "kubernetes.io/os": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "persistence": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "additionalProperties": false,
+          "properties": {
+            "emptyDir": {
+              "additionalProperties": false,
+              "properties": {
+                "sizeLimit": {
+                  "description": "Size limit (`type: emptyDir`, everything is lost with the pod). Empty: none.",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "existingClaim": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "description": "Name of an existing PVC (`type: existingClaim`).",
+                  "type": "string"
+                },
+                "subPath": {
+                  "description": "Sub-path inside the claim.",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "type": {
+              "description": "Where `/data` (sync token, and with `config.encryption.use` the crypto store and its device) lives. `volumeClaimTemplate` creates a PVC and keeps it on uninstall; the other types use the matching sub-section. `emptyDir` loses the state with the pod and is rejected with `config.encryption.use` (every restart would create a new device).",
+              "enum": [
+                "volumeClaimTemplate",
+                "existingClaim",
+                "emptyDir"
+              ],
+              "type": "string"
+            },
+            "volumeClaimTemplate": {
+              "additionalProperties": false,
+              "properties": {
+                "accessModes": {
+                  "description": "Access modes.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "annotations": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "PVC annotations.",
+                  "required": [],
+                  "type": "object"
+                },
+                "labels": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "PVC labels.",
+                  "required": [],
+                  "type": "object"
+                },
+                "size": {
+                  "description": "Requested size. The template is immutable once installed: resize the PVC, see the README.",
+                  "type": "string"
+                },
+                "storageClassName": {
+                  "description": "StorageClass (empty: cluster default).",
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "podAnnotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Pod annotations.",
+      "required": [],
+      "type": "object"
+    },
+    "podLabels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Extra pod labels.",
+      "required": [],
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "additionalProperties": true,
+      "description": "Pod security context. Overrides are merged onto these defaults. `fsGroup` does not apply to NFS/SMB volumes.",
+      "properties": {
+        "fsGroup": {
+          "type": "integer"
+        },
+        "fsGroupChangePolicy": {
+          "type": "string"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "priorityClassName": {
+      "description": "Priority class name.",
+      "type": "string"
+    },
+    "readinessProbe": {
+      "additionalProperties": true,
+      "description": "Readiness probe (`/healthz`). The bot serves no traffic of its own: this only reports the state.",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        },
+        "timeoutSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "replicaCount": {
+      "description": "Replicas: `1`, or `0` to pause the bot. Two bots on one account would act twice and share one crypto device, so more than one is rejected.",
+      "maximum": 1,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "resources": {
+      "additionalProperties": true,
+      "description": "Resources of the mjolnir container. Idle, Mjolnir takes about 210Mi. Node derives its heap limit from the memory limit (about half of it), and `NsfwProtection` decodes every image posted in a protected room: a burst of large images ran a `512Mi` limit out of heap (crash loop), where `1Gi` held (peak about 600Mi). Measure, then tune; VPA in `Off` mode gives recommendations. No CPU limit on purpose.",
+      "properties": {
+        "limits": {
+          "additionalProperties": true,
+          "properties": {
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "requests": {
+          "additionalProperties": true,
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "revisionHistoryLimit": {
+      "description": "Old ControllerRevisions to keep.",
+      "type": "integer"
+    },
+    "securityContext": {
+      "additionalProperties": true,
+      "description": "Container security context of the mjolnir container. Overrides are merged onto these defaults.",
+      "properties": {
+        "allowPrivilegeEscalation": {
+          "type": "boolean"
+        },
+        "capabilities": {
+          "additionalProperties": true,
+          "properties": {
+            "drop": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ],
+                "required": []
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "privileged": {
+          "type": "boolean"
+        },
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "service": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Service annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "port": {
+          "description": "Service port (the container listens on 8081).",
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "type": {
+          "description": "Service type. The Service exists only with `config.web.enabled`.",
+          "enum": [
+            "ClusterIP",
+            "LoadBalancer",
+            "NodePort"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "serviceAccount": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "ServiceAccount annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "create": {
+          "description": "Create the ServiceAccount.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "ServiceAccount name. Empty: `\u003cfullname\u003e` (or `default` when `create` is false).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "startupProbe": {
+      "additionalProperties": true,
+      "description": "Startup probe (`/healthz`, which answers 418 until startup completes). 10 minutes: the bot syncs its lists and checks its permissions in every protected room before it is ready, and a failed startup exits the process.",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        },
+        "timeoutSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "terminationGracePeriodSeconds": {
+      "description": "Seconds the bot gets to stop. Mjolnir handles no signal and runs as PID 1, so SIGTERM is ignored and the kernel kills it when this expires: a long value only delays every restart. Nothing needs flushing (SQLite is crash-safe).",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "tolerations": {
+      "description": "Tolerations.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "verticalPodAutoscaler": {
+      "additionalProperties": false,
+      "properties": {
+        "controlledResources": {
+          "description": "Resources VPA controls.",
+          "items": {
+            "enum": [
+              "cpu",
+              "memory"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "controlledValues": {
+          "description": "Whether VPA also scales limits.",
+          "enum": [
+            "RequestsAndLimits",
+            "RequestsOnly"
+          ],
+          "type": "string"
+        },
+        "enabled": {
+          "description": "Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).",
+          "type": "boolean"
+        },
+        "maxAllowed": {
+          "additionalProperties": true,
+          "description": "Upper bound of recommendations.",
+          "required": [],
+          "type": "object"
+        },
+        "minAllowed": {
+          "additionalProperties": true,
+          "description": "Lower bound of recommendations (for example `{cpu: 25m, memory: 64Mi}`).",
+          "required": [],
+          "type": "object"
+        },
+        "recommender": {
+          "description": "Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`. Set it when the cluster's recommender runs under another `--recommender-name`: a VPA nobody serves gets no recommendation.",
+          "type": "string"
+        },
+        "updateMode": {
+          "description": "VPA update mode.",
+          "enum": [
+            "Off",
+            "Initial",
+            "Recreate",
+            "InPlaceOrRecreate"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    }
+  },
+  "required": [],
+  "title": "mjolnir values",
+  "type": "object"
+}

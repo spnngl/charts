@@ -1,0 +1,7 @@
+values:
+  persistence:
+    data:
+      type: existingClaim
+      existingClaim:
+        name: mjolnir-data
+        subPath: mjolnir

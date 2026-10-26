@@ -1,0 +1,28 @@
+{{- if .Values.verticalPodAutoscaler.enabled }}
+{{- $v := .Values.verticalPodAutoscaler }}
+{{- $policy := dict "controlledResources" $v.controlledResources "controlledValues" $v.controlledValues }}
+{{- with $v.minAllowed }}{{ $_ := set $policy "minAllowed" . }}{{ end }}
+{{- with $v.maxAllowed }}{{ $_ := set $policy "maxAllowed" . }}{{ end }}
+{{- $policies := list (merge (dict "containerName" "mjolnir") $policy) }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    {{- include "mjolnir.labels" . | nindent 4 }}
+  name: {{ include "mjolnir.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- with $v.recommender }}
+  recommenders:
+    - name: {{ . | quote }}
+  {{- end }}
+  resourcePolicy:
+    containerPolicies:
+      {{- toYaml $policies | nindent 6 }}
+  targetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: {{ include "mjolnir.fullname" . }}
+  updatePolicy:
+    updateMode: {{ $v.updateMode | quote }}
+{{- end }}

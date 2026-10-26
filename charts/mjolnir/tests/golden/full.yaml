@@ -1,0 +1,396 @@
+---
+# Source: mjolnir/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: mjolnir
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bot
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mjolnir-0.0.0
+  name: mjolnir-full
+  namespace: mjolnir
+spec:
+  egress:
+    - ports:
+        - port: 53
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+            - 10.0.0.0/8
+            - 100.64.0.0/10
+            - 127.0.0.0/8
+            - 169.254.0.0/16
+            - 172.16.0.0/12
+            - 192.168.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+            - fc00::/7
+            - fe80::/10
+  ingress:
+    - ports:
+      - port: 9090
+        protocol: TCP
+    - ports:
+      - port: 8081
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: mjolnir
+      app.kubernetes.io/name: bot
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Source: mjolnir/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  annotations:
+    sa: x
+  labels:
+    app.kubernetes.io/instance: mjolnir
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bot
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mjolnir-0.0.0
+  name: mjolnir-full
+  namespace: mjolnir
+---
+# Source: mjolnir/templates/configmap.yaml
+apiVersion: v1
+data:
+  production.yaml: |
+    dataPath: /data/storage
+    encryption:
+      use: true
+      username: mjolnir
+    health:
+      healthz:
+        address: 0.0.0.0
+        enabled: true
+        endpoint: /healthz
+        healthyStatus: 200
+        port: 8080
+        unhealthyStatus: 418
+      openMetrics:
+        address: 0.0.0.0
+        enabled: true
+        endpoint: /metrics
+        port: 9090
+    homeserverUrl: https://matrix.example.org
+    managementRoom: '!room:example.org'
+    rawHomeserverUrl: http://synapse.matrix.svc:8008
+    web:
+      address: 0.0.0.0
+      enabled: true
+      port: 8081
+      ruleServer:
+        enabled: true
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: mjolnir
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bot
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mjolnir-0.0.0
+  name: mjolnir-full
+  namespace: mjolnir
+---
+# Source: mjolnir/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    s: t
+  labels:
+    app.kubernetes.io/instance: mjolnir
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bot
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mjolnir-0.0.0
+  name: mjolnir-full
+  namespace: mjolnir
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: mjolnir
+    app.kubernetes.io/name: bot
+  type: ClusterIP
+---
+# Source: mjolnir/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "One replica on purpose: two bots on one account act twice and share one crypto device."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/instance: mjolnir
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bot
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mjolnir-0.0.0
+  name: mjolnir-full
+  namespace: mjolnir
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: mjolnir
+      app.kubernetes.io/name: bot
+  template:
+    metadata:
+      annotations:
+        checksum/config: dd6c58a4e0d19c335d3d1b0c8b7fa5bd73e40eb196528ba6410e021b936daccf
+        checksum/secret: "7"
+        p: q
+      labels:
+        app.kubernetes.io/instance: mjolnir
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: bot
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: mjolnir-0.0.0
+        r: s
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution: []
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - --foo
+          env:
+            - name: NODE_CONFIG_DIR
+              value: /etc/mjolnir/config:/etc/mjolnir/secret
+            - name: NODE_ENV
+              value: production
+            - name: TZ
+              value: UTC
+          image: "ghcr.io/spnngl/images/mjolnir:2.0.1@sha256:ddb1842137b2f2d5590b44df937a566d8d784420882b4b4bd02309a158ea951d"
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 10
+            timeoutSeconds: 5
+          name: mjolnir
+          ports:
+            - containerPort: 8080
+              name: health
+              protocol: TCP
+            - containerPort: 9090
+              name: metrics
+              protocol: TCP
+            - containerPort: 8081
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 50m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 60
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 10
+            timeoutSeconds: 5
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /data
+              name: data
+            - mountPath: /etc/mjolnir/config
+              name: config
+              readOnly: true
+            - mountPath: /etc/mjolnir/secret
+              name: secret
+              readOnly: true
+            - mountPath: /extra
+              name: extra
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: true
+      imagePullSecrets:
+        - name: registry
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: high
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: mjolnir-full
+      terminationGracePeriodSeconds: 10
+      tolerations:
+        - operator: Exists
+      volumes:
+        - configMap:
+            name: mjolnir-full
+          name: config
+        - name: secret
+          secret:
+            defaultMode: 288
+            items:
+              - key: credentials.yaml
+                path: local.yaml
+            secretName: mjolnir-credentials
+        - emptyDir: {}
+          name: extra
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+    - metadata:
+        annotations:
+          a: b
+        labels:
+          c: d
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
+        storageClassName: fast
+---
+# Source: mjolnir/templates/podmonitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  labels:
+    app.kubernetes.io/instance: mjolnir
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bot
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: mjolnir-0.0.0
+    release: prometheus
+  name: mjolnir-full
+  namespace: mjolnir
+spec:
+  namespaceSelector:
+    matchNames:
+      - mjolnir
+  podMetricsEndpoints:
+    - interval: 15s
+      path: /metrics
+      port: metrics
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: mjolnir
+      app.kubernetes.io/name: bot
+---
+# Source: mjolnir/templates/prometheusrule.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app.kubernetes.io/instance: mjolnir
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bot
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: mjolnir-0.0.0
+    release: prometheus
+  name: mjolnir-full
+  namespace: mjolnir
+spec:
+  groups:
+    - name: mjolnir-full
+      rules:
+        - alert: MjolnirDown
+          annotations:
+            description: "No mjolnir target of mjolnir/mjolnir-full has been up for 5m (pod not running or not scraped; also fires when replicaCount is 0)."
+            summary: Mjolnir is down.
+          expr: "absent(up{job=\"mjolnir/mjolnir-full\", namespace=\"mjolnir\"}) or max by (job, namespace) (up{job=\"mjolnir/mjolnir-full\", namespace=\"mjolnir\"}) < 1"
+          for: 5m
+          labels:
+            severity: critical
+        - alert: MjolnirHomeserverUnreachable
+          annotations:
+            description: "Mjolnir on {{ $labels.namespace }}/{{ $labels.pod }} cannot reach its homeserver: more than 0.1 of its requests failed at the transport level (DNS, connection refused, timeout) over 5m, for 10m. Check config.homeserverUrl, the NetworkPolicy and the homeserver."
+            summary: Mjolnir cannot reach its homeserver.
+          expr: "sum by (namespace, pod) (rate(mjolnir_status_api_request_fail{job=\"mjolnir/mjolnir-full\", namespace=\"mjolnir\"}[5m])) / sum by (namespace, pod) (rate(mjolnir_status_api_request_pass{job=\"mjolnir/mjolnir-full\", namespace=\"mjolnir\"}[5m]) + rate(mjolnir_status_api_request_fail{job=\"mjolnir/mjolnir-full\", namespace=\"mjolnir\"}[5m])) > 0.1"
+          for: 10m
+          labels:
+            severity: warning
+---
+# Source: mjolnir/templates/vpa.yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    app.kubernetes.io/instance: mjolnir
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: bot
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: mjolnir-0.0.0
+  name: mjolnir-full
+  namespace: mjolnir
+spec:
+  resourcePolicy:
+    containerPolicies:
+      - containerName: mjolnir
+        controlledResources:
+        - cpu
+        - memory
+        controlledValues: RequestsAndLimits
+  targetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: mjolnir-full
+  updatePolicy:
+    updateMode: "Off"
