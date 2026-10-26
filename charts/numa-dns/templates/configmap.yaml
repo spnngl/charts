@@ -1,0 +1,11 @@
+{{- include "numa-dns.validate" . }}
+apiVersion: v1
+data:
+  numa.toml: |
+    {{- include "numa-dns.config" . | nindent 4 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "numa-dns.labels" . | nindent 4 }}
+  name: {{ include "numa-dns.fullname" . }}
+  namespace: {{ .Release.Namespace }}

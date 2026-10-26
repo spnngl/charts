@@ -1,0 +1,2 @@
+# CI install: defaults. hostUsers: true because user namespaces fail on kind inside GitHub runners.
+hostUsers: true

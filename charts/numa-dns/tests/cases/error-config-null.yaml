@@ -1,0 +1,8 @@
+values:
+  config:
+    cache:
+      max_entries: null
+    zones:
+      - null
+expect:
+  error: unsupported value

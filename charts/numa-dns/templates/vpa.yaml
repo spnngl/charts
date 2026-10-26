@@ -1,0 +1,23 @@
+{{- if .Values.verticalPodAutoscaler.enabled }}
+{{- $v := .Values.verticalPodAutoscaler }}
+{{- $policy := dict "containerName" "numa-dns" "controlledResources" $v.controlledResources "controlledValues" $v.controlledValues }}
+{{- with $v.minAllowed }}{{ $_ := set $policy "minAllowed" . }}{{ end }}
+{{- with $v.maxAllowed }}{{ $_ := set $policy "maxAllowed" . }}{{ end }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    {{- include "numa-dns.labels" . | nindent 4 }}
+  name: {{ include "numa-dns.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  resourcePolicy:
+    containerPolicies:
+      {{- toYaml (list $policy) | nindent 6 }}
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "numa-dns.fullname" . }}
+  updatePolicy:
+    updateMode: {{ $v.updateMode | quote }}
+{{- end }}

@@ -1,0 +1,6 @@
+values:
+  config:
+    server:
+      bind_addr: ["0.0.0.0:53"]
+expect:
+  error: invalid propertyName 'bind_addr'

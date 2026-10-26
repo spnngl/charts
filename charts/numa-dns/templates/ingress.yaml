@@ -1,0 +1,47 @@
+{{- $fullname := include "numa-dns.fullname" . }}
+{{- $all := list }}
+{{- if .Values.ingress.enabled }}
+{{- $all = append $all (merge (dict "name" $fullname) (deepCopy .Values.ingress)) }}
+{{- end }}
+{{- range .Values.extraIngresses }}
+{{- $all = append $all (merge (dict "name" (printf "%s-%s" $fullname .nameSuffix)) (deepCopy .)) }}
+{{- end }}
+{{- range $i, $ing := $all }}
+{{- /* DoH is an HTTP path; DoT reaches the controller as TCP and the Ingress routes it to the DNS-over-TCP port. */}}
+{{- $isDoh := eq (default "doh" $ing.port) "doh" }}
+{{- if $i }}
+---
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  {{- with $ing.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- toYaml (merge (include "numa-dns.labels" $ | fromYaml) (deepCopy (default dict $ing.labels))) | nindent 4 }}
+  name: {{ $ing.name }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  {{- with $ing.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  rules:
+    {{- range $ing.hosts }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: {{ $fullname }}
+                port:
+                  name: {{ ternary "doh" "dns-tcp" $isDoh }}
+            path: {{ ternary "/dns-query" "/" $isDoh }}
+            pathType: {{ ternary "Exact" "Prefix" $isDoh }}
+    {{- end }}
+  {{- with $ing.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

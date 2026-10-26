@@ -1,0 +1,6 @@
+values:
+  config:
+    dot:
+      enabled: true
+expect:
+  error: invalid propertyName 'enabled'

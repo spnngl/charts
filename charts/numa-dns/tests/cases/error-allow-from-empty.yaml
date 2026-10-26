@@ -1,0 +1,6 @@
+values:
+  config:
+    server:
+      allow_from: []
+expect:
+  error: allow_from

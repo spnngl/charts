@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    {{- if .Values.autoscaling.enabled }}
+    ignore-check.kube-linter.io/minimum-three-replicas: "The HPA owns the replica count; hpa-minimum-three-replicas checks its minReplicas."
+    {{- end }}
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read; a nodeAffinity would be replaced by a user affinity override."
+    {{- if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: the user chose no isolation."
+    {{- end }}
+    {{- if ne .Values.strategy.type "RollingUpdate" }}
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "strategy.type is a user choice."
+    {{- end }}
+  labels:
+    {{- include "numa-dns.labels" . | nindent 4 }}
+  name: {{ include "numa-dns.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  minReadySeconds: {{ .Values.minReadySeconds }}
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "numa-dns.selectorLabels" . | nindent 6 }}
+  strategy:
+    {{- if eq .Values.strategy.type "Recreate" }}
+    type: Recreate
+    {{- else }}
+    {{- toYaml .Values.strategy | nindent 4 }}
+    {{- end }}
+  template:
+    metadata:
+      annotations:
+        {{- toYaml (merge (dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum)) (deepCopy .Values.podAnnotations)) | nindent 8 }}
+      labels:
+        {{- toYaml (merge (include "numa-dns.labels" . | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      affinity:
+        {{- include "numa-dns.affinity" . | nindent 8 }}
+      automountServiceAccountToken: false
+      containers:
+        {{- if .Values.extraEnv }}
+        - env:
+            {{- toYaml .Values.extraEnv | nindent 12 }}
+          image: {{ include "numa-dns.image" . | quote }}
+        {{- else }}
+        - image: {{ include "numa-dns.image" . | quote }}
+        {{- end }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          name: numa-dns
+          ports:
+            - containerPort: 8053
+              name: dns-udp
+              protocol: UDP
+            - containerPort: 8053
+              name: dns-tcp
+              protocol: TCP
+            - containerPort: 8443
+              name: doh
+              protocol: TCP
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /root/.config/numa
+              name: config
+              readOnly: true
+            - mountPath: /var/lib/numa
+              name: data
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      dnsConfig:
+        {{- toYaml .Values.dnsConfig | nindent 8 }}
+      dnsPolicy: {{ .Values.dnsPolicy }}
+      enableServiceLinks: false
+      hostUsers: {{ .Values.hostUsers }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "numa-dns.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 15
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      topologySpreadConstraints:
+        {{- include "numa-dns.topologySpreadConstraints" . | nindent 8 }}
+      volumes:
+        - configMap:
+            name: {{ include "numa-dns.fullname" . }}
+          name: config
+        - emptyDir:
+            sizeLimit: {{ .Values.dataSizeLimit }}
+          name: data
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}

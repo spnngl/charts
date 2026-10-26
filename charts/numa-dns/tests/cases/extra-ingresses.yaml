@@ -1,0 +1,17 @@
+values:
+  extraIngresses:
+    - nameSuffix: dot
+      port: dns-tcp
+      className: haproxy
+      annotations:
+        haproxy-ingress.github.io/tcp-service-port: "853"
+      labels:
+        external-dns: "true"
+      hosts:
+        - dns.example.com
+      tls:
+        - hosts:
+            - dns.example.com
+    - nameSuffix: doh
+      hosts:
+        - doh.example.com

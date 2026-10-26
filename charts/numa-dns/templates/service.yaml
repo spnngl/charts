@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "numa-dns.labels" . | nindent 4 }}
+  name: {{ include "numa-dns.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: dns
+      port: 53
+      protocol: UDP
+      targetPort: dns-udp
+    - name: dns-tcp
+      port: 53
+      protocol: TCP
+      targetPort: dns-tcp
+    - appProtocol: https
+      name: doh
+      port: 443
+      protocol: TCP
+      targetPort: doh
+  selector:
+    {{- include "numa-dns.selectorLabels" . | nindent 4 }}
+  type: ClusterIP
