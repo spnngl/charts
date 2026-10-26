@@ -1,0 +1,11 @@
+{{- include "cinny.validate" . }}
+apiVersion: v1
+data:
+  config.json: |
+    {{- .Values.config | toPrettyJson | nindent 4 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "cinny.labels" . | nindent 4 }}
+  name: {{ include "cinny.fullname" . }}
+  namespace: {{ .Release.Namespace }}

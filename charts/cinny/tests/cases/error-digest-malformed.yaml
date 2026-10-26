@@ -1,0 +1,6 @@
+values:
+  image:
+    tag: 4.12.6
+    digest: abc
+expect:
+  error: at '/image/digest'

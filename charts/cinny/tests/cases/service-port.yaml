@@ -1,0 +1,9 @@
+values:
+  service:
+    port: 80
+  httpRoute:
+    enabled: true
+    parentRefs:
+    - name: gw
+    hostnames:
+    - chat.example.com

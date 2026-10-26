@@ -1,0 +1,5 @@
+values:
+  image:
+    repository: registry.example.com/cinny
+expect:
+  error: is not an image pinned in Chart.yaml

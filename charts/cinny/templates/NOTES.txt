@@ -1,0 +1,32 @@
+{{ include "cinny.fullname" . }} serves the Cinny web client (Deployment, stateless).
+
+Cinny runs in the browser: it talks to the homeservers of config.homeserverList
+directly, never through this pod, so they must be reachable from your users'
+browsers.
+{{- $hosts := concat (ternary .Values.ingress.hosts list .Values.ingress.enabled) (ternary .Values.httpRoute.hostnames list .Values.httpRoute.enabled) | uniq }}
+{{- if $hosts }}
+
+Open:
+{{- range $hosts }}
+  https://{{ . }}/
+{{- end }}
+
+Or, from your machine:
+{{- else }}
+
+From your machine:
+{{- end }}
+
+  kubectl -n {{ .Release.Namespace }} port-forward service/{{ include "cinny.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+  then open http://localhost:{{ .Values.service.port }}/
+{{- if and .Values.metrics.enabled (or .Values.ingress.enabled .Values.httpRoute.enabled) }}
+
+metrics.enabled is true: /metrics is served on the app port, without authentication,
+so the Ingress or HTTPRoute publishes it. Block the path in your proxy.
+{{- end }}
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: the pod runs in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) cannot start it; set
+hostUsers=true to use host users.
+{{- end }}

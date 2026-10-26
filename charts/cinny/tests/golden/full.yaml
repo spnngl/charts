@@ -1,0 +1,404 @@
+---
+# Source: cinny/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: web
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cinny-0.0.0
+  name: cinny-web
+  namespace: cinny
+spec:
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress
+      ports:
+      - port: 8080
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: cinny
+      app.kubernetes.io/name: web
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Source: cinny/templates/pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: web
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cinny-0.0.0
+  name: cinny-web
+  namespace: cinny
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: cinny
+      app.kubernetes.io/name: web
+  unhealthyPodEvictionPolicy: AlwaysAllow
+---
+# Source: cinny/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: web
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cinny-0.0.0
+  name: cinny-web
+  namespace: cinny
+---
+# Source: cinny/templates/configmap.yaml
+apiVersion: v1
+data:
+  config.json: |
+    {
+      "allowCustomHomeservers": true,
+      "defaultHomeserver": 0,
+      "homeserverList": [
+        "matrix.org"
+      ]
+    }
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: web
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cinny-0.0.0
+  name: cinny-web
+  namespace: cinny
+---
+# Source: cinny/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: web
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cinny-0.0.0
+  name: cinny-web
+  namespace: cinny
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/name: web
+  type: ClusterIP
+---
+# Source: cinny/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/dnsconfig-options: "The server resolves no name: it serves local files and opens no connection."
+    ignore-check.kube-linter.io/minimum-three-replicas: "The HPA owns the replica count; hpa-minimum-three-replicas checks its minReplicas."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: web
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cinny-0.0.0
+  name: cinny-web
+  namespace: cinny
+spec:
+  minReadySeconds: 10
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: cinny
+      app.kubernetes.io/name: web
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        a: b
+        checksum/config: 678f9ec3de405e956b820bb3db3fdf2f0784615fba57ad6f854047cdace7c610
+      labels:
+        app.kubernetes.io/instance: cinny
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: web
+        app.kubernetes.io/version: 0.0.0
+        c: d
+        helm.sh/chart: cinny-0.0.0
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: disk
+                operator: In
+                values:
+                - ssd
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: cinny
+                  app.kubernetes.io/name: web
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            - name: SERVER_GRACE_PERIOD
+              value: "5"
+            - name: SERVER_METRICS
+              value: "true"
+            - name: SERVER_LOG_LEVEL
+              value: warn
+          image: "ghcr.io/spnngl/images/cinny:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          name: cinny
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /app/config.json
+              name: config
+              readOnly: true
+              subPath: config.json
+      enableServiceLinks: false
+      hostUsers: false
+      imagePullSecrets:
+        - name: regcred
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: low
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: cinny-web
+      terminationGracePeriodSeconds: 15
+      tolerations:
+        - key: k
+          operator: Exists
+      topologySpreadConstraints:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: cinny
+              app.kubernetes.io/name: web
+          maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+      volumes:
+        - configMap:
+            name: cinny-web
+          name: config
+---
+# Source: cinny/templates/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/hpa-minimum-three-replicas: "Cinny is a stateless static server: two replicas keep a rolling update gap-free."
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: web
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cinny-0.0.0
+  name: cinny-web
+  namespace: cinny
+spec:
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  maxReplicas: 10
+  metrics:
+    - resource:
+        name: cpu
+        target:
+          averageUtilization: 75
+          type: Utilization
+      type: Resource
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cinny-web
+---
+# Source: cinny/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: web
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: cinny-0.0.0
+  name: cinny-web
+  namespace: cinny
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "chat.example.com"
+      http:
+        paths:
+          - backend:
+              service:
+                name: cinny-web
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+      - chat.example.com
+      secretName: chat-tls
+---
+# Source: cinny/templates/httproute.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: web
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: cinny-0.0.0
+  name: cinny-web
+  namespace: cinny
+spec:
+  hostnames:
+    - chat.example.com
+  parentRefs:
+    - name: gw
+  rules:
+    - backendRefs:
+        - name: cinny-web
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
+# Source: cinny/templates/servicemonitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: web
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: cinny-0.0.0
+  name: cinny-web
+  namespace: cinny
+spec:
+  endpoints:
+    - path: /metrics
+      port: http
+  namespaceSelector:
+    matchNames:
+      - cinny
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: cinny
+      app.kubernetes.io/name: web
+---
+# Source: cinny/templates/vpa.yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: web
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cinny-0.0.0
+  name: cinny-web
+  namespace: cinny
+spec:
+  resourcePolicy:
+    containerPolicies:
+      - containerName: cinny
+        controlledResources:
+        - cpu
+        - memory
+        controlledValues: RequestsAndLimits
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cinny-web
+  updatePolicy:
+    updateMode: "Off"

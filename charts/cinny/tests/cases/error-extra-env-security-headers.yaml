@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+  - name: SERVER_SECURITY_HEADERS
+    value: "true"
+expect:
+  error: "at '/extraEnv/0/name': 'not' failed"

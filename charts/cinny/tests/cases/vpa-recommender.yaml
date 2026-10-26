@@ -1,0 +1,10 @@
+values:
+  verticalPodAutoscaler:
+    enabled: true
+    recommender: custom
+    updateMode: InPlaceOrRecreate
+    minAllowed:
+      cpu: 10m
+      memory: 16Mi
+    maxAllowed:
+      memory: 256Mi

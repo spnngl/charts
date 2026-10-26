@@ -1,0 +1,217 @@
+---
+# Source: cinny/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cinny
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cinny-0.0.0
+  name: chat
+  namespace: cinny
+spec:
+  ingress:
+    - ports:
+      - port: 8080
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: cinny
+      app.kubernetes.io/name: cinny
+  policyTypes:
+    - Ingress
+---
+# Source: cinny/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cinny
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cinny-0.0.0
+  name: chat
+  namespace: cinny
+---
+# Source: cinny/templates/configmap.yaml
+apiVersion: v1
+data:
+  config.json: |
+    {
+      "allowCustomHomeservers": true,
+      "defaultHomeserver": 0,
+      "homeserverList": [
+        "matrix.org"
+      ]
+    }
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cinny
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cinny-0.0.0
+  name: chat
+  namespace: cinny
+---
+# Source: cinny/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cinny
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cinny-0.0.0
+  name: chat
+  namespace: cinny
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/name: cinny
+  type: ClusterIP
+---
+# Source: cinny/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/dnsconfig-options: "The server resolves no name: it serves local files and opens no connection."
+    ignore-check.kube-linter.io/minimum-three-replicas: "Cinny is a stateless static server: two replicas keep a rolling update gap-free."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/instance: cinny
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cinny
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cinny-0.0.0
+  name: chat
+  namespace: cinny
+spec:
+  minReadySeconds: 10
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: cinny
+      app.kubernetes.io/name: cinny
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/config: 7df94cae536971d4f936d863ee623c49a93554730721fd0da12a7b3276df1c5f
+      labels:
+        app.kubernetes.io/instance: cinny
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: cinny
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: cinny-0.0.0
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: cinny
+                  app.kubernetes.io/name: cinny
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            - name: SERVER_GRACE_PERIOD
+              value: "5"
+          image: "ghcr.io/spnngl/images/cinny:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          name: cinny
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /app/config.json
+              name: config
+              readOnly: true
+              subPath: config.json
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: chat
+      terminationGracePeriodSeconds: 15
+      topologySpreadConstraints:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: cinny
+              app.kubernetes.io/name: cinny
+          maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+      volumes:
+        - configMap:
+            name: chat
+          name: config

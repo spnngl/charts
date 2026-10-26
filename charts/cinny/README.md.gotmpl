@@ -1,0 +1,150 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.description" . }}
+
+Runs [Cinny](https://github.com/cinnyapp/cinny), a Matrix web client, as a
+stateless Deployment of two replicas. The image is built from
+[spnngl/images](https://github.com/spnngl/images): `scratch`,
+[static-web-server](https://static-web-server.net/), non-root, no shell.
+
+Cinny runs in the browser: the pods only serve its static files. The browser
+talks to the homeservers directly, so they must be reachable from your users,
+not from the cluster.
+
+## Install
+
+```sh
+helm install cinny oci://ghcr.io/spnngl/charts/cinny --version <version> -n cinny --create-namespace
+```
+
+## Settings
+
+`config` is Cinny's `config.json`, rendered into a ConfigMap and mounted over
+the image's file; a change rolls the pods (`checksum/config`). It is served to
+every browser: keep secrets out. Keys Cinny reads:
+
+| Key | Meaning |
+|-----|---------|
+| `homeserverList` | Homeservers offered at login (server names or `https://` URLs) |
+| `defaultHomeserver` | Index of the preselected one in `homeserverList` |
+| `allowCustomHomeservers` | Let users type another homeserver |
+| `featuredCommunities` | `openAsDefault`, `spaces`, `rooms`, `servers` shown in Explore |
+| `hashRouter` | `enabled`, `basename`: route with `#/` URLs |
+
+For example, a client locked to your homeserver:
+
+```yaml
+config:
+  allowCustomHomeservers: false
+  homeserverList:
+    - example.com
+```
+
+Maps merge with the chart defaults, lists replace them; set a key to `null` to
+drop it. Cinny looks each entry up at
+`https://<name>/.well-known/matrix/client` (CORS headers needed:
+`Access-Control-Allow-Origin: *`) to find the homeserver URL; when that file is
+missing or unreachable, it uses `https://<name>` itself.
+
+`gracePeriodSeconds` (default `5`) is how long a pod keeps serving after
+`SIGTERM`, while Services and proxies stop routing to it; it then drains open
+requests.
+
+Other static-web-server settings (`SERVER_*` variables) go in
+`extraEnv`; the names the chart sets or relies on are rejected (see the value).
+
+The server sends no security headers, on purpose: Cinny frames its bundled
+Element Call from its own origin, which `X-Frame-Options: DENY` would block.
+Set the headers you want at your ingress or gateway (for clickjacking,
+`Content-Security-Policy: frame-ancestors 'self'` instead of `X-Frame-Options`).
+
+## Access
+
+```sh
+kubectl -n cinny port-forward service/cinny 8080:8080
+```
+
+then <http://localhost:8080/>. `ingress` (Ingress) and `httpRoute` (Gateway API
+HTTPRoute) expose it publicly; both need explicit hosts (and `parentRefs` for the
+route). Cinny is built for the root path: serve it on its own host, not under
+a prefix. Every unknown path answers `index.html`, so deep links work.
+
+The image serves plain HTTP: terminate TLS in front.
+
+## Image
+
+The default image is `appVersion`, pinned by the digest recorded in the
+`artifacthub.io/images` annotation of `Chart.yaml` (Renovate updates tag and
+digest together). Setting `image.tag` drops that digest; add `image.digest` to
+pin the tag again (a digest without a tag is an error).
+
+The image is signed with cosign (keyless, GitHub Actions OIDC). Verify a digest with:
+
+```sh
+cosign verify \
+  --certificate-identity-regexp 'https://github.com/spnngl/images/.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ghcr.io/spnngl/images/cinny@sha256:<digest>
+```
+
+## Security
+
+Defaults satisfy the `restricted` Pod Security Standard: non-root uid/gid 65532,
+read-only root filesystem, all capabilities dropped, no privilege escalation,
+`RuntimeDefault` seccomp, no ServiceAccount token, no Service environment
+variables. The server writes nothing to disk.
+
+### User namespaces
+
+`hostUsers: false` (default) runs the pod in a user namespace: uid 65532 in
+the pod maps to an unprivileged host uid, which limits what a container escape
+gains. Nodes need a container runtime with user namespace support
+(containerd 2.0+ or CRI-O), runc 1.2+ or crun, and a Linux kernel 6.3+. On other
+nodes the pod sandbox cannot be created: set `hostUsers: true`.
+
+## Network
+
+The NetworkPolicy (`networkPolicy.enabled`, on by default) allows the HTTP port
+(8080). Restrict the sources with `networkPolicy.http.from` (your ingress
+controller or Gateway, and Prometheus with metrics); empty means any source.
+`networkPolicy.egress.enabled` (off by default) allows only `extraEgress`: the
+server opens no connection and resolves no name, so an empty list denies all
+egress safely.
+
+## Metrics
+
+`metrics.enabled` serves Prometheus metrics (`sws_http_requests_total`,
+`sws_http_request_duration_seconds`, ...) on `/metrics`, on the app port and
+without authentication: an Ingress or HTTPRoute publishes them too, so block the
+path in your proxy. `metrics.serviceMonitor` or `metrics.podMonitor` (one of
+them) creates the Prometheus Operator scrape object.
+
+## Autoscaling and resources
+
+Two replicas, spread over nodes (preferred pod anti-affinity) and zones
+(`ScheduleAnyway`), rolled one at a time without dropping below the replica
+count. `podDisruptionBudget` (off by default) keeps node drains from evicting
+both at once.
+
+`autoscaling` (off by default) creates a HorizontalPodAutoscaler on CPU; the
+target is a percentage of `resources.requests.cpu`, so size requests first.
+`verticalPodAutoscaler` (off by default) supports `Off`, `Initial`, `Recreate`
+and `InPlaceOrRecreate` (in-place resize needs Kubernetes 1.33+); it must not act
+on a resource the HPA scales. A recommender started with another
+`--recommender-name` than `default` ignores the VPA unless
+`verticalPodAutoscaler.recommender` names it. The default requests (`10m` CPU,
+`16Mi` memory) are scheduling floors, not a sizing: measure then tune.
+
+## Compatibility
+
+The values schema is strict: unknown keys fail the install. A breaking change
+to values bumps the chart MAJOR version; deprecations are announced one MINOR
+version ahead. Requires Kubernetes 1.33 or later.
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}
