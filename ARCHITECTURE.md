@@ -185,10 +185,12 @@ runs so `plan.nu` never races itself):
 with `.tgz` + SBOM → package visibility check (warning if not public).
 
 Then two jobs: `tooling/release/artifacthub.nu --all` for **every** published
-chart (search the AH repository by OCI URL, create it as `spnngl-<chart>` if
-missing, `oras push` `artifacthub-repo.yml` with the `repositoryID` to
-`<chart>:artifacthub.io`; idempotent, skipped with a warning without AH
-secrets, so it also catches charts published before the secrets existed), and
+chart (list the API key user's AH repositories once, paginated, since one
+search per chart hits HTTP 429; create a missing one as `spnngl-<chart>`;
+`oras push` `artifacthub-repo.yml` with the `repositoryID` to
+`<chart>:artifacthub.io` unless that tag already has the same layer digest;
+idempotent, skipped with a warning without AH secrets, so it also catches
+charts published before the secrets existed), and
 `tooling/release/verify.nu` running the documented verify commands from a job
 without repo secrets (matrix, in parallel). `workflow_dispatch` with nothing to publish still runs
 the Artifact Hub job.

@@ -12,6 +12,7 @@ use ../crdgen/exec.nu [run-checked]
 
 const AH_API = "https://artifacthub.io/api/v1"
 const METADATA_LAYER_TYPE = "application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml"
+const PAGE_SIZE = 60 # AH API maximum `limit`
 
 def headers []: nothing -> record {
   {"X-API-KEY-ID": $env.AH_API_KEY_ID, "X-API-KEY-SECRET": $env.AH_API_KEY_SECRET}
@@ -40,9 +41,27 @@ def ah-post [path: string, body: record]: nothing -> nothing {
 
 # Artifact Hub caches search responses per query string, so a lookup made
 # before creation would keep returning [] afterwards: bust it with a nonce.
-def find-repository [url: string]: nothing -> oneof<record, nothing> {
+# Parsed response body: untyped external data.
+def ah-search [query: record]: nothing -> any {
   let nonce = (date now | format date %s%f)
-  ah-get $"/repositories/search?({url: $url, limit: 10, nonce: $nonce} | url build-query)" | where url == $url | get 0?
+  ah-get $"/repositories/search?($query | insert nonce $nonce | url build-query)"
+}
+
+# Every AH repository of the API key's user. One paginated listing rather
+# than one search per chart, which trips the AH rate limit (HTTP 429).
+def list-repositories []: nothing -> list<record> {
+  let alias = (ah-get "/users/profile" | get -o alias)
+  if ($alias | is-empty) {
+    error make {msg: "Artifact Hub /users/profile returned no alias: check AH_API_KEY_ID and AH_API_KEY_SECRET"}
+  }
+  generate {|offset|
+    let page = (ah-search {user: $alias, limit: $PAGE_SIZE, offset: $offset})
+    if ($page | length) < $PAGE_SIZE { {out: $page} } else { {out: $page, next: ($offset + $PAGE_SIZE)} }
+  } 0 | flatten
+}
+
+def find-repository [url: string]: nothing -> oneof<record, nothing> {
+  ah-search {url: $url, limit: 10} | where url == $url | get 0?
 }
 
 # Creation is asynchronous on the AH side; poll a few times.
@@ -60,26 +79,37 @@ def is-published [chart: string]: nothing -> bool {
   (^oras repo tags $"($OCI_HOST_PATH)/($chart)" | complete | get exit_code) == 0
 }
 
-# Ensure the AH repository exists and the metadata artifact is pushed. Returns the repositoryID.
-def ensure [chart: string, template: record]: nothing -> string {
+# Register the AH repository of a chart. Returns it once AH lists it.
+def register-repository [chart: string]: nothing -> record {
   let url = $"($OCI_BASE)/($chart)"
-  let existing = (find-repository $url)
-  let repo = (if $existing == null {
-    print $"  registering ($url) as ($chart)"
-    ah-post "/repositories/user" {kind: 0, name: (ah-repo-name $chart), display_name: $chart, url: $url}
-    find-repository-retry $url
-  } else {
-    $existing
-  })
-  if $repo == null {
+  print $"  registering ($url) as ($chart)"
+  ah-post "/repositories/user" {kind: 0, name: (ah-repo-name $chart), display_name: $chart, url: $url}
+  let created = (find-repository-retry $url)
+  if $created == null {
     error make {msg: $"Artifact Hub repository for ($url) not found after creation"}
   }
+  $created
+}
+
+# Digest of the metadata layer at <chart>:artifacthub.io, null when absent.
+def pushed-metadata-digest [chart: string]: nothing -> oneof<string, nothing> {
+  let r = (^oras manifest fetch $"($OCI_HOST_PATH)/($chart):artifacthub.io" | complete)
+  if $r.exit_code != 0 { return null }
+  $r.stdout | from json | get -o layers | default [] | where {|layer| $layer.mediaType? == $METADATA_LAYER_TYPE } | get -o 0.digest
+}
+
+# Push the AH metadata artifact (artifacthub-repo.yml) of a chart, unless the
+# registry already holds the same content: a push always makes a new manifest
+# (creation timestamp). Returns whether it pushed.
+def push-metadata [chart: string, metadata: record]: nothing -> bool {
+  let yaml = ($metadata | to yaml)
+  if (pushed-metadata-digest $chart) == $"sha256:($yaml | hash sha256)" { return false }
   let dir = (mktemp -d -t ah.XXXXXX)
-  $template | upsert repositoryID $repo.repository_id | to yaml | save -f ($dir | path join "artifacthub-repo.yml")
+  $yaml | save -f ($dir | path join "artifacthub-repo.yml")
   try {
     run-checked $"oras push of Artifact Hub metadata for ($chart)" { cd $dir; ^oras push $"($OCI_HOST_PATH)/($chart):artifacthub.io" $"artifacthub-repo.yml:($METADATA_LAYER_TYPE)" } | ignore
   } finally { rm -rf $dir }
-  $repo.repository_id
+  true
 }
 
 # Register charts on Artifact Hub and push their metadata artifact.
@@ -97,12 +127,17 @@ def main [
   } else if ($charts | is-empty) {
     error make {msg: "give chart names or --all"}
   } else { $charts })
+  let repos = (list-repositories)
   for chart in $selected {
-    if not (is-published $chart) {
+    let url = $"($OCI_BASE)/($chart)"
+    let listed = ($repos | where url == $url | get 0?)
+    # Listed on AH implies published: ask the registry only about the others.
+    if $listed == null and not (is-published $chart) {
       print $"skip  ($chart): not published yet"
       continue
     }
-    let id = (ensure $chart $template)
-    print $"ok    ($chart): https://artifacthub.io/packages/helm/(ah-repo-name $chart)/($chart) \(repository ($id)\)"
+    let id = (if $listed == null { register-repository $chart } else { $listed } | get repository_id)
+    let metadata = (if (push-metadata $chart ($template | upsert repositoryID $id)) { "pushed" } else { "unchanged" })
+    print $"ok    ($chart): https://artifacthub.io/packages/helm/(ah-repo-name $chart)/($chart) \(repository ($id), metadata ($metadata)\)"
   }
 }
