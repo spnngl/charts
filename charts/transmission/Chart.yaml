@@ -3,7 +3,7 @@ apiVersion: v2
 name: transmission
 description: Transmission BitTorrent daemon and web UI as a hardened single-replica StatefulSet, with an optional Prometheus exporter sidecar
 type: application
-version: 0.2.5
+version: 0.2.6
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/transmission
 appVersion: "4.1.3"
 kubeVersion: ">=1.33.0-0"
@@ -30,7 +30,7 @@ annotations:
     - name: transmission
       image: ghcr.io/spnngl/images/transmission:4.1.3@sha256:d8292c57d8232a6ded62207d4709f6b8e80a121016a88c704bafcd7770e34a0d
     - name: transmission-exporter
-      image: ghcr.io/spnngl/images/transmission-exporter:0.5.0@sha256:62aadb3627ff62372e7a986606864f3c1cb29312ac7067c0573585bee7c7e90b
+      image: ghcr.io/spnngl/images/transmission-exporter:0.5.0@sha256:a87f65f1fe0853d0ff3ba1ba7d733fdaa64cb32446ec125c7e1413957099cb51
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://transmissionbt.com
