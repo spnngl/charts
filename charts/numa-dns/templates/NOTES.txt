@@ -1,0 +1,27 @@
+{{ include "numa-dns.fullname" . }} runs numa behind one Service.
+
+In-cluster clients use the Service on port 53 (UDP and TCP):
+
+  kubectl -n {{ .Release.Namespace }} run dig --rm -it --restart=Never --image=<an image with dig> -- \
+    dig @{{ include "numa-dns.fullname" . }}.{{ .Release.Namespace }}.svc example.com
+
+Check that the pods are ready:
+
+  kubectl -n {{ .Release.Namespace }} get pods -l {{ include "numa-dns.selectorLabels" . | replace ": " "=" | replace "\n" "," }}
+{{- if .Values.ingress.enabled }}
+{{ include "numa-dns.notesIngress" (dict "name" "ingress" "ing" .Values.ingress) }}
+{{- end }}
+{{- range .Values.extraIngresses }}
+{{ include "numa-dns.notesIngress" (dict "name" (printf "extraIngresses[%s]" .nameSuffix) "ing" .) }}
+{{- end }}
+
+The dashboard and API listen on loopback in each pod and give full admin
+access without a token to anything that reaches them; reach one pod with:
+
+  kubectl -n {{ .Release.Namespace }} port-forward deploy/{{ include "numa-dns.fullname" . }} 5380:5380
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: pods run in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) cannot start them; set
+hostUsers=true to use host users.
+{{- end }}

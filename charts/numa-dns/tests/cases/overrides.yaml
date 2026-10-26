@@ -1,0 +1,34 @@
+values:
+  strategy:
+    type: Recreate
+  serviceAccount:
+    create: false
+  hostUsers: true
+  dnsPolicy: Default
+  fullnameOverride: a-rather-long-release-name-that-goes-on-and-on-and-on-past-limit
+  ingress:
+    enabled: true
+    port: dns-tcp
+    hosts:
+      - dns.example.com
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: numa-dns
+          topologyKey: kubernetes.io/hostname
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: disktype
+                operator: In
+                values: [ssd]
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: numa-dns

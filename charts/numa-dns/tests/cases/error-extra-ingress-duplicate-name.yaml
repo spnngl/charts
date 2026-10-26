@@ -1,0 +1,8 @@
+values:
+  extraIngresses:
+    - nameSuffix: dot
+      hosts: [a.example.com]
+    - nameSuffix: dot
+      hosts: [b.example.com]
+expect:
+  error: used twice

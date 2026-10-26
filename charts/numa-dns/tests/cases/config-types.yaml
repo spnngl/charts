@@ -1,0 +1,27 @@
+# Integers stay integers, lists of maps stay lists, strings are escaped.
+values:
+  config:
+    cache:
+      max_entries: 100000
+      min_ttl: 60
+    blocking:
+      enabled: true
+      lists:
+        - https://example.com/list.txt
+    zones:
+      - domain: home.example
+        record_type: A
+        value: 192.168.1.10
+        ttl: 300
+      - domain: "quote\"s and é.example"
+        record_type: TXT
+        value: "a \\ b"
+    server:
+      allow_from:
+        - 10.0.0.0/8
+      rebind_allowlist: ["corp.example"]
+    upstream:
+      timeout_ms: 2500
+      fallback: https://9.9.9.9/dns-query
+      pins:
+        a.example: tls://1.1.1.1

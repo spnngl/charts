@@ -1,0 +1,5 @@
+values:
+  extraIngresses:
+    - hosts: [a.example.com]
+expect:
+  error: nameSuffix

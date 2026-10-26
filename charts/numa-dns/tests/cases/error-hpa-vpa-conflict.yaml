@@ -1,0 +1,8 @@
+values:
+  autoscaling:
+    enabled: true
+  verticalPodAutoscaler:
+    enabled: true
+    updateMode: Recreate
+expect:
+  error: HPA and VPA must not act on the same

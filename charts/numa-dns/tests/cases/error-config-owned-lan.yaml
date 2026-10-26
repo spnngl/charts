@@ -1,0 +1,6 @@
+values:
+  config:
+    lan:
+      enabled: true
+expect:
+  error: invalid propertyName 'enabled'

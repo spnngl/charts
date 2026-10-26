@@ -1,0 +1,6 @@
+values:
+  ingress:
+    enabled: true
+    hosts:
+      - dns.example.com
+      - dns2.example.com

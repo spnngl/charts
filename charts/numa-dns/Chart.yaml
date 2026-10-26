@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: numa-dns
+description: Numa DNS resolver (ad blocking, local zones, DoT and DoH behind an ingress) running as a hardened, highly available Deployment
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/numa-dns
+appVersion: "0.25.0"
+kubeVersion: ">=1.33.0-0"
+home: https://github.com/razvandimescu/numa
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/razvandimescu/numa
+  - https://github.com/spnngl/images/tree/main/containers/numa-dns
+keywords:
+  - dns
+  - dot
+  - doh
+  - resolver
+  - ad-blocking
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: MIT
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # numa-dns.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: numa-dns
+      image: ghcr.io/spnngl/images/numa-dns:0.25.0@sha256:0db6a8daad9537a699af719a67d4523240fc18330c0334caa37fe0660bcef1fc
+  artifacthub.io/links: |-
+    - name: Upstream project
+      url: https://github.com/razvandimescu/numa
+    - name: Image build
+      url: https://github.com/spnngl/images/tree/main/containers/numa-dns
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/numa-dns
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

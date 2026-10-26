@@ -1,0 +1,6 @@
+values:
+  config:
+    mobile:
+      enabled: true
+expect:
+  error: invalid propertyName 'enabled'

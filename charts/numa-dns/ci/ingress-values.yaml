@@ -1,0 +1,23 @@
+# CI install: DoH Ingress plus a DoT extra Ingress, so the Ingress objects are admitted by a real API server.
+hostUsers: true
+ingress:
+  enabled: true
+  className: example
+  annotations:
+    example.com/backend-protocol: h1-ssl
+  hosts:
+    - dns.example.com
+  tls:
+    - hosts:
+        - dns.example.com
+extraIngresses:
+  - nameSuffix: dot
+    className: example
+    port: dns-tcp
+    annotations:
+      example.com/tcp-service-port: "853"
+    hosts:
+      - dns.example.com
+    tls:
+      - hosts:
+          - dns.example.com

@@ -1,0 +1,5 @@
+values:
+  ingress:
+    port: dot
+expect:
+  error: /ingress/port

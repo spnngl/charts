@@ -1,0 +1,58 @@
+values:
+  hostUsers: true
+  replicaCount: 5
+  image:
+    tag: 0.25.0
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+  verticalPodAutoscaler:
+    enabled: true
+    updateMode: "Off"
+    minAllowed:
+      memory: 64Mi
+  podDisruptionBudget:
+    enabled: true
+  service:
+    annotations:
+      example.com/note: hello
+  ingress:
+    enabled: true
+    className: haproxy
+    annotations:
+      haproxy-ingress.github.io/backend-protocol: h1-ssl
+    hosts:
+      - dns.example.com
+    tls:
+      - hosts:
+          - dns.example.com
+  extraIngresses:
+    - nameSuffix: dot
+      className: haproxy
+      port: dns-tcp
+      annotations:
+        haproxy-ingress.github.io/tcp-service-port: "853"
+      hosts:
+        - dns.example.com
+      tls:
+        - hosts:
+            - dns.example.com
+  networkPolicy:
+    ingress:
+      from:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+    egress:
+      enabled: true
+  podAnnotations:
+    example.com/note: hello
+  podLabels:
+    example.com/team: edge
+  priorityClassName: system-cluster-critical
+  extraVolumes:
+    - name: scratch
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: scratch
+      mountPath: /tmp

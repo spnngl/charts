@@ -1,0 +1,6 @@
+values:
+  extraIngresses:
+    - nameSuffix: dot
+      port: dns-tcp
+expect:
+  error: extraIngresses[dot].hosts is required

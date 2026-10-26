@@ -1,0 +1,252 @@
+---
+# Source: numa-dns/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: numa-dns
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: numa-dns
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: numa-dns-0.0.0
+  name: numa-dns
+  namespace: numa-dns
+spec:
+  ingress:
+    - ports:
+      - port: 8053
+        protocol: UDP
+      - port: 8053
+        protocol: TCP
+      - port: 8443
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: numa-dns
+      app.kubernetes.io/name: numa-dns
+  policyTypes:
+    - Ingress
+---
+# Source: numa-dns/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: numa-dns
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: numa-dns
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: numa-dns-0.0.0
+  name: numa-dns
+  namespace: numa-dns
+---
+# Source: numa-dns/templates/configmap.yaml
+apiVersion: v1
+data:
+  numa.toml: |
+    [dot]
+    enabled = false
+    [lan]
+    enabled = false
+    [mobile]
+    enabled = false
+    [proxy]
+    bind_addr = "0.0.0.0"
+    enabled = true
+    port = 8080
+    tls_port = 8443
+    [server]
+    allow_from = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10", "fc00::/7", "fe80::/10"]
+    api_bind_addr = "127.0.0.1"
+    bind_addr = ["0.0.0.0:8053"]
+    [upstream]
+    address = ["tls://1.1.1.1#cloudflare-dns.com", "tls://1.0.0.1#cloudflare-dns.com", "tls://8.8.8.8#dns.google", "tls://8.8.4.4#dns.google"]
+    fallback = "https://1.1.1.1/dns-query"
+    mode = "forward"
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: numa-dns
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: numa-dns
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: numa-dns-0.0.0
+  name: numa-dns
+  namespace: numa-dns
+---
+# Source: numa-dns/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: numa-dns
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: numa-dns
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: numa-dns-0.0.0
+  name: numa-dns
+  namespace: numa-dns
+spec:
+  ports:
+    - name: dns
+      port: 53
+      protocol: UDP
+      targetPort: dns-udp
+    - name: dns-tcp
+      port: 53
+      protocol: TCP
+      targetPort: dns-tcp
+    - appProtocol: https
+      name: doh
+      port: 443
+      protocol: TCP
+      targetPort: doh
+  selector:
+    app.kubernetes.io/instance: numa-dns
+    app.kubernetes.io/name: numa-dns
+  type: ClusterIP
+---
+# Source: numa-dns/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read; a nodeAffinity would be replaced by a user affinity override."
+  labels:
+    app.kubernetes.io/instance: numa-dns
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: numa-dns
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: numa-dns-0.0.0
+  name: numa-dns
+  namespace: numa-dns
+spec:
+  minReadySeconds: 5
+  replicas: 3
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: numa-dns
+      app.kubernetes.io/name: numa-dns
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/config: 37d3acc9f5902e39701f7e49e51ae7f0404b47b4735b2cc128c9a4c885ce80f9
+      labels:
+        app.kubernetes.io/instance: numa-dns
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: numa-dns
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: numa-dns-0.0.0
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: numa-dns
+                  app.kubernetes.io/name: numa-dns
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      automountServiceAccountToken: false
+      containers:
+        - image: "ghcr.io/spnngl/images/numa-dns:0.25.0@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+          livenessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            tcpSocket:
+              port: dns-tcp
+          name: numa-dns
+          ports:
+            - containerPort: 8053
+              name: dns-udp
+              protocol: UDP
+            - containerPort: 8053
+              name: dns-tcp
+              protocol: TCP
+            - containerPort: 8443
+              name: doh
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 2
+            periodSeconds: 5
+            tcpSocket:
+              port: dns-tcp
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            periodSeconds: 2
+            tcpSocket:
+              port: doh
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /root/.config/numa
+              name: config
+              readOnly: true
+            - mountPath: /var/lib/numa
+              name: data
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: numa-dns
+      terminationGracePeriodSeconds: 15
+      topologySpreadConstraints:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: numa-dns
+              app.kubernetes.io/name: numa-dns
+          matchLabelKeys:
+          - pod-template-hash
+          maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+      volumes:
+        - configMap:
+            name: numa-dns
+          name: config
+        - emptyDir:
+            sizeLimit: 64Mi
+          name: data

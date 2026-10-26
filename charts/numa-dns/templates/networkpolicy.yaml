@@ -1,0 +1,49 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $np := .Values.networkPolicy }}
+{{- $ports := list (dict "port" 8053 "protocol" "UDP") (dict "port" 8053 "protocol" "TCP") (dict "port" 8443 "protocol" "TCP") }}
+{{- $ingress := dict "ports" $ports }}
+{{- with $np.ingress.from }}{{ $_ := set $ingress "from" . }}{{ end }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    {{- include "numa-dns.labels" . | nindent 4 }}
+  name: {{ include "numa-dns.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- if $np.egress.enabled }}
+  egress:
+    - ports:
+        - port: 53
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+      {{- with $np.egress.dns.to }}
+      to:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    - ports:
+        - port: 53
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+        - port: 443
+          protocol: TCP
+        - port: 853
+          protocol: TCP
+      {{- with $np.egress.upstreams.to }}
+      to:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- end }}
+  ingress:
+    {{- toYaml (list $ingress) | nindent 4 }}
+  podSelector:
+    matchLabels:
+      {{- include "numa-dns.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    {{- if $np.egress.enabled }}
+    - Egress
+    {{- end }}
+{{- end }}

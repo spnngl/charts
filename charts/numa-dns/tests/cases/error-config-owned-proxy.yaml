@@ -1,0 +1,6 @@
+values:
+  config:
+    proxy:
+      tls_port: 443
+expect:
+  error: invalid propertyName 'tls_port'

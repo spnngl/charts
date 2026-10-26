@@ -1,0 +1,861 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "affinity": {
+      "additionalProperties": true,
+      "description": "Affinity. Empty: preferred podAntiAffinity on hostname. A non-empty value replaces that default wholesale.",
+      "required": [],
+      "type": "object"
+    },
+    "autoscaling": {
+      "additionalProperties": false,
+      "properties": {
+        "behavior": {
+          "additionalProperties": true,
+          "description": "HPA behavior. Slow scale-down: a removed pod drops its cache and its in-flight queries.",
+          "properties": {
+            "scaleDown": {
+              "additionalProperties": true,
+              "properties": {
+                "stabilizationWindowSeconds": {
+                  "type": "integer"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "enabled": {
+          "description": "Create a HorizontalPodAutoscaler. Enabling it drops `replicas` from the Deployment: it falls to 1 until the HPA reacts.",
+          "type": "boolean"
+        },
+        "maxReplicas": {
+          "description": "HPA maximum replicas.",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "metrics": {
+          "description": "Raw `autoscaling/v2` MetricSpec list. CPU `Utilization` is a percentage of `resources.requests.cpu`: with the 50m floor, 75% fires at ~38m, so size requests first.",
+          "items": {
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "minReplicas": {
+          "description": "HPA minimum replicas.",
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "config": {
+      "additionalProperties": true,
+      "description": "Free-form numa configuration, rendered to `numa.toml` (every key of numa's own `numa.toml` works: `[[zones]]` as `zones`, `blocking`, `cache`, ...). The default is the image's configuration. Chart-owned keys are rejected: `server.bind_addr`, `server.api_bind_addr`, `dot.enabled`, `lan.enabled`, `mobile.enabled`, `proxy.bind_addr`, `proxy.enabled`, `proxy.port`, `proxy.tls_port`. Read once at start; a change rolls the pods. numa logs an unknown key and carries on.",
+      "properties": {
+        "dot": {
+          "additionalProperties": true,
+          "propertyNames": {
+            "not": {
+              "enum": [
+                "enabled"
+              ],
+              "required": []
+            },
+            "required": []
+          },
+          "required": [],
+          "type": "object"
+        },
+        "lan": {
+          "additionalProperties": true,
+          "propertyNames": {
+            "not": {
+              "enum": [
+                "enabled"
+              ],
+              "required": []
+            },
+            "required": []
+          },
+          "required": [],
+          "type": "object"
+        },
+        "mobile": {
+          "additionalProperties": true,
+          "propertyNames": {
+            "not": {
+              "enum": [
+                "enabled"
+              ],
+              "required": []
+            },
+            "required": []
+          },
+          "required": [],
+          "type": "object"
+        },
+        "proxy": {
+          "additionalProperties": true,
+          "propertyNames": {
+            "not": {
+              "enum": [
+                "bind_addr",
+                "enabled",
+                "port",
+                "tls_port"
+              ],
+              "required": []
+            },
+            "required": []
+          },
+          "required": [],
+          "type": "object"
+        },
+        "server": {
+          "additionalProperties": true,
+          "properties": {
+            "allow_from": {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "propertyNames": {
+            "not": {
+              "enum": [
+                "api_bind_addr",
+                "bind_addr"
+              ],
+              "required": []
+            },
+            "required": []
+          },
+          "required": [
+            "allow_from"
+          ],
+          "type": "object"
+        },
+        "upstream": {
+          "additionalProperties": true,
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [
+        "server"
+      ],
+      "type": "object"
+    },
+    "dataSizeLimit": {
+      "description": "Size limit of the `emptyDir` on `/var/lib/numa` (CA, API token, blocklist cache).",
+      "type": "string"
+    },
+    "dnsConfig": {
+      "additionalProperties": true,
+      "description": "DNS config.",
+      "properties": {
+        "options": {
+          "description": "DNS options (fewer search-list lookups for numa's own name lookups, such as blocklist hosts).",
+          "items": {
+            "additionalProperties": true,
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "dnsPolicy": {
+      "description": "Pod DNS policy. `ClusterFirst`: numa forwards `cluster.local` names to the cluster DNS it finds in `resolv.conf`. `Default` turns that off.",
+      "enum": [
+        "ClusterFirst",
+        "ClusterFirstWithHostNet",
+        "Default",
+        "None"
+      ],
+      "type": "string"
+    },
+    "extraEnv": {
+      "description": "Extra environment variables (`EnvVar` list) for the numa container. numa logs through `env_logger` at `info`, so every query (client address, name) and the API token reach stdout: `RUST_LOG=warn` stops both (`numa::ctx` logs queries, `numa::serve` the token).",
+      "items": {
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraIngresses": {
+      "description": "More Ingresses, for example DoT next to a DoH `ingress`. Each item takes the `ingress` keys (`port` defaults to `doh`) plus a required, unique `nameSuffix`: the object is named `\u003cfullname\u003e-\u003cnameSuffix\u003e`. `hosts` is required.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "annotations": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "required": [],
+            "type": "object"
+          },
+          "className": {
+            "type": "string"
+          },
+          "hosts": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "required": [],
+            "type": "object"
+          },
+          "nameSuffix": {
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "type": "string"
+          },
+          "port": {
+            "enum": [
+              "doh",
+              "dns-tcp"
+            ],
+            "type": "string"
+          },
+          "tls": {
+            "items": {
+              "required": [],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "nameSuffix"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumeMounts": {
+      "description": "Extra volume mounts for the numa container.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumes": {
+      "description": "Extra volumes.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "fullnameOverride": {
+      "description": "Override the full resource name (default `\u003crelease\u003e-\u003cchart\u003e`).",
+      "type": "string"
+    },
+    "global": {
+      "description": "Global values are values that can be accessed from any chart or subchart by exactly the same name.",
+      "required": [],
+      "type": "object"
+    },
+    "hostUsers": {
+      "description": "Run the pod in a user namespace (`false`: container uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+); pods fail to start otherwise. `true` uses host users.",
+      "type": "boolean"
+    },
+    "image": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "description": "Image digest, only valid together with `image.tag`.",
+          "pattern": "^(sha256:[a-f0-9]{64})?$",
+          "type": "string"
+        },
+        "pullPolicy": {
+          "description": "Image pull policy.",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ],
+          "type": "string"
+        },
+        "repository": {
+          "description": "Image repository.",
+          "type": "string"
+        },
+        "tag": {
+          "description": "Image tag. Empty: `appVersion` pinned by the digest recorded in `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "imagePullSecrets": {
+      "description": "Image pull secrets (list of `{name: \u003csecret\u003e}`).",
+      "items": {
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "ingress": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Ingress annotations (controller specifics, for example `haproxy-ingress.github.io/tcp-service-port`).",
+          "required": [],
+          "type": "object"
+        },
+        "className": {
+          "description": "Ingress class name (empty: cluster default).",
+          "type": "string"
+        },
+        "enabled": {
+          "description": "Create an Ingress. Read [Remote access](#remote-access) first.",
+          "type": "boolean"
+        },
+        "hosts": {
+          "description": "Host names. Required when enabled.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Extra Ingress labels.",
+          "required": [],
+          "type": "object"
+        },
+        "port": {
+          "description": "Service port the Ingress routes to. `doh`: path `/dns-query` (Exact) to the DNS-over-HTTPS port, TLS to the pod. `dns-tcp`: path `/` to DNS over TCP, for controllers that route TCP from an Ingress (DoT).",
+          "enum": [
+            "doh",
+            "dns-tcp"
+          ],
+          "type": "string"
+        },
+        "tls": {
+          "description": "Ingress TLS blocks (`secretName`, `hosts`).",
+          "items": {
+            "required": [],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "livenessProbe": {
+      "additionalProperties": true,
+      "description": "Liveness probe: the DNS-over-TCP listener (8053). numa has no \"alive\" endpoint beyond the socket; an upstream outage does not close it.",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        },
+        "tcpSocket": {
+          "additionalProperties": true,
+          "properties": {
+            "port": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "minReadySeconds": {
+      "description": "Seconds a new pod must be Ready before an old one is retired.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "nameOverride": {
+      "description": "yaml-language-server: $schema=values.schema.json\nOverride the chart name used in resource names and labels.",
+      "type": "string"
+    },
+    "networkPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "egress": {
+          "additionalProperties": false,
+          "properties": {
+            "dns": {
+              "additionalProperties": false,
+              "properties": {
+                "to": {
+                  "description": "Cluster DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "enabled": {
+              "description": "Restrict egress (cluster DNS, upstreams).",
+              "type": "boolean"
+            },
+            "upstreams": {
+              "additionalProperties": false,
+              "properties": {
+                "to": {
+                  "description": "Upstream and blocklist peers (53 TCP/UDP, 443 and 853 TCP). Narrow it to the resolvers in `config.upstream` and the hosts of `config.blocking`.",
+                  "items": {
+                    "required": [],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [],
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "enabled": {
+          "description": "Create a NetworkPolicy (ingress: DNS on 8053, DoH on 8443; the plain proxy port 8080 is never allowed).",
+          "type": "boolean"
+        },
+        "ingress": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to reach 8053 and 8443. Empty: any source, because an ingress controller on the host network cannot be selected by a `podSelector`. `config.server.allow_from` still filters by client address.",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "nodeSelector": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Node selector. Merged with (and cannot drop) the default `kubernetes.io/os: linux`.",
+      "properties": {
+        "kubernetes.io/os": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "podAnnotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Pod annotations.",
+      "required": [],
+      "type": "object"
+    },
+    "podDisruptionBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Create a PodDisruptionBudget (`unhealthyPodEvictionPolicy: AlwaysAllow`).",
+          "type": "boolean"
+        },
+        "maxUnavailable": {
+          "description": "Pods that may be evicted at once.",
+          "required": [],
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "podLabels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Extra pod labels.",
+      "required": [],
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "additionalProperties": true,
+      "description": "Pod security context. Overrides are merged onto these defaults.",
+      "properties": {
+        "fsGroup": {
+          "type": "integer"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "priorityClassName": {
+      "description": "Priority class name.",
+      "type": "string"
+    },
+    "readinessProbe": {
+      "additionalProperties": true,
+      "description": "Readiness probe: the DNS-over-TCP listener (8053).",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        },
+        "tcpSocket": {
+          "additionalProperties": true,
+          "properties": {
+            "port": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "replicaCount": {
+      "description": "Number of replicas. Ignored when `autoscaling.enabled`.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "resources": {
+      "additionalProperties": true,
+      "description": "Resources. A scheduling floor, not a sizing: measure, then tune (VPA in `Off` mode gives recommendations). No CPU limit on purpose: throttling adds latency to DNS.",
+      "properties": {
+        "limits": {
+          "additionalProperties": true,
+          "properties": {
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "requests": {
+          "additionalProperties": true,
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "revisionHistoryLimit": {
+      "description": "Old ReplicaSets to keep.",
+      "type": "integer"
+    },
+    "securityContext": {
+      "additionalProperties": true,
+      "description": "Container security context. Overrides are merged onto these defaults.",
+      "properties": {
+        "allowPrivilegeEscalation": {
+          "type": "boolean"
+        },
+        "capabilities": {
+          "additionalProperties": true,
+          "properties": {
+            "drop": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ],
+                "required": []
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "privileged": {
+          "type": "boolean"
+        },
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "service": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Service annotations. The Service is ClusterIP only: exposure is the ingress controller's job.",
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "serviceAccount": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "ServiceAccount annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "create": {
+          "description": "Create the ServiceAccount.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "ServiceAccount name. Empty: `\u003cfullname\u003e` (or `default` when `create` is false).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "startupProbe": {
+      "additionalProperties": true,
+      "description": "Startup probe: the DoH listener (8443). numa only warns when it fails to bind or has no certificate, so this turns that into a failed start.",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        },
+        "tcpSocket": {
+          "additionalProperties": true,
+          "properties": {
+            "port": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "strategy": {
+      "additionalProperties": false,
+      "properties": {
+        "rollingUpdate": {
+          "additionalProperties": false,
+          "properties": {
+            "maxSurge": {
+              "description": "Extra pods during a rollout.",
+              "required": [],
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "maxUnavailable": {
+              "description": "Pods that may be unavailable during a rollout.",
+              "required": [],
+              "type": [
+                "integer",
+                "string"
+              ]
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "type": {
+          "description": "Deployment strategy type.",
+          "enum": [
+            "RollingUpdate",
+            "Recreate"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "tolerations": {
+      "description": "Tolerations.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "topologySpreadConstraints": {
+      "description": "Topology spread constraints. Empty: spread over `topology.kubernetes.io/zone` (`ScheduleAnyway`). A non-empty value replaces that default.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "verticalPodAutoscaler": {
+      "additionalProperties": false,
+      "properties": {
+        "controlledResources": {
+          "description": "Resources VPA controls.",
+          "items": {
+            "enum": [
+              "cpu",
+              "memory"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "controlledValues": {
+          "description": "Whether VPA also scales limits.",
+          "enum": [
+            "RequestsAndLimits",
+            "RequestsOnly"
+          ],
+          "type": "string"
+        },
+        "enabled": {
+          "description": "Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).",
+          "type": "boolean"
+        },
+        "maxAllowed": {
+          "additionalProperties": true,
+          "description": "Upper bound of recommendations.",
+          "required": [],
+          "type": "object"
+        },
+        "minAllowed": {
+          "additionalProperties": true,
+          "description": "Lower bound of recommendations (for example `{cpu: 25m, memory: 64Mi}`).",
+          "required": [],
+          "type": "object"
+        },
+        "updateMode": {
+          "description": "VPA update mode. Not combinable with an HPA acting on the same resource.",
+          "enum": [
+            "Off",
+            "Initial",
+            "Recreate",
+            "InPlaceOrRecreate"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    }
+  },
+  "required": [],
+  "title": "numa-dns values",
+  "type": "object"
+}

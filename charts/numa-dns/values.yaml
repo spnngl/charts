@@ -1,0 +1,568 @@
+# yaml-language-server: $schema=values.schema.json
+# @schema.root
+# title: numa-dns values
+# @schema.root
+# -- Override the chart name used in resource names and labels.
+nameOverride: ""
+# -- Override the full resource name (default `<release>-<chart>`).
+fullnameOverride: ""
+
+image:
+  # -- Image repository.
+  repository: ghcr.io/spnngl/images/numa-dns
+  # -- Image tag. Empty: `appVersion` pinned by the digest recorded in `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.
+  tag: ""
+  # @schema
+  # type: string
+  # pattern: "^(sha256:[a-f0-9]{64})?$"
+  # @schema
+  # -- Image digest, only valid together with `image.tag`.
+  digest: ""
+  # @schema
+  # type: string
+  # enum: [Always, IfNotPresent, Never]
+  # @schema
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+# @schema
+# -- Image pull secrets (list of `{name: <secret>}`).
+imagePullSecrets: []
+
+# @schema
+# type: object
+# additionalProperties: true
+# required: [server]
+# properties:
+#   server:
+#     type: object
+#     additionalProperties: true
+#     required: [allow_from]
+#     properties:
+#       allow_from:
+#         type: array
+#         minItems: 1
+#         items:
+#           type: string
+#           minLength: 1
+#     propertyNames:
+#       not:
+#         enum: [api_bind_addr, bind_addr]
+#   upstream:
+#     type: object
+#     additionalProperties: true
+#   dot:
+#     type: object
+#     additionalProperties: true
+#     propertyNames:
+#       not:
+#         enum: [enabled]
+#   lan:
+#     type: object
+#     additionalProperties: true
+#     propertyNames:
+#       not:
+#         enum: [enabled]
+#   mobile:
+#     type: object
+#     additionalProperties: true
+#     propertyNames:
+#       not:
+#         enum: [enabled]
+#   proxy:
+#     type: object
+#     additionalProperties: true
+#     propertyNames:
+#       not:
+#         enum: [bind_addr, enabled, port, tls_port]
+# @schema
+# -- Free-form numa configuration, rendered to `numa.toml` (every key of numa's own `numa.toml` works: `[[zones]]` as `zones`, `blocking`, `cache`, ...). The default is the image's configuration. Chart-owned keys are rejected: `server.bind_addr`, `server.api_bind_addr`, `dot.enabled`, `lan.enabled`, `mobile.enabled`, `proxy.bind_addr`, `proxy.enabled`, `proxy.port`, `proxy.tls_port`. Read once at start; a change rolls the pods. numa logs an unknown key and carries on.
+config:
+  server:
+    # -- Client addresses numa answers, loopback always. An empty list would answer the whole Internet: at least one entry. Must contain the source address of every client, the ingress controller included.
+    allow_from:
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+      - 100.64.0.0/10
+      - fc00::/7
+      - fe80::/10
+  upstream:
+    mode: forward
+    address:
+      - tls://1.1.1.1#cloudflare-dns.com
+      - tls://1.0.0.1#cloudflare-dns.com
+      - tls://8.8.8.8#dns.google
+      - tls://8.8.4.4#dns.google
+    fallback: https://1.1.1.1/dns-query
+
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Number of replicas. Ignored when `autoscaling.enabled`.
+replicaCount: 3
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Seconds a new pod must be Ready before an old one is retired.
+minReadySeconds: 5
+# -- Old ReplicaSets to keep.
+revisionHistoryLimit: 3
+strategy:
+  # @schema
+  # type: string
+  # enum: [RollingUpdate, Recreate]
+  # @schema
+  # -- Deployment strategy type.
+  type: RollingUpdate
+  rollingUpdate:
+    # @schema
+    # type: [integer, string]
+    # @schema
+    # -- Extra pods during a rollout.
+    maxSurge: 1
+    # @schema
+    # type: [integer, string]
+    # @schema
+    # -- Pods that may be unavailable during a rollout.
+    maxUnavailable: 0
+
+service:
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Service annotations. The Service is ClusterIP only: exposure is the ingress controller's job.
+  annotations: {}
+
+ingress:
+  # -- Create an Ingress. Read [Remote access](#remote-access) first.
+  enabled: false
+  # -- Ingress class name (empty: cluster default).
+  className: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Ingress annotations (controller specifics, for example `haproxy-ingress.github.io/tcp-service-port`).
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra Ingress labels.
+  labels: {}
+  # @schema
+  # type: string
+  # enum: [doh, dns-tcp]
+  # @schema
+  # -- Service port the Ingress routes to. `doh`: path `/dns-query` (Exact) to the DNS-over-HTTPS port, TLS to the pod. `dns-tcp`: path `/` to DNS over TCP, for controllers that route TCP from an Ingress (DoT).
+  port: doh
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   minLength: 1
+  # @schema
+  # -- Host names. Required when enabled.
+  hosts: []
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Ingress TLS blocks (`secretName`, `hosts`).
+  tls: []
+# @schema
+# type: array
+# items:
+#   type: object
+#   additionalProperties: false
+#   required: [nameSuffix]
+#   properties:
+#     nameSuffix:
+#       type: string
+#       pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+#     className:
+#       type: string
+#     annotations:
+#       type: object
+#       additionalProperties:
+#         type: string
+#     labels:
+#       type: object
+#       additionalProperties:
+#         type: string
+#     port:
+#       type: string
+#       enum: [doh, dns-tcp]
+#     hosts:
+#       type: array
+#       items:
+#         type: string
+#         minLength: 1
+#     tls:
+#       type: array
+#       items:
+#         type: object
+# @schema
+# -- More Ingresses, for example DoT next to a DoH `ingress`. Each item takes the `ingress` keys (`port` defaults to `doh`) plus a required, unique `nameSuffix`: the object is named `<fullname>-<nameSuffix>`. `hosts` is required.
+extraIngresses: []
+
+serviceAccount:
+  # -- Create the ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false).
+  name: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- ServiceAccount annotations.
+  annotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Pod annotations.
+podAnnotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Extra pod labels.
+podLabels: {}
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Pod security context. Overrides are merged onto these defaults.
+podSecurityContext:
+  fsGroup: 65532
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Container security context. Overrides are merged onto these defaults.
+securityContext:
+  allowPrivilegeEscalation: false
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: boolean
+# @schema
+# -- Run the pod in a user namespace (`false`: container uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+); pods fail to start otherwise. `true` uses host users.
+hostUsers: false
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Resources. A scheduling floor, not a sizing: measure, then tune (VPA in `Off` mode gives recommendations). No CPU limit on purpose: throttling adds latency to DNS.
+resources:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  limits:
+    memory: 256Mi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  requests:
+    cpu: 50m
+    memory: 64Mi
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- DNS config.
+dnsConfig:
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  #   additionalProperties: true
+  # @schema
+  # -- DNS options (fewer search-list lookups for numa's own name lookups, such as blocklist hosts).
+  options:
+    - name: ndots
+      value: "2"
+# @schema
+# type: string
+# enum: [ClusterFirst, ClusterFirstWithHostNet, Default, None]
+# @schema
+# -- Pod DNS policy. `ClusterFirst`: numa forwards `cluster.local` names to the cluster DNS it finds in `resolv.conf`. `Default` turns that off.
+dnsPolicy: ClusterFirst
+# @schema
+# type: string
+# @schema
+# -- Size limit of the `emptyDir` on `/var/lib/numa` (CA, API token, blocklist cache).
+dataSizeLimit: 64Mi
+
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Startup probe: the DoH listener (8443). numa only warns when it fails to bind or has no certificate, so this turns that into a failed start.
+startupProbe:
+  failureThreshold: 30
+  periodSeconds: 2
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  tcpSocket:
+    port: doh
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Readiness probe: the DNS-over-TCP listener (8053).
+readinessProbe:
+  failureThreshold: 2
+  periodSeconds: 5
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  tcpSocket:
+    port: dns-tcp
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Liveness probe: the DNS-over-TCP listener (8053). numa has no "alive" endpoint beyond the socket; an upstream outage does not close it.
+livenessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  tcpSocket:
+    port: dns-tcp
+
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Node selector. Merged with (and cannot drop) the default `kubernetes.io/os: linux`.
+nodeSelector:
+  kubernetes.io/os: linux
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Tolerations.
+tolerations: []
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Affinity. Empty: preferred podAntiAffinity on hostname. A non-empty value replaces that default wholesale.
+affinity: {}
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Topology spread constraints. Empty: spread over `topology.kubernetes.io/zone` (`ScheduleAnyway`). A non-empty value replaces that default.
+topologySpreadConstraints: []
+# -- Priority class name.
+priorityClassName: ""
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+#       minLength: 1
+# @schema
+# -- Extra environment variables (`EnvVar` list) for the numa container. numa logs through `env_logger` at `info`, so every query (client address, name) and the API token reach stdout: `RUST_LOG=warn` stops both (`numa::ctx` logs queries, `numa::serve` the token).
+extraEnv: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volumes.
+extraVolumes: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volume mounts for the numa container.
+extraVolumeMounts: []
+
+podDisruptionBudget:
+  # -- Create a PodDisruptionBudget (`unhealthyPodEvictionPolicy: AlwaysAllow`).
+  enabled: false
+  # @schema
+  # type: [integer, string]
+  # @schema
+  # -- Pods that may be evicted at once.
+  maxUnavailable: 1
+
+autoscaling:
+  # -- Create a HorizontalPodAutoscaler. Enabling it drops `replicas` from the Deployment: it falls to 1 until the HPA reacts.
+  enabled: false
+  # @schema
+  # type: integer
+  # minimum: 1
+  # @schema
+  # -- HPA minimum replicas.
+  minReplicas: 3
+  # @schema
+  # type: integer
+  # minimum: 1
+  # @schema
+  # -- HPA maximum replicas.
+  maxReplicas: 10
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Raw `autoscaling/v2` MetricSpec list. CPU `Utilization` is a percentage of `resources.requests.cpu`: with the 50m floor, 75% fires at ~38m, so size requests first.
+  metrics:
+    - resource:
+        name: cpu
+        target:
+          averageUtilization: 75
+          type: Utilization
+      type: Resource
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- HPA behavior. Slow scale-down: a removed pod drops its cache and its in-flight queries.
+  behavior:
+    # @schema
+    # type: object
+    # additionalProperties: true
+    # @schema
+    scaleDown:
+      stabilizationWindowSeconds: 300
+
+verticalPodAutoscaler:
+  # -- Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).
+  enabled: false
+  # @schema
+  # type: string
+  # enum: ["Off", Initial, Recreate, InPlaceOrRecreate]
+  # @schema
+  # -- VPA update mode. Not combinable with an HPA acting on the same resource.
+  updateMode: "Off"
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   enum: [cpu, memory]
+  # @schema
+  # -- Resources VPA controls.
+  controlledResources:
+    - cpu
+    - memory
+  # @schema
+  # type: string
+  # enum: [RequestsAndLimits, RequestsOnly]
+  # @schema
+  # -- Whether VPA also scales limits.
+  controlledValues: RequestsAndLimits
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Lower bound of recommendations (for example `{cpu: 25m, memory: 64Mi}`).
+  minAllowed: {}
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Upper bound of recommendations.
+  maxAllowed: {}
+
+networkPolicy:
+  # -- Create a NetworkPolicy (ingress: DNS on 8053, DoH on 8443; the plain proxy port 8080 is never allowed).
+  enabled: true
+  ingress:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach 8053 and 8443. Empty: any source, because an ingress controller on the host network cannot be selected by a `podSelector`. `config.server.allow_from` still filters by client address.
+    from: []
+  egress:
+    # -- Restrict egress (cluster DNS, upstreams).
+    enabled: false
+    dns:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- Cluster DNS peers (port 53 TCP/UDP). Override for NodeLocal DNSCache or non-standard labels.
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    upstreams:
+      # @schema
+      # type: array
+      # items:
+      #   type: object
+      # @schema
+      # -- Upstream and blocklist peers (53 TCP/UDP, 443 and 853 TCP). Narrow it to the resolvers in `config.upstream` and the hosts of `config.blocking`.
+      to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
