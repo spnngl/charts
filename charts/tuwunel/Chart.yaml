@@ -3,7 +3,7 @@ apiVersion: v2
 name: tuwunel
 description: Tuwunel Matrix homeserver as a hardened single-replica StatefulSet, with an optional Cinny web client and LiveKit for calls
 type: application
-version: 0.1.5
+version: 0.1.6
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/tuwunel
 appVersion: "1.9.4"
 kubeVersion: ">=1.33.0-0"
@@ -34,7 +34,7 @@ annotations:
   # Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: tuwunel
-      image: ghcr.io/spnngl/images/tuwunel:1.9.4@sha256:465b0a74d0b50dfd59a09a1009c163d2a9b7c9128c5f74a61960917d93ba5043
+      image: ghcr.io/spnngl/images/tuwunel:1.9.4@sha256:40ed486e64d171d761f12f02dc5a90016c93c580bf7b8d0685638633481bf1a6
     - name: cinny
       image: ghcr.io/spnngl/images/cinny:4.12.7@sha256:ed562a7f0521575e65e00d28883fae3bb67c7b806cf615c92544e1f96faa85e9
     - name: livekit
