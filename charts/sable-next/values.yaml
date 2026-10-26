@@ -1,0 +1,442 @@
+# yaml-language-server: $schema=values.schema.json
+# @schema.root
+# title: sable-next values
+# @schema.root
+# -- Override the chart name used in resource names and labels.
+nameOverride: ""
+# -- Override the full resource name (default `<release>-<chart>`).
+fullnameOverride: ""
+
+image:
+  # -- Image repository.
+  repository: ghcr.io/spnngl/images/sable-next
+  # -- Image tag. Empty: the tag and digest recorded for `image.repository` in the `artifacthub.io/images` annotation of `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.
+  tag: ""
+  # @schema
+  # type: string
+  # pattern: "^(sha256:[a-f0-9]{64})?$"
+  # @schema
+  # -- Image digest, only valid together with `image.tag`.
+  digest: ""
+  # @schema
+  # type: string
+  # enum: [Always, IfNotPresent, Never]
+  # @schema
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+# @schema
+# -- Image pull secrets (list of `{name: <secret>}`).
+imagePullSecrets: []
+
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Sable `config.json` (see `static/config.json` upstream): `homeserverList`, `defaultHomeserver`, `allowCustomHomeservers`, `featuredCommunities`, `pushNotificationDetails`, `embeds`, `supporterAwards`, `gifs`, `calls`, `disableAccountSwitcher`, `settingsDefaults`, `hideUsernamePasswordFields`. Empty: the image's own file serves. Set: the chart mounts this map as `/app/config.json`, which replaces the image's file whole, so list every key you need: a key left out gets the app's built-in default (the six built-in homeservers with custom ones allowed; no push gateway, GIF provider, embeds, supporter awards or calls), not the image's value. The browser reads the file: every value, API keys included, is public. A change rolls the pods.
+config: {}
+
+service:
+  # @schema
+  # type: string
+  # enum: [ClusterIP, LoadBalancer, NodePort]
+  # @schema
+  # -- Service type.
+  type: ClusterIP
+  # @schema
+  # type: integer
+  # minimum: 1
+  # maximum: 65535
+  # @schema
+  # -- Service port (the container listens on 8080).
+  port: 8080
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Service annotations.
+  annotations: {}
+
+ingress:
+  # -- Create an Ingress (path `/`). Sable needs HTTPS (service worker, WebCrypto): terminate TLS here or in front.
+  enabled: false
+  # -- Ingress class name (empty: cluster default).
+  className: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Ingress annotations.
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra Ingress labels (for example the label an external-dns `--label-filter` selects).
+  labels: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   minLength: 1
+  # @schema
+  # -- Host names. Required when enabled.
+  hosts: []
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Ingress TLS blocks (`secretName`, `hosts`).
+  tls: []
+
+httpRoute:
+  # -- Create a Gateway API HTTPRoute (path prefix `/`). Sable needs HTTPS (service worker, WebCrypto): terminate TLS on the Gateway.
+  enabled: false
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- HTTPRoute annotations.
+  annotations: {}
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- Extra HTTPRoute labels.
+  labels: {}
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  # @schema
+  # -- Gateways (`parentRefs`). Required when enabled.
+  parentRefs: []
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   minLength: 1
+  # @schema
+  # -- Host names (empty: any host of the Gateway listener).
+  hostnames: []
+
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Replicas. Sable is stateless: three keep serving through a node loss during a rolling update. `0` stops the app.
+replicaCount: 3
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Seconds a new pod must be ready before it counts as available (rolling updates never drop below `replicaCount`).
+minReadySeconds: 10
+# -- Old ReplicaSets to keep.
+revisionHistoryLimit: 3
+
+serviceAccount:
+  # -- Create the ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false).
+  name: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- ServiceAccount annotations.
+  annotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Pod annotations.
+podAnnotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Extra pod labels.
+podLabels: {}
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Pod security context. Overrides are merged onto these defaults.
+podSecurityContext:
+  fsGroup: 65532
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Container security context. Overrides are merged onto these defaults.
+securityContext:
+  allowPrivilegeEscalation: false
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: boolean
+# @schema
+# -- Run the pod in a user namespace (`false`: uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+); pods fail to start otherwise. `true` uses host users.
+hostUsers: false
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Resources. A scheduling floor, not a sizing: the server serves files from disk (VPA in `Off` mode gives recommendations). No CPU limit on purpose.
+resources:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  limits:
+    memory: 64Mi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  requests:
+    cpu: 10m
+    memory: 16Mi
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Seconds the pod gets to stop. It covers the 5 seconds the chart waits (`preStop`) for the endpoints to drop the pod before the server stops accepting connections, then the drain.
+terminationGracePeriodSeconds: 30
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- DNS config.
+dnsConfig:
+  # @schema
+  # type: array
+  # items:
+  #   type: object
+  #   additionalProperties: true
+  # @schema
+  # -- DNS options.
+  options:
+    - name: ndots
+      value: "2"
+
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Startup probe (`GET /health`).
+startupProbe:
+  failureThreshold: 30
+  periodSeconds: 2
+  timeoutSeconds: 2
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Readiness probe (`GET /health`).
+readinessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+  timeoutSeconds: 2
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Liveness probe (`GET /health`).
+livenessProbe:
+  failureThreshold: 3
+  periodSeconds: 10
+  timeoutSeconds: 2
+
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Node selector.
+nodeSelector:
+  kubernetes.io/os: linux
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Tolerations.
+tolerations: []
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Affinity, merged over the chart default: a preferred pod anti-affinity that spreads the replicas over nodes (set `podAntiAffinity` to replace it).
+affinity: {}
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Topology spread constraints. Empty: the chart spreads the replicas over zones (`topology.kubernetes.io/zone`, `ScheduleAnyway`). A list you set replaces it and needs its own `labelSelector`.
+topologySpreadConstraints: []
+# -- Priority class name.
+priorityClassName: ""
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+#       minLength: 1
+#       not:
+#         enum: [SERVER_PORT, SERVER_ROOT, SERVER_HEALTH, SERVER_CONFIG_FILE]
+# @schema
+# -- Extra environment variables (`EnvVar` list): static-web-server's `SERVER_*` settings. Names the chart, its Service, probes and mount rely on (`SERVER_PORT`, `SERVER_ROOT`, `SERVER_HEALTH`), and the image's response-header file (`SERVER_CONFIG_FILE`), are rejected.
+extraEnv: []
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+#       minLength: 1
+#       not:
+#         enum: [config]
+# @schema
+# -- Extra volumes (the name `config` is the chart's).
+extraVolumes: []
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [mountPath]
+#   properties:
+#     mountPath:
+#       type: string
+#       not:
+#         enum: [/app/config.json]
+# @schema
+# -- Extra volume mounts for the Sable container (not on `/app/config.json`: use `config`).
+extraVolumeMounts: []
+
+# @schema
+# type: object
+# additionalProperties: false
+# properties:
+#   enabled:
+#     type: boolean
+#   maxUnavailable:
+#     type: [integer, string]
+# @schema
+# -- PodDisruptionBudget (`unhealthyPodEvictionPolicy: AlwaysAllow`). `maxUnavailable` is a number or a percentage.
+podDisruptionBudget:
+  enabled: false
+  maxUnavailable: 1
+
+networkPolicy:
+  # -- Create a NetworkPolicy (ingress: the HTTP port).
+  enabled: true
+  http:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach the HTTP port (your ingress controller or Gateway). Empty: any source.
+    from: []
+  egress:
+    # -- Restrict egress to `extraEgress` (none by default: the server makes no outbound call, so no DNS rule either).
+    enabled: false
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- Extra `NetworkPolicyEgressRule`s.
+    extraEgress: []
+
+verticalPodAutoscaler:
+  # -- Create a VerticalPodAutoscaler (needs the VPA CRDs, see the `vertical-pod-autoscaler-crds` chart).
+  enabled: false
+  # @schema
+  # type: string
+  # enum: ["Off", Initial, Recreate, InPlaceOrRecreate]
+  # @schema
+  # -- VPA update mode.
+  updateMode: "Off"
+  # @schema
+  # type: string
+  # @schema
+  # -- Recommender name (`spec.recommenders`, which takes at most one). Empty: the recommender named `default`. Set it when the cluster's recommender runs under another `--recommender-name`: a VPA nobody serves gets no recommendation.
+  recommender: ""
+  # @schema
+  # type: array
+  # items:
+  #   type: string
+  #   enum: [cpu, memory]
+  # @schema
+  # -- Resources VPA controls.
+  controlledResources:
+    - cpu
+    - memory
+  # @schema
+  # type: string
+  # enum: [RequestsAndLimits, RequestsOnly]
+  # @schema
+  # -- Whether VPA also scales limits.
+  controlledValues: RequestsAndLimits
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Lower bound of recommendations (for example `{cpu: 25m, memory: 32Mi}`).
+  minAllowed: {}
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Upper bound of recommendations.
+  maxAllowed: {}

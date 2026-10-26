@@ -1,0 +1,9 @@
+values:
+  networkPolicy:
+    http:
+      from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+      - ipBlock:
+          cidr: 10.0.0.0/8

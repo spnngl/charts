@@ -1,0 +1,359 @@
+---
+# Source: sable-next/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sable
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sable-next-0.0.0
+  name: sable-next
+  namespace: sable-next
+spec:
+  egress:
+    - ports:
+      - port: 443
+        protocol: TCP
+      to:
+      - ipBlock:
+          cidr: 10.0.0.0/8
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress
+      ports:
+      - port: 8080
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: sable-next
+      app.kubernetes.io/name: sable
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Source: sable-next/templates/pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sable
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sable-next-0.0.0
+  name: sable-next
+  namespace: sable-next
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: sable-next
+      app.kubernetes.io/name: sable
+  unhealthyPodEvictionPolicy: AlwaysAllow
+---
+# Source: sable-next/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sable
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sable-next-0.0.0
+  name: sable-next
+  namespace: sable-next
+---
+# Source: sable-next/templates/configmap.yaml
+apiVersion: v1
+data:
+  config.json: |
+    {
+      "allowCustomHomeservers": false,
+      "defaultHomeserver": 0,
+      "homeserverList": [
+        "example.org"
+      ]
+    }
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sable
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sable-next-0.0.0
+  name: sable-next
+  namespace: sable-next
+---
+# Source: sable-next/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    a: b
+  labels:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sable
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sable-next-0.0.0
+  name: sable-next
+  namespace: sable-next
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/name: sable
+  type: ClusterIP
+---
+# Source: sable-next/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sable
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sable-next-0.0.0
+  name: sable-next
+  namespace: sable-next
+spec:
+  minReadySeconds: 10
+  replicas: 3
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: sable-next
+      app.kubernetes.io/name: sable
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        a: b
+        checksum/config: 64b9ecf9363fd7e72f7890ca5a4172f93b5b364d9227e9429028bd24f3aef72c
+      labels:
+        app.kubernetes.io/instance: sable-next
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: sable
+        app.kubernetes.io/version: 0.0.0
+        c: d
+        helm.sh/chart: sable-next-0.0.0
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: sable-next
+                  app.kubernetes.io/name: sable
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            - name: SERVER_LOG_LEVEL
+              value: debug
+          image: "ghcr.io/spnngl/images/sable-next:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          name: sable-next
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /app/config.json
+              name: config
+              readOnly: true
+              subPath: config.json
+            - mountPath: /tmp
+              name: tmp
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      imagePullSecrets:
+        - name: regcred
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: low
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: sable-next
+      terminationGracePeriodSeconds: 30
+      tolerations:
+        - key: k
+          operator: Exists
+      topologySpreadConstraints:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: sable-next
+              app.kubernetes.io/name: sable
+          maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+      volumes:
+        - configMap:
+            name: sable-next
+          name: config
+        - emptyDir: {}
+          name: tmp
+---
+# Source: sable-next/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sable
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: sable-next-0.0.0
+  name: sable-next
+  namespace: sable-next
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "sable.example.com"
+      http:
+        paths:
+          - backend:
+              service:
+                name: sable-next
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+      - sable.example.com
+      secretName: sable-tls
+---
+# Source: sable-next/templates/httproute.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  labels:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sable
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: sable-next-0.0.0
+  name: sable-next
+  namespace: sable-next
+spec:
+  hostnames:
+    - sable.example.com
+  parentRefs:
+    - name: gw
+  rules:
+    - backendRefs:
+        - name: sable-next
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
+# Source: sable-next/templates/vpa.yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sable
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sable-next-0.0.0
+  name: sable-next
+  namespace: sable-next
+spec:
+  resourcePolicy:
+    containerPolicies:
+      - containerName: sable-next
+        controlledResources:
+        - cpu
+        - memory
+        controlledValues: RequestsAndLimits
+        maxAllowed:
+          memory: 128Mi
+        minAllowed:
+          cpu: 10m
+          memory: 16Mi
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sable-next
+  updatePolicy:
+    updateMode: "Off"

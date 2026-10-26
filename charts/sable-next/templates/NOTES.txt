@@ -1,0 +1,29 @@
+{{ include "sable-next.fullname" . }} serves the Sable web client ({{ .Values.replicaCount }} replicas of a static file server).
+
+Sable needs HTTPS (service worker, WebCrypto): browsers refuse it over plain HTTP, except on localhost.
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+  https://{{ . }}/
+{{- end }}
+{{- end }}
+{{- if .Values.httpRoute.enabled }}
+{{- range .Values.httpRoute.hostnames }}
+  https://{{ . }}/
+{{- end }}
+{{- end }}
+
+Or, from your machine:
+
+  kubectl -n {{ .Release.Namespace }} port-forward service/{{ include "sable-next.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+  then open http://localhost:{{ .Values.service.port }}/
+{{- if not .Values.config }}
+
+config is empty: the image's own config.json serves (upstream's homeserver list, custom homeservers allowed,
+and upstream's push, GIF and award services). Set config to choose your own.
+{{- end }}
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: the pod runs in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) cannot start it; set
+hostUsers=true to use host users.
+{{- end }}

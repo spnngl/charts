@@ -1,0 +1,218 @@
+---
+# Source: sable-next/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sable-next
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sable-next-0.0.0
+  name: sable-next
+  namespace: sable-next
+spec:
+  ingress:
+    - ports:
+      - port: 8080
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: sable-next
+      app.kubernetes.io/name: sable-next
+  policyTypes:
+    - Ingress
+---
+# Source: sable-next/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sable-next
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sable-next-0.0.0
+  name: sable-next
+  namespace: sable-next
+---
+# Source: sable-next/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sable-next
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sable-next-0.0.0
+  name: sable-next
+  namespace: sable-next
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/name: sable-next
+  type: ClusterIP
+---
+# Source: sable-next/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read."
+  labels:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sable-next
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: sable-next-0.0.0
+  name: sable-next
+  namespace: sable-next
+spec:
+  minReadySeconds: 10
+  replicas: 3
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: sable-next
+      app.kubernetes.io/name: sable-next
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/config: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+      labels:
+        app.kubernetes.io/instance: sable-next
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: sable-next
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: sable-next-0.0.0
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: sable-next
+                  app.kubernetes.io/name: sable-next
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      automountServiceAccountToken: false
+      containers:
+        - image: "ghcr.io/spnngl/images/sable-next:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          name: sable-next
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 2
+          terminationMessagePolicy: FallbackToLogsOnError
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      enableServiceLinks: false
+      hostUsers: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: sable-next
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: sable-next
+              app.kubernetes.io/name: sable-next
+          maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+---
+# Source: sable-next/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    app.kubernetes.io/instance: sable-next
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: sable-next
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: sable-next-0.0.0
+  name: sable-next
+  namespace: sable-next
+spec:
+  rules:
+    - host: "sable.example.com"
+      http:
+        paths:
+          - backend:
+              service:
+                name: sable-next
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+      - sable.example.com
+      secretName: sable-tls

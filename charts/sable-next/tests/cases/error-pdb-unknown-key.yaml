@@ -1,0 +1,6 @@
+values:
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+expect:
+  error: podDisruptionBudget

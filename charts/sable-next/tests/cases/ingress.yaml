@@ -1,0 +1,11 @@
+values:
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      a: b
+    labels:
+      c: d
+    hosts:
+    - sable.example.com
+    - sable.example.org

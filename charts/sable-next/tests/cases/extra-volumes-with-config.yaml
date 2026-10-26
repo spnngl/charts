@@ -1,0 +1,10 @@
+values:
+  config:
+    homeserverList:
+    - example.org
+  extraVolumes:
+  - name: tmp
+    emptyDir: {}
+  extraVolumeMounts:
+  - name: tmp
+    mountPath: /tmp

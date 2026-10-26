@@ -1,0 +1,6 @@
+values:
+  image:
+    tag: 2.1.5
+    digest: abc
+expect:
+  error: digest

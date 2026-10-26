@@ -1,0 +1,12 @@
+{{- if .Values.config }}
+apiVersion: v1
+data:
+  config.json: |
+    {{- toPrettyJson .Values.config | nindent 4 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "sable-next.labels" . | nindent 4 }}
+  name: {{ include "sable-next.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}

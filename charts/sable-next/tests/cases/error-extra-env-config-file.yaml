@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+  - name: SERVER_CONFIG_FILE
+    value: /x.toml
+expect:
+  error: extraEnv

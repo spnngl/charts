@@ -1,0 +1,10 @@
+values:
+  extraEnv:
+  - name: SERVER_LOG_LEVEL
+    value: debug
+  extraVolumes:
+  - name: tmp
+    emptyDir: {}
+  extraVolumeMounts:
+  - name: tmp
+    mountPath: /tmp
