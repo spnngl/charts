@@ -3,7 +3,7 @@ apiVersion: v2
 name: numa-dns
 description: Numa DNS resolver (ad blocking, local zones, DoT and DoH behind an ingress) running as a hardened, highly available Deployment
 type: application
-version: 0.2.0
+version: 0.2.1
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/numa-dns
 appVersion: "0.25.0"
 kubeVersion: ">=1.33.0-0"
@@ -27,7 +27,7 @@ annotations:
   # numa-dns.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: numa-dns
-      image: ghcr.io/spnngl/images/numa-dns:0.25.0@sha256:0db6a8daad9537a699af719a67d4523240fc18330c0334caa37fe0660bcef1fc
+      image: ghcr.io/spnngl/images/numa-dns:0.25.0@sha256:68cf44d4a9e1dc4ed2b16525fe50ccf7247dd5cec16ccf71fbf9992c3005b9b8
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://github.com/razvandimescu/numa
