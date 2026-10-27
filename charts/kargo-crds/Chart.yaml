@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for Kargo (Projects, Warehouses, Freight, Stages,
   Promotions)
 type: application
-version: 1.12.4
-appVersion: 1.12.4
+version: 1.12.5
+appVersion: 1.12.5
 kubeVersion: ">=1.25.0-0"
 home: https://kargo.io
 icon: >-
@@ -93,13 +93,13 @@ annotations:
     - name: Upstream repository
       url: https://github.com/akuity/kargo
     - name: Upstream CRD source (charts/kargo/resources/crds)
-      url: https://github.com/akuity/kargo/tree/v1.12.4/charts/kargo/resources/crds
+      url: https://github.com/akuity/kargo/tree/v1.12.5/charts/kargo/resources/crds
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/kargo-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/akuity/kargo
-  charts.spnngl.io/upstream-tag: v1.12.4
-  charts.spnngl.io/upstream-commit: 1b6a368d3dcfc64de36e487a9e5c410b430a03c8
+  charts.spnngl.io/upstream-tag: v1.12.5
+  charts.spnngl.io/upstream-commit: f9623d8e8415f4c4d18feefc4aa532bdeb173cc0
   artifacthub.io/changes: |
-    - Initial release, CRDs from upstream v1.12.4
+    - Upstream CRDs updated from v1.12.4 to v1.12.5
