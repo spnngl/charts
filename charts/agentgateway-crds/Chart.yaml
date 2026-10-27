@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for agentgateway (backends, models, parameters,
   policies)
 type: application
-version: 1.6.3
-appVersion: 1.6.0
+version: 1.7.0
+appVersion: 1.7.0
 kubeVersion: ">=1.25.0-0"
 home: https://agentgateway.dev
 icon: >-
@@ -51,13 +51,13 @@ annotations:
       url: https://github.com/agentgateway/agentgateway
     - name: Upstream CRD source (controller/install/helm/agentgateway-crds/templates)
       url: >-
-        https://github.com/agentgateway/agentgateway/tree/v1.6.0/controller/install/helm/agentgateway-crds/templates
+        https://github.com/agentgateway/agentgateway/tree/v1.7.0/controller/install/helm/agentgateway-crds/templates
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/agentgateway-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/agentgateway/agentgateway
-  charts.spnngl.io/upstream-tag: v1.6.0
-  charts.spnngl.io/upstream-commit: ea5608642b9d5c94c5baf5fd9f2f9849b808e963
+  charts.spnngl.io/upstream-tag: v1.7.0
+  charts.spnngl.io/upstream-commit: 26f5aebe99a36a037fe54f8080a608aca5547e15
   artifacthub.io/changes: |
-    - Chart regenerated with updated tooling (upstream unchanged at v1.6.0)
+    - Upstream CRDs updated from v1.6.0 to v1.7.0
