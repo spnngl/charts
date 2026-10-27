@@ -3,7 +3,7 @@ apiVersion: v2
 name: seerr
 description: Seerr media request manager for Jellyfin, Emby and Plex as a hardened single-replica StatefulSet, with SQLite or an external PostgreSQL
 type: application
-version: 0.1.0
+version: 0.1.1
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/seerr
 appVersion: "3.5.1"
 kubeVersion: ">=1.33.0-0"
@@ -28,7 +28,7 @@ annotations:
   # seerr.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: seerr
-      image: ghcr.io/spnngl/images/seerr:3.5.1@sha256:a9900f3f86dd38fe98df11b6120072df743374dd81e06c3800b9b079b1058602
+      image: ghcr.io/spnngl/images/seerr:3.5.1@sha256:5ec5399c668516883c902d02a92aab8934823929c5eb3bc2a1b4491e08caa185
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://docs.seerr.dev
