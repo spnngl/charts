@@ -1,0 +1,7 @@
+# A probe overridden to httpGet still targets loopback.
+values:
+  livenessProbe:
+    httpGet:
+      path: /metrics
+      port: metrics
+    tcpSocket: null

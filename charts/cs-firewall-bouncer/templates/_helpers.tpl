@@ -106,13 +106,16 @@ a PodMonitor needs to reach them: then they listen on the node IP.
 {{- end }}
 
 {{/*
-Probe from `.probe`; `.root` is the chart context. httpGet probes target
-loopback unless the metrics listen on the node IP.
+Probe from `.probe`; `.root` is the chart context. httpGet and tcpSocket
+probes target loopback unless the metrics listen on the node IP.
 */}}
 {{- define "cs-firewall-bouncer.probe" -}}
 {{- $probe := deepCopy .probe }}
-{{- if and $probe.httpGet (not .root.Values.metrics.podMonitor.enabled) (not (hasKey $probe.httpGet "host")) }}
-{{- $_ := set $probe.httpGet "host" "127.0.0.1" }}
+{{- range $handler := list "httpGet" "tcpSocket" }}
+{{- $h := get $probe $handler }}
+{{- if and $h (not $.root.Values.metrics.podMonitor.enabled) (not (hasKey $h "host")) }}
+{{- $_ := set $h "host" "127.0.0.1" }}
+{{- end }}
 {{- end }}
 {{- toYaml $probe }}
 {{- end }}

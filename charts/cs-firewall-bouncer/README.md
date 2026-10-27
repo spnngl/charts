@@ -152,7 +152,7 @@ The bouncer logs to stdout and writes nothing to disk.
 
 ## Network
 
-- The metrics (`/metrics`, also the probe endpoint) listen on `127.0.0.1`,
+- The metrics (`/metrics`, also the probes' port) listen on `127.0.0.1`,
   port `metrics.port` (a port of every node). With `metrics.podMonitor.enabled`
   they listen on the node IP instead (`status.hostIP`) so Prometheus can reach
   them: they are then readable from any network that reaches the node, firewall
@@ -213,7 +213,7 @@ Kubernetes: `>=1.33.0-0`
 | lapi.existingSecret.key | string | `"api-key"` | Key of the API key in the Secret (env `API_KEY`; the bouncer has no key-file option). |
 | lapi.existingSecret.name | string | `""` | Name of the Secret holding the bouncer API key. Empty: `<fullname>`. The chart never creates it. |
 | lapi.url | string | `"http://crowdsec-service.crowdsec.svc.cluster.local:8080"` | CrowdSec LAPI URL (env `API_URL`). The default is the Service of the `crowdsec` chart installed as release `crowdsec` in namespace `crowdsec`. The image has no CA bundle: for `https://` add the CA with `extraVolumes` and set `config.ca_cert_path`. |
-| livenessProbe | object | `{"failureThreshold":3,"httpGet":{"path":"/metrics","port":"metrics"},"periodSeconds":10}` | Liveness probe, `/metrics` (the process serves HTTP). The bouncer has no other health endpoint. |
+| livenessProbe | object | `{"failureThreshold":3,"periodSeconds":10,"tcpSocket":{"port":"metrics"}}` | Liveness probe, a TCP connect to the metrics port (the HTTP server runs). The bouncer has no health endpoint, and `/metrics` is too slow to probe (see `startupProbe`). |
 | metrics.podMonitor.enabled | bool | `false` | Create a Prometheus Operator PodMonitor. The metrics then listen on the node IP instead of `127.0.0.1`: they are reachable from the node's network, firewall them if the node is public. |
 | metrics.podMonitor.interval | string | `""` | Scrape interval (empty: Prometheus default). |
 | metrics.podMonitor.labels | object | `{}` | Extra labels (for example `release: kube-prometheus-stack`). |
@@ -232,14 +232,14 @@ Kubernetes: `>=1.33.0-0`
 | podLabels | object | `{}` | Extra pod labels. |
 | podSecurityContext | object | `{"runAsGroup":0,"runAsNonRoot":false,"runAsUser":0,"seccompProfile":{"type":"RuntimeDefault"}}` | Pod security context. Overrides are merged onto these defaults. Root is required: Kubernetes has no ambient capabilities, so only root holds `NET_ADMIN`. |
 | priorityClassName | string | `""` | Priority class name. `system-node-critical` is recommended for a node-level security agent. |
-| readinessProbe | object | `{"failureThreshold":1,"httpGet":{"path":"/metrics","port":"metrics"},"periodSeconds":10}` | Readiness probe, `/metrics` (the nftables tables exist). A LAPI outage never fails it. |
+| readinessProbe | object | `{"failureThreshold":1,"periodSeconds":10,"tcpSocket":{"port":"metrics"}}` | Readiness probe, a TCP connect to the metrics port (the nftables tables exist). A LAPI outage never fails it. |
 | resources | object | `{"limits":{"memory":"256Mi"},"requests":{"cpu":"10m","memory":"32Mi"}}` | Resources. A scheduling floor, not a sizing: memory grows with the number of decisions (about 1.1 MiB per 1000, measured 90 MiB peak for 50000), so the limit holds about 150000 decisions. No CPU limit on purpose. With a memory limit, `GOMEMLIMIT` is set to 90% of it (the limit must then be an integer quantity: plain, `Ki`, `Mi`, `Gi`, `Ti`, `k`, `M`, `G` or `T`). Like the other maps, `limits` and `requests` merge with these defaults: set a key to `null` to drop it. |
 | revisionHistoryLimit | int | `3` | Old ControllerRevisions to keep. |
 | securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"add":["NET_ADMIN"],"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsGroup":0,"runAsNonRoot":false,"runAsUser":0,"seccompProfile":{"type":"RuntimeDefault"}}` | Container security context. Overrides are merged onto these defaults. `NET_ADMIN` is the only capability, needed to edit the node's nftables. On SELinux nodes that deny `netlink_netfilter_socket`, set `seLinuxOptions: {type: spc_t}`. |
 | serviceAccount.annotations | object | `{}` | ServiceAccount annotations. |
 | serviceAccount.create | bool | `true` | Create the ServiceAccount. |
 | serviceAccount.name | string | `""` | ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false). |
-| startupProbe | object | `{"failureThreshold":30,"httpGet":{"path":"/metrics","port":"metrics"},"periodSeconds":2}` | Startup probe, `/metrics`. The bouncer serves it once its nftables tables exist. The chart sets `httpGet.host: 127.0.0.1` unless `metrics.podMonitor.enabled`. |
+| startupProbe | object | `{"failureThreshold":30,"periodSeconds":2,"tcpSocket":{"port":"metrics"}}` | Startup probe, a TCP connect to the metrics port. The bouncer listens once its nftables tables exist. Not `httpGet /metrics`: each GET lists every nftables set, up to a second on a slow node with many decisions, and timed-out probes restarted the bouncer. The chart sets `httpGet.host` or `tcpSocket.host` to `127.0.0.1` unless `metrics.podMonitor.enabled`. |
 | terminationGracePeriodSeconds | int | `15` | Termination grace period. On SIGTERM the bouncer deletes its nftables tables, which is instant. |
 | tolerations | list | `[]` | Tolerations. None by default: tainted nodes (control plane) are skipped. Uncomment `operator: Exists` to run on every node. |
 | updateStrategy.rollingUpdate.maxUnavailable | int | `1` | Nodes updated at once. A node is briefly unprotected while its bouncer restarts and pulls the decisions again. |

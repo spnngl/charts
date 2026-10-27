@@ -152,7 +152,7 @@ The bouncer logs to stdout and writes nothing to disk.
 
 ## Network
 
-- The metrics (`/metrics`, also the probe endpoint) listen on `127.0.0.1`,
+- The metrics (`/metrics`, also the probes' port) listen on `127.0.0.1`,
   port `metrics.port` (a port of every node). With `metrics.podMonitor.enabled`
   they listen on the node IP instead (`status.hostIP`) so Prometheus can reach
   them: they are then readable from any network that reaches the node, firewall

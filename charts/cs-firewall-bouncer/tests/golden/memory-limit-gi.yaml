@@ -88,11 +88,10 @@ spec:
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 3
-            httpGet:
-              host: 127.0.0.1
-              path: /metrics
-              port: metrics
             periodSeconds: 10
+            tcpSocket:
+              host: 127.0.0.1
+              port: metrics
           name: cs-firewall-bouncer
           ports:
             - containerPort: 60601
@@ -100,11 +99,10 @@ spec:
               protocol: TCP
           readinessProbe:
             failureThreshold: 1
-            httpGet:
-              host: 127.0.0.1
-              path: /metrics
-              port: metrics
             periodSeconds: 10
+            tcpSocket:
+              host: 127.0.0.1
+              port: metrics
           resources:
             limits:
               memory: 1Gi
@@ -127,11 +125,10 @@ spec:
               type: RuntimeDefault
           startupProbe:
             failureThreshold: 30
-            httpGet:
-              host: 127.0.0.1
-              path: /metrics
-              port: metrics
             periodSeconds: 2
+            tcpSocket:
+              host: 127.0.0.1
+              port: metrics
           terminationMessagePolicy: FallbackToLogsOnError
           volumeMounts:
             - mountPath: /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml.local
