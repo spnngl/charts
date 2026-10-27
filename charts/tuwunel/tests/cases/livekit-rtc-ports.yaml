@@ -1,0 +1,11 @@
+values:
+  serverName: example.com
+  livekit:
+    enabled: true
+    host: calls.example.com
+    existingSecret:
+      name: lk-keys
+    rtc:
+      # One port for both protocols, as a firewall with a single rule wants it.
+      tcpPort: 7881
+      udpPort: 7881

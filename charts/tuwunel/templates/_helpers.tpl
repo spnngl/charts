@@ -335,7 +335,7 @@ LiveKit config.yaml: the chart-owned keys win over livekit.config.
 */}}
 {{- define "tuwunel.livekitConfig" -}}
 {{- $l := .Values.livekit }}
-{{- $owned := dict "key_file" (printf "/etc/livekit/keys/%s" $l.existingSecret.key) "port" 7880 "rtc" (dict "tcp_port" 7881 "udp_port" 7882) }}
+{{- $owned := dict "key_file" (printf "/etc/livekit/keys/%s" $l.existingSecret.key) "port" 7880 "rtc" (dict "tcp_port" $l.rtc.tcpPort "udp_port" $l.rtc.udpPort) }}
 {{- if $l.metrics.enabled }}
 {{- $_ := set $owned "prometheus" (dict "port" 6789) }}
 {{- end }}

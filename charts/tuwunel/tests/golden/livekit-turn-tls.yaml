@@ -173,6 +173,10 @@ spec:
       port: 7880
       protocol: TCP
       targetPort: http
+    - name: turn-tls
+      port: 5349
+      protocol: TCP
+      targetPort: turn-tls
   selector:
     app.kubernetes.io/component: livekit
     app.kubernetes.io/instance: tuwunel
@@ -303,7 +307,7 @@ spec:
               name: turn-udp
               protocol: UDP
             - containerPort: 5349
-              hostPort: 5349
+              hostPort: 443
               name: turn-tls
               protocol: TCP
           readinessProbe:

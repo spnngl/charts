@@ -56,7 +56,7 @@ spec:
 {{- if ne $l.rtc.mode "hostNetwork" }}
 {{- $http := dict "ports" (list (dict "port" 7880 "protocol" "TCP")) }}
 {{- with $np.livekit.from }}{{ $_ := set $http "from" . }}{{ end }}
-{{- $media := list (dict "port" 7881 "protocol" "TCP") (dict "port" 7882 "protocol" "UDP") }}
+{{- $media := list (dict "port" $l.rtc.tcpPort "protocol" "TCP") (dict "port" $l.rtc.udpPort "protocol" "UDP") }}
 {{- if $l.turn.enabled }}
 {{- $media = append $media (dict "port" 3478 "protocol" "UDP") }}
 {{- if $l.turn.existingSecret.name }}
