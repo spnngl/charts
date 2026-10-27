@@ -232,26 +232,23 @@
     },
     "livenessProbe": {
       "additionalProperties": true,
-      "description": "Liveness probe, `/metrics` (the process serves HTTP). The bouncer has no other health endpoint.",
+      "description": "Liveness probe, a TCP connect to the metrics port (the HTTP server runs). The bouncer has no health endpoint, and `/metrics` is too slow to probe (see `startupProbe`).",
       "properties": {
         "failureThreshold": {
           "type": "integer"
         },
-        "httpGet": {
+        "periodSeconds": {
+          "type": "integer"
+        },
+        "tcpSocket": {
           "additionalProperties": true,
           "properties": {
-            "path": {
-              "type": "string"
-            },
             "port": {
               "type": "string"
             }
           },
           "required": [],
           "type": "object"
-        },
-        "periodSeconds": {
-          "type": "integer"
         }
       },
       "required": [],
@@ -422,26 +419,23 @@
     },
     "readinessProbe": {
       "additionalProperties": true,
-      "description": "Readiness probe, `/metrics` (the nftables tables exist). A LAPI outage never fails it.",
+      "description": "Readiness probe, a TCP connect to the metrics port (the nftables tables exist). A LAPI outage never fails it.",
       "properties": {
         "failureThreshold": {
           "type": "integer"
         },
-        "httpGet": {
+        "periodSeconds": {
+          "type": "integer"
+        },
+        "tcpSocket": {
           "additionalProperties": true,
           "properties": {
-            "path": {
-              "type": "string"
-            },
             "port": {
               "type": "string"
             }
           },
           "required": [],
           "type": "object"
-        },
-        "periodSeconds": {
-          "type": "integer"
         }
       },
       "required": [],
@@ -572,26 +566,23 @@
     },
     "startupProbe": {
       "additionalProperties": true,
-      "description": "Startup probe, `/metrics`. The bouncer serves it once its nftables tables exist. The chart sets `httpGet.host: 127.0.0.1` unless `metrics.podMonitor.enabled`.",
+      "description": "Startup probe, a TCP connect to the metrics port. The bouncer listens once its nftables tables exist. Not `httpGet /metrics`: each GET lists every nftables set, up to a second on a slow node with many decisions, and timed-out probes restarted the bouncer. The chart sets `httpGet.host` or `tcpSocket.host` to `127.0.0.1` unless `metrics.podMonitor.enabled`.",
       "properties": {
         "failureThreshold": {
           "type": "integer"
         },
-        "httpGet": {
+        "periodSeconds": {
+          "type": "integer"
+        },
+        "tcpSocket": {
           "additionalProperties": true,
           "properties": {
-            "path": {
-              "type": "string"
-            },
             "port": {
               "type": "string"
             }
           },
           "required": [],
           "type": "object"
-        },
-        "periodSeconds": {
-          "type": "integer"
         }
       },
       "required": [],
