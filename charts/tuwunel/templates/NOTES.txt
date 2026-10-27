@@ -35,9 +35,9 @@ Register with that token, then close registration again (or keep the token).
 
 Calls: LiveKit and lk-jwt-service answer on https://{{ .Values.livekit.host }}.
 {{- if eq .Values.livekit.rtc.mode "LoadBalancer" }}
-Point {{ .Values.livekit.host }}'s media at the load balancer of service/{{ include "tuwunel.fullname" . }}-livekit-rtc (7881/tcp, 7882/udp).
+Point {{ .Values.livekit.host }}'s media at the load balancer of service/{{ include "tuwunel.fullname" . }}-livekit-rtc ({{ .Values.livekit.rtc.tcpPort }}/tcp, {{ .Values.livekit.rtc.udpPort }}/udp).
 {{- else }}
-Media is published on the node running LiveKit (7881/tcp, 7882/udp, {{ .Values.livekit.rtc.mode }}): open both ports to the internet on that node.
+Media is published on the node running LiveKit ({{ .Values.livekit.rtc.tcpPort }}/tcp, {{ .Values.livekit.rtc.udpPort }}/udp, {{ .Values.livekit.rtc.mode }}): open both ports to the internet on that node.
 {{- if not .Values.livekit.nodeSelector }}
 livekit.nodeSelector is empty: the scheduler may place LiveKit on a node that has no public IP, or move it to another one. Pin it to the node whose address clients reach.
 {{- end }}

@@ -73,15 +73,15 @@ spec:
             - containerPort: 7880
               name: http
               protocol: TCP
-            - containerPort: 7881
+            - containerPort: {{ $l.rtc.tcpPort }}
               {{- if $hostPort }}
-              hostPort: 7881
+              hostPort: {{ $l.rtc.tcpPort }}
               {{- end }}
               name: rtc-tcp
               protocol: TCP
-            - containerPort: 7882
+            - containerPort: {{ $l.rtc.udpPort }}
               {{- if $hostPort }}
-              hostPort: 7882
+              hostPort: {{ $l.rtc.udpPort }}
               {{- end }}
               name: rtc-udp
               protocol: UDP
@@ -95,7 +95,8 @@ spec:
             {{- if $l.turn.existingSecret.name }}
             - containerPort: 5349
               {{- if $hostPort }}
-              hostPort: 5349
+              {{- /* Clients always dial turns:<domain>:443 (LiveKit pkg/service/roommanager.go). */}}
+              hostPort: 443
               {{- end }}
               name: turn-tls
               protocol: TCP

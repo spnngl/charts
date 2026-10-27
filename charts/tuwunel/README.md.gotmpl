@@ -191,18 +191,20 @@ from the pod and reach the Ingress (delegation, see [Delegation](#delegation)).
 
 ### Media
 
-Media is fixed on 7881/tcp (ICE over TCP) and 7882/udp (every call, multiplexed).
-`livekit.rtc.mode` says how it reaches the pod:
+Media uses `livekit.rtc.tcpPort` (ICE over TCP, default 7881) and `livekit.rtc.udpPort`
+(every call, multiplexed, default 7882; it may equal `tcpPort`). Each port is the same
+inside the pod, on the node and on the media Service: LiveKit advertises the port it
+listens on. `livekit.rtc.mode` says how media reaches the pod:
 
 | Mode                 | Media reaches the pod via                      | Advertised address (unless `rtc.node_ip` or `rtc.use_external_ip` is set)  |
 | -------------------- | ---------------------------------------------- | -------------------------------------------------------------------------- |
-| `hostPort` (default) | `hostPort` 7881/tcp and 7882/udp               | the node's IP (`NODE_IP`)                                                  |
+| `hostPort` (default) | `hostPort` `tcpPort`/tcp and `udpPort`/udp     | the node's IP (`NODE_IP`)                                                  |
 | `hostNetwork`        | the node's interfaces                          | what LiveKit finds on them                                                 |
 | `LoadBalancer`       | a Service of its own, `<fullname>-livekit-rtc` | **must be set**: `config.rtc.node_ip` or `config.rtc.use_external_ip`      |
 
 - Both host modes need a namespace that allows privileged pods (Pod Security
   `baseline` and `restricted` refuse `hostPort`), a node with a public IP (pin it
-  with `livekit.nodeSelector`; `helm install` warns while it is empty) and 7881/tcp + 7882/udp open to the internet on it.
+  with `livekit.nodeSelector`; `helm install` warns while it is empty) and both media ports open to the internet on it.
   `hostPort` needs the CNI `portmap` plugin, UDP included, and keeps the pod network
   (NetworkPolicy and `hostUsers: false` apply). `hostNetwork` has neither:
   LiveKit's API (7880) and metrics (6789) listen on the node's IP, and NetworkPolicy
@@ -215,7 +217,7 @@ Media is fixed on 7881/tcp (ICE over TCP) and 7882/udp (every call, multiplexed)
   needs mixed-protocol support from the provider; otherwise use a host mode.
   `livekit.rtc.service` sets its annotations, `externalTrafficPolicy` and
   `loadBalancerClass`.
-- Without TURN, clients behind strict firewalls reach LiveKit only over 7881/tcp
+- Without TURN, clients behind strict firewalls reach LiveKit only over `tcpPort`
   (see [TURN](#turn)).
 - ingress-nginx closes idle WebSockets after 60 s: raise `proxy-read-timeout` and
   `proxy-send-timeout` on the LiveKit Ingress.
@@ -223,12 +225,25 @@ Media is fixed on 7881/tcp (ICE over TCP) and 7882/udp (every call, multiplexed)
 ### TURN
 
 `livekit.turn.enabled` runs LiveKit's built-in TURN server for clients that cannot
-reach 7882/udp. It adds 3478/udp (TURN over UDP), published like the media ports
+reach `rtc.udpPort`. It adds 3478/udp (TURN over UDP), published like the media ports
 (`rtc.mode`), and LiveKit hands its address to clients. For clients that only get
 TLS through, also set `livekit.turn.domain` and `livekit.turn.existingSecret.name`,
-a `kubernetes.io/tls` Secret for that name: TURN over TLS then listens on 5349/tcp.
-`domain` must resolve to the address clients reach (the node, or the load balancer)
-and the certificate must cover it. Open 3478/udp and 5349/tcp like 7881/7882.
+a `kubernetes.io/tls` Secret for that name: TURN over TLS. `domain` must resolve to
+the address clients reach and the certificate must cover it.
+
+LiveKit listens on 5349/tcp but always hands clients `turns:<domain>:443`
+(`pkg/service/roommanager.go` upstream), so 443 must reach 5349:
+
+| Mode           | 443 reaches 5349 via                                                            |
+| -------------- | ------------------------------------------------------------------------------- |
+| `hostPort`     | `hostPort` 443: no other process may hold 443 on that node (ingress controller) |
+| `LoadBalancer` | port 443 of the media Service                                                   |
+| `hostNetwork`  | nothing: forward 443 to 5349 in front of the node (NAT, firewall)               |
+
+An ingress controller already on 443 can pass `domain` through by SNI (SSL
+passthrough, no TLS termination) to the `turn-tls` port (5349) of the LiveKit Service.
+LiveKit loads the certificate at start only: restart it on renewal
+(`livekit.existingSecret.revision`). Open 3478/udp and 443/tcp like the media ports.
 
 ```yaml
 livekit:
