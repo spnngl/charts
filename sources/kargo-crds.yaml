@@ -10,7 +10,7 @@ version:
   # Pre-releases (-rc) are excluded by the pattern.
   tagPattern: '^v(\d+\.\d+\.\d+)$'
   allow: all
-  current: v1.12.4
+  current: v1.12.5
 sources:
   # controller-gen writes its output straight into the Helm chart as plain
   # YAML; the chart's templates/crds.yaml only wraps these files.
