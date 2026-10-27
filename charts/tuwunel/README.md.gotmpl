@@ -161,7 +161,10 @@ advertises `https://<host>` (`well_known.livekit_url`, answered from
 users of `serverName`.
 
 Create the Secret first: one file, `<api key>: <api secret>` (a secret of 32
-characters or more), shared by both pods (mode `0440`). The chart never creates it,
+characters or more), shared by both pods (mode `0440`). Write it unquoted, with no
+other `:`: lk-jwt-service splits the line on `:` and keeps quotes in the secret,
+while LiveKit parses it as YAML, so a quoted secret makes LiveKit reject every token
+request (401, `signature is invalid`). The chart never creates it,
 and a running pod does not re-read it: after a rotation, change
 `livekit.existingSecret.revision` (any string, a hash of the Secret from CI for
 instance) to restart both pods.
