@@ -161,7 +161,10 @@ advertises `https://<host>` (`well_known.livekit_url`, answered from
 users of `serverName`.
 
 Create the Secret first: one file, `<api key>: <api secret>` (a secret of 32
-characters or more), shared by both pods (mode `0440`). The chart never creates it,
+characters or more), shared by both pods (mode `0440`). Write it unquoted, with no
+other `:`: lk-jwt-service splits the line on `:` and keeps quotes in the secret,
+while LiveKit parses it as YAML, so a quoted secret makes LiveKit reject every token
+request (401, `signature is invalid`). The chart never creates it,
 and a running pod does not re-read it: after a rotation, change
 `livekit.existingSecret.revision` (any string, a hash of the Secret from CI for
 instance) to restart both pods.
@@ -469,7 +472,7 @@ Kubernetes: `>=1.33.0-0`
 | livekit.affinity | object | `{}` | Affinity of the LiveKit pod. |
 | livekit.config | object | `{}` | LiveKit settings (`config.yaml`, see `config-sample.yaml` upstream), rendered into a ConfigMap. Chart-owned keys (`port`, `rtc.tcp_port`, `rtc.udp_port`, `key_file`, `prometheus.port` and `turn.enabled`, `turn.domain`, `turn.udp_port`, `turn.tls_port`, `turn.cert_file`, `turn.key_file`) are rejected. Keys go through `existingSecret`, never here. Redis and multi-node are out of scope. |
 | livekit.enabled | bool | `false` | Deploy LiveKit and lk-jwt-service (calls for Element Call and Element X). Needs `host` and `existingSecret.name`. |
-| livekit.existingSecret.key | string | `"keys.yaml"` | Key of the Secret: a file holding one line, `<api key>: <api secret>` (a secret of 32 characters or more). |
+| livekit.existingSecret.key | string | `"keys.yaml"` | Key of the Secret: a file holding one line, `<api key>: <api secret>` (a secret of 32 characters or more), unquoted and with no other `:`: lk-jwt-service splits the line on `:` and keeps quotes, LiveKit parses it as YAML (a quoted secret fails every call with a 401 from LiveKit). |
 | livekit.existingSecret.name | string | `""` | Name of a Secret holding the LiveKit API key and secret, shared by LiveKit and lk-jwt-service. Required when enabled. The chart never creates it. |
 | livekit.existingSecret.revision | string | `""` | Opaque string added to both pods as the `checksum/secret` annotation: change it when you rotate the Secret to restart them (a mounted Secret is not re-read by a running process). The chart cannot hash a Secret it does not own, so it is yours to set, for example from CI: `--set-string livekit.existingSecret.revision=$(kubectl get secret livekit-keys -o json | sha256sum | cut -c1-12)`. Empty: no annotation. |
 | livekit.host | string | `""` | Public host of LiveKit and lk-jwt-service (one host for both, `calls.example.com`). Required when enabled. Clients get `https://<host>` from the homeserver (`well_known.livekit_url`), lk-jwt-service gets `wss://<host>`. |

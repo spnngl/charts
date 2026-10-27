@@ -705,7 +705,7 @@
           "additionalProperties": false,
           "properties": {
             "key": {
-              "description": "Key of the Secret: a file holding one line, `\u003capi key\u003e: \u003capi secret\u003e` (a secret of 32 characters or more).",
+              "description": "Key of the Secret: a file holding one line, `\u003capi key\u003e: \u003capi secret\u003e` (a secret of 32 characters or more), unquoted and with no other `:`: lk-jwt-service splits the line on `:` and keeps quotes, LiveKit parses it as YAML (a quoted secret fails every call with a 401 from LiveKit).",
               "type": "string"
             },
             "name": {
