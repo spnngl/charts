@@ -3,7 +3,7 @@ apiVersion: v2
 name: artifacthub-exporter
 description: Prometheus exporter for Artifact Hub package and repository metrics (stars, versions, views, vulnerabilities, tracking status) running as a hardened Deployment
 type: application
-version: 0.1.3
+version: 0.1.4
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/artifacthub-exporter
 appVersion: "0.1.0"
 kubeVersion: ">=1.33.0-0"
@@ -28,7 +28,7 @@ annotations:
   # artifacthub-exporter.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: artifacthub-exporter
-      image: ghcr.io/spnngl/images/artifacthub-exporter:0.1.0@sha256:172d80e6d4dade6ddf07f0434e64568096c1ed9cc8e11fdd25a3f9caa029f894
+      image: ghcr.io/spnngl/images/artifacthub-exporter:0.1.0@sha256:9f2e4388c11a7117ee43a4ee44eb51bc4449e0c1cea474555eb3abbb6b9122b9
   artifacthub.io/links: |-
     - name: Upstream repository
       url: https://github.com/spnngl/artifacthub-exporter
