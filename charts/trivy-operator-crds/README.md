@@ -5,7 +5,7 @@
 CustomResourceDefinitions for Trivy Operator (VulnerabilityReport, ConfigAuditReport, SbomReport and other security reports).
 
 CRDs are copied verbatim from [aquasecurity/trivy-operator](https://github.com/aquasecurity/trivy-operator)
-at tag [`v0.36.0`](https://github.com/aquasecurity/trivy-operator/tree/v0.36.0) (commit `047f1d95f4f8355569aadbdad0f1c74550c6cbec`),
+at tag [`v0.36.1`](https://github.com/aquasecurity/trivy-operator/tree/v0.36.1) (commit `b40091af2bfba4c90b109fc0817d6c3f49bfc9a4`),
 path(s) `deploy/helm/crds`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 

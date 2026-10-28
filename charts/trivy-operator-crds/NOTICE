@@ -7,7 +7,7 @@ This product includes software developed by Aqua Security (https://aquasec.com).
 
 The CustomResourceDefinition manifests under templates/ were copied from
   https://github.com/aquasecurity/trivy-operator
-at tag v0.36.0 (commit 047f1d95f4f8355569aadbdad0f1c74550c6cbec), path(s): deploy/helm/crds
+at tag v0.36.1 (commit b40091af2bfba4c90b109fc0817d6c3f49bfc9a4), path(s): deploy/helm/crds
 and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
 added; server-side metadata and upstream Helm release metadata were removed.
 Upstream license: Apache-2.0 (see LICENSE in this directory).

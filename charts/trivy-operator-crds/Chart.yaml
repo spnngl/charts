@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for Trivy Operator (VulnerabilityReport,
   ConfigAuditReport, SbomReport and other security reports)
 type: application
-version: 0.36.0
-appVersion: 0.36.0
+version: 0.36.1
+appVersion: 0.36.1
 kubeVersion: ">=1.16.0-0"
 home: https://aquasecurity.github.io/trivy-operator/latest
 icon: >-
@@ -106,13 +106,13 @@ annotations:
     - name: Upstream repository
       url: https://github.com/aquasecurity/trivy-operator
     - name: Upstream CRD source (deploy/helm/crds)
-      url: https://github.com/aquasecurity/trivy-operator/tree/v0.36.0/deploy/helm/crds
+      url: https://github.com/aquasecurity/trivy-operator/tree/v0.36.1/deploy/helm/crds
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/trivy-operator-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/aquasecurity/trivy-operator
-  charts.spnngl.io/upstream-tag: v0.36.0
-  charts.spnngl.io/upstream-commit: 047f1d95f4f8355569aadbdad0f1c74550c6cbec
+  charts.spnngl.io/upstream-tag: v0.36.1
+  charts.spnngl.io/upstream-commit: b40091af2bfba4c90b109fc0817d6c3f49bfc9a4
   artifacthub.io/changes: |
-    - Upstream CRDs updated from v0.35.0 to v0.36.0
+    - Upstream CRDs updated from v0.36.0 to v0.36.1
