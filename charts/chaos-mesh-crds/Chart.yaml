@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for Chaos Mesh (chaos experiments, schedules,
   workflows)
 type: application
-version: 2.8.8
-appVersion: 2.8.6
+version: 2.8.9
+appVersion: 2.8.7
 kubeVersion: ">=1.16.0-0"
 home: https://chaos-mesh.org
 icon: https://raw.githubusercontent.com/chaos-mesh/chaos-mesh/master/static/logo.svg
@@ -144,13 +144,13 @@ annotations:
     - name: Upstream repository
       url: https://github.com/chaos-mesh/chaos-mesh
     - name: Upstream CRD source (config/crd/bases)
-      url: https://github.com/chaos-mesh/chaos-mesh/tree/v2.8.6/config/crd/bases
+      url: https://github.com/chaos-mesh/chaos-mesh/tree/v2.8.7/config/crd/bases
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/chaos-mesh-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/chaos-mesh/chaos-mesh
-  charts.spnngl.io/upstream-tag: v2.8.6
-  charts.spnngl.io/upstream-commit: c58b44f18ff02f04965be5d439a68658e5d65fde
+  charts.spnngl.io/upstream-tag: v2.8.7
+  charts.spnngl.io/upstream-commit: bed3ddc335600c633b2679a76ef0f07aa01ce5fb
   artifacthub.io/changes: |
-    - Upstream CRDs updated from v2.8.5 to v2.8.6
+    - Upstream CRDs updated from v2.8.6 to v2.8.7
