@@ -4,8 +4,8 @@
 "metadata": {
 "annotations": {
 {{- with include "gateway-api-exp-crds.crdAnnotations" . | trimPrefix "{" | trimSuffix "}" }}{{ . }},{{- end }}
-"api-approved.kubernetes.io": "https://github.com/kubernetes-sigs/gateway-api/pull/4530",
-"gateway.networking.k8s.io/bundle-version": "v1.6.3",
+"api-approved.kubernetes.io": "https://github.com/kubernetes-sigs/gateway-api/pull/5371",
+"gateway.networking.k8s.io/bundle-version": "v1.7.0",
 "gateway.networking.k8s.io/channel": "experimental"
 },
 "name": "gatewayclasses.gateway.networking.k8s.io",
@@ -80,7 +80,7 @@
 "type": "string",
 "x-kubernetes-validations": [
 {
-"message": "Value is immutable",
+"message": "field is immutable",
 "rule": "self == oldSelf"
 }
 ]
@@ -304,7 +304,7 @@
 "type": "string",
 "x-kubernetes-validations": [
 {
-"message": "Value is immutable",
+"message": "field is immutable",
 "rule": "self == oldSelf"
 }
 ]
