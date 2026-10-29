@@ -18,7 +18,7 @@ kubeconform = "0.8.0"
 # yannh/kubernetes-json-schema, which has no such release tags: when it lags
 # behind, the Renovate PR stays red until it catches up.
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
-k8s-json-schema = "1.37.1"
+k8s-json-schema = "1.37.2"
 # renovate: datasource=github-releases depName=helm/chart-testing
 chart-testing = "3.15.0"
 # renovate: datasource=github-releases depName=sigstore/cosign
