@@ -5,7 +5,7 @@
 CustomResourceDefinitions for Kubernetes Gateway API, experimental channel.
 
 CRDs are copied verbatim from [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api)
-at tag [`v1.6.3`](https://github.com/kubernetes-sigs/gateway-api/tree/v1.6.3) (commit `c0836133e24073fcdcdbb1713aba3cc73a89d0b5`),
+at tag [`v1.7.0`](https://github.com/kubernetes-sigs/gateway-api/tree/v1.7.0) (commit `e26d183dbbc1bb782b78addbd26faba03955c152`),
 path(s) `config/crd/experimental`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
@@ -32,9 +32,9 @@ helm install gateway-api-exp oci://ghcr.io/spnngl/charts/gateway-api-exp-crds --
 or, on older Helm, hand them over first (replace `<release>` and `<namespace>`):
 
 ```sh
-kubectl annotate crd backendtlspolicies.gateway.networking.k8s.io gatewayclasses.gateway.networking.k8s.io gateways.gateway.networking.k8s.io grpcroutes.gateway.networking.k8s.io httproutes.gateway.networking.k8s.io listenersets.gateway.networking.k8s.io referencegrants.gateway.networking.k8s.io tcproutes.gateway.networking.k8s.io tlsroutes.gateway.networking.k8s.io udproutes.gateway.networking.k8s.io xbackends.gateway.networking.x-k8s.io xbackendtrafficpolicies.gateway.networking.x-k8s.io xmeshes.gateway.networking.x-k8s.io \
+kubectl annotate crd backendtlspolicies.gateway.networking.k8s.io gatewayclasses.gateway.networking.k8s.io gateways.gateway.networking.k8s.io grpcroutes.gateway.networking.k8s.io httproutes.gateway.networking.k8s.io listenersets.gateway.networking.k8s.io referencegrants.gateway.networking.k8s.io tcproutes.gateway.networking.k8s.io tlsroutes.gateway.networking.k8s.io udproutes.gateway.networking.k8s.io xbackends.gateway.networking.x-k8s.io xbackendtrafficpolicies.gateway.networking.x-k8s.io xmeshes.gateway.networking.x-k8s.io xtelemetrypolicies.gateway.networking.x-k8s.io \
   meta.helm.sh/release-name=<release> meta.helm.sh/release-namespace=<namespace> --overwrite
-kubectl label crd backendtlspolicies.gateway.networking.k8s.io gatewayclasses.gateway.networking.k8s.io gateways.gateway.networking.k8s.io grpcroutes.gateway.networking.k8s.io httproutes.gateway.networking.k8s.io listenersets.gateway.networking.k8s.io referencegrants.gateway.networking.k8s.io tcproutes.gateway.networking.k8s.io tlsroutes.gateway.networking.k8s.io udproutes.gateway.networking.k8s.io xbackends.gateway.networking.x-k8s.io xbackendtrafficpolicies.gateway.networking.x-k8s.io xmeshes.gateway.networking.x-k8s.io \
+kubectl label crd backendtlspolicies.gateway.networking.k8s.io gatewayclasses.gateway.networking.k8s.io gateways.gateway.networking.k8s.io grpcroutes.gateway.networking.k8s.io httproutes.gateway.networking.k8s.io listenersets.gateway.networking.k8s.io referencegrants.gateway.networking.k8s.io tcproutes.gateway.networking.k8s.io tlsroutes.gateway.networking.k8s.io udproutes.gateway.networking.k8s.io xbackends.gateway.networking.x-k8s.io xbackendtrafficpolicies.gateway.networking.x-k8s.io xmeshes.gateway.networking.x-k8s.io xtelemetrypolicies.gateway.networking.x-k8s.io \
   app.kubernetes.io/managed-by=Helm --overwrite
 ```
 
@@ -65,6 +65,7 @@ Unknown keys are rejected (`values.schema.json`).
 | `xbackends.gateway.networking.x-k8s.io` | XBackend | gateway.networking.x-k8s.io | Namespaced | **v1alpha1** |
 | `xbackendtrafficpolicies.gateway.networking.x-k8s.io` | XBackendTrafficPolicy | gateway.networking.x-k8s.io | Namespaced | **v1alpha1** |
 | `xmeshes.gateway.networking.x-k8s.io` | XMesh | gateway.networking.x-k8s.io | Cluster | **v1alpha1** |
+| `xtelemetrypolicies.gateway.networking.x-k8s.io` | XTelemetryPolicy | gateway.networking.x-k8s.io | Namespaced | **v1alpha1** |
 
 Bold = storage version, ~~struck~~ = not served.
 
