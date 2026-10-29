@@ -5,7 +5,7 @@
 CustomResourceDefinitions for Kubernetes Gateway API, standard channel.
 
 CRDs are copied verbatim from [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api)
-at tag [`v1.6.3`](https://github.com/kubernetes-sigs/gateway-api/tree/v1.6.3) (commit `c0836133e24073fcdcdbb1713aba3cc73a89d0b5`),
+at tag [`v1.7.0`](https://github.com/kubernetes-sigs/gateway-api/tree/v1.7.0) (commit `e26d183dbbc1bb782b78addbd26faba03955c152`),
 path(s) `config/crd`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 

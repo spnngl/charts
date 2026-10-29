@@ -4,8 +4,8 @@
 "metadata": {
 "annotations": {
 {{- with include "gateway-api-crds.crdAnnotations" . | trimPrefix "{" | trimSuffix "}" }}{{ . }},{{- end }}
-"api-approved.kubernetes.io": "https://github.com/kubernetes-sigs/gateway-api/pull/4530",
-"gateway.networking.k8s.io/bundle-version": "v1.6.3",
+"api-approved.kubernetes.io": "https://github.com/kubernetes-sigs/gateway-api/pull/5371",
+"gateway.networking.k8s.io/bundle-version": "v1.7.0",
 "gateway.networking.k8s.io/channel": "standard"
 },
 "labels": {
@@ -93,7 +93,7 @@
 "type": "string"
 },
 "sectionName": {
-"description": "SectionName is the name of a section within the target resource. When\nunspecified, this targetRef targets the entire resource. In the following\nresources, SectionName is interpreted as the following:\n\n* Gateway: Listener name\n* HTTPRoute: HTTPRouteRule name\n* Service: Port name\n\nIf a SectionName is specified, but does not exist on the targeted object,\nthe Policy must fail to attach, and the policy implementation should record\na `ResolvedRefs` or similar Condition in the Policy's status.",
+"description": "SectionName is the name of a section within the target resource. When\nunspecified, this targetRef targets the entire resource. In the following\nresources, SectionName is interpreted as the following:\n\n* Gateway: Listener name\n* ListenerSet: Listener name\n* HTTPRoute: HTTPRouteRule name\n* Service: Port name\n\nIf a SectionName is specified, but does not exist on the targeted object,\nthe Policy must fail to attach, and the policy implementation should record\na `ResolvedRefs` or similar Condition in the Policy's status.",
 "maxLength": 253,
 "minLength": 1,
 "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
@@ -469,7 +469,7 @@
 "type": "string"
 },
 "sectionName": {
-"description": "SectionName is the name of a section within the target resource. When\nunspecified, this targetRef targets the entire resource. In the following\nresources, SectionName is interpreted as the following:\n\n* Gateway: Listener name\n* HTTPRoute: HTTPRouteRule name\n* Service: Port name\n\nIf a SectionName is specified, but does not exist on the targeted object,\nthe Policy must fail to attach, and the policy implementation should record\na `ResolvedRefs` or similar Condition in the Policy's status.",
+"description": "SectionName is the name of a section within the target resource. When\nunspecified, this targetRef targets the entire resource. In the following\nresources, SectionName is interpreted as the following:\n\n* Gateway: Listener name\n* ListenerSet: Listener name\n* HTTPRoute: HTTPRouteRule name\n* Service: Port name\n\nIf a SectionName is specified, but does not exist on the targeted object,\nthe Policy must fail to attach, and the policy implementation should record\na `ResolvedRefs` or similar Condition in the Policy's status.",
 "maxLength": 253,
 "minLength": 1,
 "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
