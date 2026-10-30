@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for Traefik Proxy (IngressRoutes, Middlewares, TLS
   options, transports)
 type: application
-version: 3.7.18
-appVersion: 3.7.16
+version: 3.7.19
+appVersion: 3.7.17
 kubeVersion: ">=1.25.0-0"
 home: https://traefik.io
 icon: >-
@@ -85,13 +85,13 @@ annotations:
         Upstream CRD source
         (docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml)
       url: >-
-        https://github.com/traefik/traefik/tree/v3.7.16/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml
+        https://github.com/traefik/traefik/tree/v3.7.17/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/traefik-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/traefik/traefik
-  charts.spnngl.io/upstream-tag: v3.7.16
-  charts.spnngl.io/upstream-commit: af6d927c51191ae1df104aaf907793386b816c28
+  charts.spnngl.io/upstream-tag: v3.7.17
+  charts.spnngl.io/upstream-commit: 04e8ccf84ada1dcb450cec06554fe27812903134
   artifacthub.io/changes: |
-    - Upstream CRDs updated from v3.7.15 to v3.7.16
+    - Upstream CRDs updated from v3.7.16 to v3.7.17
