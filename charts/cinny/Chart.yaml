@@ -5,7 +5,7 @@ description: Cinny, a Matrix web client, as a hardened stateless Deployment serv
 type: application
 version: 0.1.0
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/cinny
-appVersion: "4.12.7"
+appVersion: "4.12.8"
 kubeVersion: ">=1.33.0-0"
 home: https://github.com/cinnyapp/cinny
 icon: https://raw.githubusercontent.com/cinnyapp/cinny/v4.12.7/public/res/svg/cinny.svg
@@ -27,7 +27,7 @@ annotations:
   # cinny.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: cinny
-      image: ghcr.io/spnngl/images/cinny:4.12.7@sha256:90ee88777d209eebcecc047391d4c5a178c5a650bc4f5076344c479d5f6a315b
+      image: ghcr.io/spnngl/images/cinny:4.12.8@sha256:778a1750613974985f0da8d1eb217b666cda16758cef001813ffa3c23159c6f8
   artifacthub.io/links: |-
     - name: Upstream repository
       url: https://github.com/cinnyapp/cinny
