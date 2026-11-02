@@ -5,7 +5,7 @@
 CustomResourceDefinitions for Argo CD (Applications, ApplicationSets, AppProjects).
 
 CRDs are copied verbatim from [argoproj/argo-cd](https://github.com/argoproj/argo-cd)
-at tag [`v3.5.6`](https://github.com/argoproj/argo-cd/tree/v3.5.6) (commit `c2b1e3017e2cec86b122172e861dcd026453ae44`),
+at tag [`v3.5.7`](https://github.com/argoproj/argo-cd/tree/v3.5.7) (commit `6d732962f61a99c2a0f221fd26b9aac7c83bcf18`),
 path(s) `manifests/crds`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
