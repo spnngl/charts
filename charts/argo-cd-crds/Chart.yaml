@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for Argo CD (Applications, ApplicationSets,
   AppProjects)
 type: application
-version: 3.5.8
-appVersion: 3.5.6
+version: 3.5.9
+appVersion: 3.5.7
 kubeVersion: ">=1.16.0-0"
 home: https://argo-cd.readthedocs.io
 icon: >-
@@ -45,13 +45,13 @@ annotations:
     - name: Upstream repository
       url: https://github.com/argoproj/argo-cd
     - name: Upstream CRD source (manifests/crds)
-      url: https://github.com/argoproj/argo-cd/tree/v3.5.6/manifests/crds
+      url: https://github.com/argoproj/argo-cd/tree/v3.5.7/manifests/crds
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/argo-cd-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/argoproj/argo-cd
-  charts.spnngl.io/upstream-tag: v3.5.6
-  charts.spnngl.io/upstream-commit: c2b1e3017e2cec86b122172e861dcd026453ae44
+  charts.spnngl.io/upstream-tag: v3.5.7
+  charts.spnngl.io/upstream-commit: 6d732962f61a99c2a0f221fd26b9aac7c83bcf18
   artifacthub.io/changes: |
-    - Upstream CRDs updated from v3.5.5 to v3.5.6
+    - Upstream CRDs updated from v3.5.6 to v3.5.7
