@@ -5,7 +5,7 @@
 CustomResourceDefinitions for Cluster API core (clusters, machines, ClusterClass, IPAM, runtime extensions).
 
 CRDs are copied verbatim from [kubernetes-sigs/cluster-api](https://github.com/kubernetes-sigs/cluster-api)
-at tag [`v1.14.3`](https://github.com/kubernetes-sigs/cluster-api/tree/v1.14.3) (commit `825a79dc92ddcca6acc935e233201c697a2f7488`),
+at tag [`v1.14.4`](https://github.com/kubernetes-sigs/cluster-api/tree/v1.14.4) (commit `4356c154f4a76b8939748ef7ebc2d0793ffe47e8`),
 path(s) `core/config/crd/bases`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
