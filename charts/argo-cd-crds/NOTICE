@@ -1,6 +1,6 @@
 The CustomResourceDefinition manifests under templates/ were copied from
   https://github.com/argoproj/argo-cd
-at tag v3.6.0 (commit f55566445ee3a2a4f3339bf10df0f6bc1ecf7f23), path(s): manifests/crds
+at tag v3.6.1 (commit 94037c4d4e1af4bd0651d37a179fbd9e347e668c), path(s): manifests/crds
 and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
 added; server-side metadata and upstream Helm release metadata were removed.
 Upstream license: Apache-2.0 (see LICENSE in this directory).
