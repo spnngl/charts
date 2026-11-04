@@ -30,7 +30,7 @@ annotations:
     - name: transmission
       image: ghcr.io/spnngl/images/transmission:4.1.4@sha256:dea3024afddfba68f5d8b49cea20ce2af039363578833f58580177d840518f2f
     - name: transmission-exporter
-      image: ghcr.io/spnngl/images/transmission-exporter:0.5.0@sha256:c013ff95b4c1d937c6a27ff1a258d4cd0381973ae3030d049d1a376ff35932ba
+      image: ghcr.io/spnngl/images/transmission-exporter:0.5.0@sha256:9789d35771db7ba1c472a9f8a924281d2e935e90ad15cfff25f744d3517a74e4
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://transmissionbt.com
