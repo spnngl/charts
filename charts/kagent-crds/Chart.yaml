@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for kagent (agents, model configs, memories, tool and
   MCP servers)
 type: application
-version: 0.10.5
-appVersion: 0.10.5
+version: 0.10.6
+appVersion: 0.10.6
 kubeVersion: ">=1.25.0-0"
 home: https://kagent.dev
 icon: https://avatars.githubusercontent.com/u/195942545?s=200&v=4
@@ -73,13 +73,13 @@ annotations:
     - name: Upstream repository
       url: https://github.com/kagent-dev/kagent
     - name: Upstream CRD source (go/api/config/crd/bases)
-      url: https://github.com/kagent-dev/kagent/tree/v0.10.5/go/api/config/crd/bases
+      url: https://github.com/kagent-dev/kagent/tree/v0.10.6/go/api/config/crd/bases
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/kagent-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/kagent-dev/kagent
-  charts.spnngl.io/upstream-tag: v0.10.5
-  charts.spnngl.io/upstream-commit: 46bedf7c6b3567d1437dc23462bedd8d3fe3067e
+  charts.spnngl.io/upstream-tag: v0.10.6
+  charts.spnngl.io/upstream-commit: e36246357df0b8ad248e421ddfcce534be1d6816
   artifacthub.io/changes: |
-    - Upstream CRDs updated from v0.10.4 to v0.10.5
+    - Upstream CRDs updated from v0.10.5 to v0.10.6
