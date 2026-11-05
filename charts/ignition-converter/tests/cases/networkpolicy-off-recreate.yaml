@@ -1,0 +1,5 @@
+values:
+  networkPolicy:
+    enabled: false
+  strategy:
+    type: Recreate

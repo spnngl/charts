@@ -1,0 +1,396 @@
+---
+# Source: ignition-converter/templates/certificates.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app.kubernetes.io/instance: ignition-converter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ignition-converter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: ignition-converter-0.0.0
+  name: converter
+  namespace: ignition-converter
+spec:
+  dnsNames:
+    - converter.ignition-converter.svc
+    - converter.ignition-converter.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: converter-ca
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  secretName: converter-tls
+---
+# Source: ignition-converter/templates/certificates.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app.kubernetes.io/instance: ignition-converter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ignition-converter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: ignition-converter-0.0.0
+  name: converter-ca
+  namespace: ignition-converter
+spec:
+  commonName: converter-ca
+  # Ten years. A renewed CA changes caBundle at once: renew the serving
+  # certificate right after (README, TLS).
+  duration: 87600h
+  isCA: true
+  issuerRef:
+    kind: Issuer
+    name: converter-selfsigned
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  secretName: converter-ca
+---
+# Source: ignition-converter/templates/certificates.yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  labels:
+    app.kubernetes.io/instance: ignition-converter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ignition-converter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: ignition-converter-0.0.0
+  name: converter-ca
+  namespace: ignition-converter
+spec:
+  ca:
+    secretName: converter-ca
+---
+# Source: ignition-converter/templates/certificates.yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  labels:
+    app.kubernetes.io/instance: ignition-converter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ignition-converter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: ignition-converter-0.0.0
+  name: converter-selfsigned
+  namespace: ignition-converter
+spec:
+  selfSigned: {}
+---
+# Source: ignition-converter/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/dnsconfig-options: "The webhook resolves no name: it dials nothing."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read; a nodeAffinity would be replaced by a user affinity override."
+  labels:
+    app.kubernetes.io/instance: ignition-converter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ignition-converter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: ignition-converter-0.0.0
+  name: converter
+  namespace: ignition-converter
+spec:
+  minReadySeconds: 5
+  replicas: 5
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: ignition-converter
+      app.kubernetes.io/name: ignition-converter
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        example.com/note: hello
+      labels:
+        app.kubernetes.io/instance: ignition-converter
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: ignition-converter
+        app.kubernetes.io/version: 0.0.0
+        example.com/team: platform
+        helm.sh/chart: ignition-converter-0.0.0
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: ignition-converter
+                  app.kubernetes.io/name: ignition-converter
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      automountServiceAccountToken: false
+      containers:
+        # Flags are the binary's whole configuration (main.go): it reads no
+        # file and no variable besides these.
+        - args:
+            - --addr=:8443
+            - --cert-file=/tls/tls.crt
+            - --key-file=/tls/tls.key
+          env:
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+            - name: GODEBUG
+              value: http2debug=1
+          image: "ghcr.io/spnngl/images/ignition-converter:0.1.2"
+          imagePullPolicy: IfNotPresent
+          # The Service keeps routing to a terminating pod until the endpoint
+          # removal propagates: keep serving meanwhile, then SIGTERM closes the
+          # listener. sleep, not exec: the image has no shell.
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+            periodSeconds: 10
+          name: ignition-converter
+          ports:
+            - containerPort: 8443
+              name: https
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+            periodSeconds: 5
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /tls
+              name: tls
+              readOnly: true
+            - mountPath: /tmp
+              name: scratch
+      enableServiceLinks: false
+      hostUsers: true
+      imagePullSecrets:
+        - name: ghcr
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-cluster-critical
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: converter
+      # preStop 5 s + the webhook's 10 s shutdown (shutdownTimeout in main.go,
+      # also the webhook timeoutSeconds) + margin.
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: ignition-converter
+              app.kubernetes.io/name: ignition-converter
+          matchLabelKeys:
+          - pod-template-hash
+          maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+      volumes:
+        - name: tls
+          secret:
+            defaultMode: 288 # 0440
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+            secretName: converter-tls
+        - emptyDir: {}
+          name: scratch
+---
+# Source: ignition-converter/templates/mutatingwebhookconfiguration.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    # cainjector fills in caBundle with the CA, not the serving certificate.
+    cert-manager.io/inject-ca-from: ignition-converter/converter-ca
+  labels:
+    app.kubernetes.io/instance: ignition-converter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ignition-converter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: ignition-converter-0.0.0
+  # Cluster-scoped: the namespace keeps two releases of one name apart.
+  name: converter-ignition-converter
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: converter
+        namespace: ignition-converter
+        path: /mutate
+        port: 443
+    # Fail closed: a Secret left in Ignition 2.x would be rejected at boot by
+    # Fedora CoreOS, far from the cause.
+    failurePolicy: Fail
+    matchConditions:
+      # Data values are base64 in the API object, so only the key is matched;
+      # the webhook checks that format is "ignition".
+      - expression: >-
+          object.type == 'cluster.x-k8s.io/secret' &&
+          has(object.data) && 'format' in object.data
+        name: ignition-bootstrap-secret
+    matchPolicy: Equivalent
+    name: converter.ignition-converter.svc
+    namespaceSelector:
+      matchLabels:
+        example.com/capi: "true"
+    # Only Cluster API bootstrap Secrets. This also keeps the webhook's own
+    # TLS Secret out of scope, which would otherwise deadlock its startup.
+    objectSelector:
+      matchExpressions:
+        - key: cluster.x-k8s.io/cluster-name
+          operator: Exists
+    reinvocationPolicy: Never
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - secrets
+        scope: Namespaced
+    sideEffects: None
+    # The webhook's shutdownTimeout (main.go) matches it: a terminating pod
+    # answers every review the API server still waits for.
+    timeoutSeconds: 10
+---
+# Source: ignition-converter/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/instance: ignition-converter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ignition-converter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: ignition-converter-0.0.0
+  name: converter
+  namespace: ignition-converter
+spec:
+  ingress:
+    - from:
+      - ipBlock:
+          cidr: 10.0.0.0/8
+      ports:
+      - port: 8443
+        protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: ignition-converter
+      app.kubernetes.io/name: ignition-converter
+  # Egress listed with no rule: every outbound connection is denied. The
+  # webhook dials nothing, not even DNS.
+  policyTypes:
+    - Egress
+    - Ingress
+---
+# Source: ignition-converter/templates/pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    app.kubernetes.io/instance: ignition-converter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ignition-converter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: ignition-converter-0.0.0
+  name: converter
+  namespace: ignition-converter
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: ignition-converter
+      app.kubernetes.io/name: ignition-converter
+  unhealthyPodEvictionPolicy: AlwaysAllow
+---
+# Source: ignition-converter/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: ignition-converter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ignition-converter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: ignition-converter-0.0.0
+  name: converter
+  namespace: ignition-converter
+spec:
+  ports:
+    - appProtocol: https
+      name: https
+      port: 443
+      protocol: TCP
+      targetPort: https
+  selector:
+    app.kubernetes.io/instance: ignition-converter
+    app.kubernetes.io/name: ignition-converter
+  type: ClusterIP
+---
+# Source: ignition-converter/templates/serviceaccount.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  annotations:
+    example.com/note: hello
+  labels:
+    app.kubernetes.io/instance: ignition-converter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ignition-converter
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: ignition-converter-0.0.0
+  name: converter
+  namespace: ignition-converter

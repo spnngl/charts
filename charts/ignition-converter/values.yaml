@@ -1,0 +1,329 @@
+# yaml-language-server: $schema=values.schema.json
+# @schema.root
+# title: ignition-converter values
+# allOf:
+#   # tls.mode=existingSecret: the chart has neither the key pair nor the CA, both are required
+#   - if:
+#       required: [tls]
+#       properties:
+#         tls:
+#           required: [mode]
+#           properties:
+#             mode:
+#               const: existingSecret
+#     then:
+#       properties:
+#         tls:
+#           properties:
+#             existingSecret:
+#               required: [name, caBundle]
+#               properties:
+#                 name:
+#                   minLength: 1
+#                 caBundle:
+#                   minLength: 1
+#     else:
+#       properties:
+#         tls:
+#           properties:
+#             existingSecret:
+#               properties:
+#                 name:
+#                   maxLength: 0
+#                 caBundle:
+#                   maxLength: 0
+# @schema.root
+# -- Override the chart name used in resource names and labels.
+nameOverride: ""
+# -- Override the full resource name (default `<release>-<chart>`).
+fullnameOverride: ""
+
+image:
+  # -- Image repository.
+  repository: ghcr.io/spnngl/images/ignition-converter
+  # -- Image tag. Empty: `appVersion` pinned by the digest recorded in `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.
+  tag: ""
+  # @schema
+  # type: string
+  # pattern: "^(sha256:[a-f0-9]{64})?$"
+  # @schema
+  # -- Image digest, only valid together with `image.tag`.
+  digest: ""
+  # @schema
+  # type: string
+  # enum: [Always, IfNotPresent, Never]
+  # @schema
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+# @schema
+# -- Image pull secrets (list of `{name: <secret>}`).
+imagePullSecrets: []
+
+tls:
+  # @schema
+  # type: string
+  # enum: [certManager, existingSecret]
+  # @schema
+  # -- Source of the serving certificate. `certManager`: the chart creates a private CA and the serving certificate it signs (needs cert-manager, which Cluster API already requires); cainjector writes the CA into the webhook's `caBundle`. `existingSecret`: a `kubernetes.io/tls` Secret you manage, plus its CA in `existingSecret.caBundle`. The API server calls webhooks over HTTPS only, so TLS cannot be turned off.
+  mode: certManager
+  existingSecret:
+    # -- Name of a `kubernetes.io/tls` Secret (keys `tls.crt`, `tls.key`) in the release namespace, valid for `<fullname>.<namespace>.svc`. Required with `tls.mode: existingSecret`, empty otherwise. Read at every TLS handshake: a renewed key pair needs no restart.
+    name: ""
+    # @schema
+    # type: string
+    # pattern: "^[A-Za-z0-9+/]*={0,2}$"
+    # @schema
+    # -- Base64 of the PEM CA certificate that signed the Secret's certificate: the webhook's `caBundle`. Required with `tls.mode: existingSecret`, empty otherwise.
+    caBundle: ""
+
+webhook:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  # -- Namespace selector of the webhook (a `LabelSelector`). Empty: every namespace. Narrow it to the namespaces holding Cluster API clusters; Secrets outside it are stored unconverted.
+  namespaceSelector: {}
+
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Number of replicas. The webhook fails closed: with no replica ready, Cluster API cannot write any bootstrap Secret.
+replicaCount: 3
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Seconds a new pod must be Ready before an old one is retired.
+minReadySeconds: 5
+# -- Old ReplicaSets to keep.
+revisionHistoryLimit: 3
+strategy:
+  # @schema
+  # type: string
+  # enum: [RollingUpdate, Recreate]
+  # @schema
+  # -- Deployment strategy type. `Recreate` leaves no replica during a rollout, so bootstrap Secret writes fail meanwhile.
+  type: RollingUpdate
+  rollingUpdate:
+    # @schema
+    # type: [integer, string]
+    # @schema
+    # -- Extra pods during a rollout.
+    maxSurge: 1
+    # @schema
+    # type: [integer, string]
+    # @schema
+    # -- Pods that may be unavailable during a rollout.
+    maxUnavailable: 0
+
+serviceAccount:
+  # -- Create the ServiceAccount. The webhook never calls the Kubernetes API: no token is mounted, no RBAC is bound.
+  create: true
+  # -- ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false).
+  name: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- ServiceAccount annotations.
+  annotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Pod annotations.
+podAnnotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Extra pod labels.
+podLabels: {}
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Pod security context. Overrides are merged onto these defaults.
+podSecurityContext:
+  fsGroup: 65532
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Container security context. Overrides are merged onto these defaults.
+securityContext:
+  allowPrivilegeEscalation: false
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 65532
+  runAsNonRoot: true
+  runAsUser: 65532
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: boolean
+# @schema
+# -- Run the pod in a user namespace (`false`: container uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+); pods fail to start otherwise. `true` uses host users.
+hostUsers: false
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Resources. A scheduling floor and a memory ceiling, not a sizing: measure, then tune. No CPU limit: throttling delays reviews the API server waits on. `limits.memory` also sets `GOMEMLIMIT`.
+resources:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  limits:
+    memory: 128Mi
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  requests:
+    cpu: 10m
+    memory: 32Mi
+
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Readiness probe: `GET /healthz` over HTTPS.
+readinessProbe:
+  failureThreshold: 2
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  httpGet:
+    path: /healthz
+    port: https
+    scheme: HTTPS
+  periodSeconds: 5
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Liveness probe: `GET /healthz` over HTTPS. The webhook depends on nothing, so a failure means the process itself is stuck.
+livenessProbe:
+  failureThreshold: 3
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  httpGet:
+    path: /healthz
+    port: https
+    scheme: HTTPS
+  periodSeconds: 10
+
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Node selector.
+nodeSelector:
+  kubernetes.io/os: linux
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Tolerations.
+tolerations: []
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Affinity. Empty: preferred podAntiAffinity on hostname. A non-empty value replaces that default wholesale.
+affinity: {}
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Topology spread constraints. Empty: spread over `topology.kubernetes.io/zone` (`ScheduleAnyway`). A non-empty value replaces that default.
+topologySpreadConstraints: []
+# -- Priority class name.
+priorityClassName: ""
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+#       minLength: 1
+# @schema
+# -- Extra environment variables (`EnvVar` list), for the Go runtime (`GODEBUG`, `GOMAXPROCS`): the webhook reads no variable itself. With `resources.limits.memory` set, `GOMEMLIMIT` is the chart's and rejected here.
+extraEnv: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volumes.
+extraVolumes: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volume mounts for the webhook container.
+extraVolumeMounts: []
+
+podDisruptionBudget:
+  # -- Create a PodDisruptionBudget (`unhealthyPodEvictionPolicy: AlwaysAllow`).
+  enabled: false
+  # @schema
+  # type: [integer, string]
+  # @schema
+  # -- Pods that may be evicted at once.
+  maxUnavailable: 1
+
+networkPolicy:
+  # -- Create a NetworkPolicy: ingress on 8443 only, no egress at all (the webhook dials nothing, not even DNS).
+  enabled: true
+  ingress:
+    # @schema
+    # type: array
+    # items:
+    #   type: object
+    # @schema
+    # -- NetworkPolicyPeer list allowed to reach 8443. Empty: any source, because the API server is not a pod a `podSelector` can select; narrow it to the control plane node addresses (`ipBlock`).
+    from: []

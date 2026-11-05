@@ -1,0 +1,36 @@
+values:
+  hostUsers: true
+  replicaCount: 5
+  fullnameOverride: converter
+  image:
+    tag: 0.1.2
+  imagePullSecrets:
+    - name: ghcr
+  webhook:
+    namespaceSelector:
+      matchLabels:
+        example.com/capi: "true"
+  podDisruptionBudget:
+    enabled: true
+  networkPolicy:
+    ingress:
+      from:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+  serviceAccount:
+    annotations:
+      example.com/note: hello
+  podAnnotations:
+    example.com/note: hello
+  podLabels:
+    example.com/team: platform
+  priorityClassName: system-cluster-critical
+  extraEnv:
+    - name: GODEBUG
+      value: http2debug=1
+  extraVolumes:
+    - name: scratch
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: scratch
+      mountPath: /tmp

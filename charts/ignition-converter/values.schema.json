@@ -1,0 +1,568 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "else": {
+        "properties": {
+          "tls": {
+            "properties": {
+              "existingSecret": {
+                "properties": {
+                  "caBundle": {
+                    "maxLength": 0,
+                    "required": []
+                  },
+                  "name": {
+                    "maxLength": 0,
+                    "required": []
+                  }
+                },
+                "required": []
+              }
+            },
+            "required": []
+          }
+        },
+        "required": []
+      },
+      "if": {
+        "properties": {
+          "tls": {
+            "properties": {
+              "mode": {
+                "const": "existingSecret",
+                "required": []
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          }
+        },
+        "required": [
+          "tls"
+        ]
+      },
+      "required": [],
+      "then": {
+        "properties": {
+          "tls": {
+            "properties": {
+              "existingSecret": {
+                "properties": {
+                  "caBundle": {
+                    "minLength": 1,
+                    "required": []
+                  },
+                  "name": {
+                    "minLength": 1,
+                    "required": []
+                  }
+                },
+                "required": [
+                  "name",
+                  "caBundle"
+                ]
+              }
+            },
+            "required": []
+          }
+        },
+        "required": []
+      }
+    }
+  ],
+  "properties": {
+    "affinity": {
+      "additionalProperties": true,
+      "description": "Affinity. Empty: preferred podAntiAffinity on hostname. A non-empty value replaces that default wholesale.",
+      "required": [],
+      "type": "object"
+    },
+    "extraEnv": {
+      "description": "Extra environment variables (`EnvVar` list), for the Go runtime (`GODEBUG`, `GOMAXPROCS`): the webhook reads no variable itself. With `resources.limits.memory` set, `GOMEMLIMIT` is the chart's and rejected here.",
+      "items": {
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumeMounts": {
+      "description": "Extra volume mounts for the webhook container.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumes": {
+      "description": "Extra volumes.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "fullnameOverride": {
+      "description": "Override the full resource name (default `\u003crelease\u003e-\u003cchart\u003e`).",
+      "type": "string"
+    },
+    "global": {
+      "description": "Global values are values that can be accessed from any chart or subchart by exactly the same name.",
+      "required": [],
+      "type": "object"
+    },
+    "hostUsers": {
+      "description": "Run the pod in a user namespace (`false`: container uid 65532 maps to an unprivileged host uid). Needs node support (containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+); pods fail to start otherwise. `true` uses host users.",
+      "type": "boolean"
+    },
+    "image": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "description": "Image digest, only valid together with `image.tag`.",
+          "pattern": "^(sha256:[a-f0-9]{64})?$",
+          "type": "string"
+        },
+        "pullPolicy": {
+          "description": "Image pull policy.",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ],
+          "type": "string"
+        },
+        "repository": {
+          "description": "Image repository.",
+          "type": "string"
+        },
+        "tag": {
+          "description": "Image tag. Empty: `appVersion` pinned by the digest recorded in `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "imagePullSecrets": {
+      "description": "Image pull secrets (list of `{name: \u003csecret\u003e}`).",
+      "items": {
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "livenessProbe": {
+      "additionalProperties": true,
+      "description": "Liveness probe: `GET /healthz` over HTTPS. The webhook depends on nothing, so a failure means the process itself is stuck.",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "httpGet": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "port": {
+              "type": "string"
+            },
+            "scheme": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "minReadySeconds": {
+      "description": "Seconds a new pod must be Ready before an old one is retired.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "nameOverride": {
+      "description": "yaml-language-server: $schema=values.schema.json\nOverride the chart name used in resource names and labels.",
+      "type": "string"
+    },
+    "networkPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Create a NetworkPolicy: ingress on 8443 only, no egress at all (the webhook dials nothing, not even DNS).",
+          "type": "boolean"
+        },
+        "ingress": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "NetworkPolicyPeer list allowed to reach 8443. Empty: any source, because the API server is not a pod a `podSelector` can select; narrow it to the control plane node addresses (`ipBlock`).",
+              "items": {
+                "required": [],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "nodeSelector": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Node selector.",
+      "properties": {
+        "kubernetes.io/os": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "podAnnotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Pod annotations.",
+      "required": [],
+      "type": "object"
+    },
+    "podDisruptionBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Create a PodDisruptionBudget (`unhealthyPodEvictionPolicy: AlwaysAllow`).",
+          "type": "boolean"
+        },
+        "maxUnavailable": {
+          "description": "Pods that may be evicted at once.",
+          "required": [],
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "podLabels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Extra pod labels.",
+      "required": [],
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "additionalProperties": true,
+      "description": "Pod security context. Overrides are merged onto these defaults.",
+      "properties": {
+        "fsGroup": {
+          "type": "integer"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "priorityClassName": {
+      "description": "Priority class name.",
+      "type": "string"
+    },
+    "readinessProbe": {
+      "additionalProperties": true,
+      "description": "Readiness probe: `GET /healthz` over HTTPS.",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "httpGet": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "port": {
+              "type": "string"
+            },
+            "scheme": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "replicaCount": {
+      "description": "Number of replicas. The webhook fails closed: with no replica ready, Cluster API cannot write any bootstrap Secret.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "resources": {
+      "additionalProperties": true,
+      "description": "Resources. A scheduling floor and a memory ceiling, not a sizing: measure, then tune. No CPU limit: throttling delays reviews the API server waits on. `limits.memory` also sets `GOMEMLIMIT`.",
+      "properties": {
+        "limits": {
+          "additionalProperties": true,
+          "properties": {
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "requests": {
+          "additionalProperties": true,
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "revisionHistoryLimit": {
+      "description": "Old ReplicaSets to keep.",
+      "type": "integer"
+    },
+    "securityContext": {
+      "additionalProperties": true,
+      "description": "Container security context. Overrides are merged onto these defaults.",
+      "properties": {
+        "allowPrivilegeEscalation": {
+          "type": "boolean"
+        },
+        "capabilities": {
+          "additionalProperties": true,
+          "properties": {
+            "drop": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ],
+                "required": []
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "privileged": {
+          "type": "boolean"
+        },
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "serviceAccount": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "ServiceAccount annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "create": {
+          "description": "Create the ServiceAccount. The webhook never calls the Kubernetes API: no token is mounted, no RBAC is bound.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "ServiceAccount name. Empty: `\u003cfullname\u003e` (or `default` when `create` is false).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "strategy": {
+      "additionalProperties": false,
+      "properties": {
+        "rollingUpdate": {
+          "additionalProperties": false,
+          "properties": {
+            "maxSurge": {
+              "description": "Extra pods during a rollout.",
+              "required": [],
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "maxUnavailable": {
+              "description": "Pods that may be unavailable during a rollout.",
+              "required": [],
+              "type": [
+                "integer",
+                "string"
+              ]
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "type": {
+          "description": "Deployment strategy type. `Recreate` leaves no replica during a rollout, so bootstrap Secret writes fail meanwhile.",
+          "enum": [
+            "RollingUpdate",
+            "Recreate"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "tls": {
+      "additionalProperties": false,
+      "properties": {
+        "existingSecret": {
+          "additionalProperties": false,
+          "properties": {
+            "caBundle": {
+              "description": "Base64 of the PEM CA certificate that signed the Secret's certificate: the webhook's `caBundle`. Required with `tls.mode: existingSecret`, empty otherwise.",
+              "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name of a `kubernetes.io/tls` Secret (keys `tls.crt`, `tls.key`) in the release namespace, valid for `\u003cfullname\u003e.\u003cnamespace\u003e.svc`. Required with `tls.mode: existingSecret`, empty otherwise. Read at every TLS handshake: a renewed key pair needs no restart.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "mode": {
+          "description": "Source of the serving certificate. `certManager`: the chart creates a private CA and the serving certificate it signs (needs cert-manager, which Cluster API already requires); cainjector writes the CA into the webhook's `caBundle`. `existingSecret`: a `kubernetes.io/tls` Secret you manage, plus its CA in `existingSecret.caBundle`. The API server calls webhooks over HTTPS only, so TLS cannot be turned off.",
+          "enum": [
+            "certManager",
+            "existingSecret"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "tolerations": {
+      "description": "Tolerations.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "topologySpreadConstraints": {
+      "description": "Topology spread constraints. Empty: spread over `topology.kubernetes.io/zone` (`ScheduleAnyway`). A non-empty value replaces that default.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "webhook": {
+      "additionalProperties": false,
+      "properties": {
+        "namespaceSelector": {
+          "additionalProperties": true,
+          "description": "Namespace selector of the webhook (a `LabelSelector`). Empty: every namespace. Narrow it to the namespaces holding Cluster API clusters; Secrets outside it are stored unconverted.",
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    }
+  },
+  "required": [],
+  "title": "ignition-converter values",
+  "type": "object"
+}
