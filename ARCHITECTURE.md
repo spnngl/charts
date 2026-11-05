@@ -151,7 +151,9 @@ CRDs live in `templates/`, not `crds/`, so `helm upgrade` updates them.
   it with `tests/golden/<case>.yaml` (or with the expected error), then runs
   kubeconform and kube-linter on it, `promtool check rules` on its
   PrometheusRules and `promtool test rules` with the case's `ruleTests`. Renders pin `version`, `appVersion` and
-  the image digest, so Renovate updates leave goldens unchanged. `pr.yml`
+  the image digest, so Renovate updates leave goldens unchanged. Renders and
+  goldens are compared without blank lines and with documents sorted, so
+  Helm 3 and 4 pass on the same goldens. `pr.yml`
   also runs kubeconform and kube-linter on the default values, and
   `ct install` with `ci/*-values.yaml`.
 - Reference implementations: `charts/cloudflared/` (Deployment),
