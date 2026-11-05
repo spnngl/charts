@@ -1,0 +1,11 @@
+# CI install, on kind without cert-manager: a Secret named but not created, so
+# no replica (the webhook only matches Cluster API Secrets, absent from kind).
+# hostUsers: true because user namespaces fail on kind inside GitHub runners.
+hostUsers: true
+replicaCount: 0
+tls:
+  mode: existingSecret
+  existingSecret:
+    name: ignition-converter-tls
+    # Placeholder: base64 of "ci". No replica serves, so no TLS handshake checks it.
+    caBundle: Y2k=

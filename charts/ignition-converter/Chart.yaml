@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: ignition-converter
+description: Admission webhook converting the Ignition 2.x user data of Cluster API bootstrap Secrets to spec 3.0 for Fedora CoreOS, running as a hardened, highly available Deployment
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/ignition-converter
+appVersion: "0.1.2"
+kubeVersion: ">=1.33.0-0"
+home: https://github.com/spnngl/ignition-converter
+icon: https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/main/docs/logos/kubernetes-cluster-logos_final-02.svg
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/spnngl/ignition-converter
+  - https://github.com/spnngl/images/tree/main/containers/ignition-converter
+keywords:
+  - cluster-api
+  - ignition
+  - fedora-coreos
+  - admission-webhook
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: Apache-2.0
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # ignition-converter.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: ignition-converter
+      image: ghcr.io/spnngl/images/ignition-converter:0.1.2@sha256:b13239bfcabe06ad10161aaf138426b99582372095618c3fd1e2602099212c23
+  artifacthub.io/links: |-
+    - name: Upstream repository
+      url: https://github.com/spnngl/ignition-converter
+    - name: Image build
+      url: https://github.com/spnngl/images/tree/main/containers/ignition-converter
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/ignition-converter
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

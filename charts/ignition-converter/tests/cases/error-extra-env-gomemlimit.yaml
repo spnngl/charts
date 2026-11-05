@@ -1,0 +1,6 @@
+values:
+  extraEnv:
+    - name: GOMEMLIMIT
+      value: 100MiB
+expect:
+  error: GOMEMLIMIT is set by the chart

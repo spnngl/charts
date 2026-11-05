@@ -1,0 +1,26 @@
+{{- $fullname := include "ignition-converter.fullname" . }}
+{{ $fullname }} converts the Ignition 2.x user data of Cluster API bootstrap
+Secrets to spec 3.0 (MutatingWebhookConfiguration {{ $fullname }}-{{ .Release.Namespace }}).
+It fails closed: while no replica is ready, Cluster API cannot write bootstrap
+Secrets.
+
+Cluster API's kubeadm bootstrap provider renders Ignition only with the
+feature gate KubeadmBootstrapFormatIgnition=true
+(EXP_KUBEADM_BOOTSTRAP_FORMAT_IGNITION=true for clusterctl).
+
+Check that the pods are ready:
+
+  kubectl -n {{ .Release.Namespace }} get pods -l {{ include "ignition-converter.selectorLabels" . | replace ": " "=" | replace "\n" "," }}
+{{- if eq .Values.tls.mode "certManager" }}
+
+The serving certificate comes from cert-manager; the pods start once it is
+issued:
+
+  kubectl -n {{ .Release.Namespace }} get certificates.cert-manager.io {{ $fullname }}-ca {{ $fullname }}
+{{- end }}
+{{- if not .Values.hostUsers }}
+
+hostUsers is false: pods run in a user namespace. Nodes without support
+(containerd 2.0+ or CRI-O, runc 1.2+, kernel 6.3+) cannot start them; set
+hostUsers=true to use host users.
+{{- end }}

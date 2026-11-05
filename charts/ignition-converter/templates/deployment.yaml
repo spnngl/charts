@@ -1,0 +1,136 @@
+{{- include "ignition-converter.validate" . }}
+{{- $memLimit := dig "limits" "memory" "" .Values.resources }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/dnsconfig-options: "The webhook resolves no name: it dials nothing."
+    ignore-check.kube-linter.io/no-node-affinity: "The OS constraint is in nodeSelector, which the check does not read; a nodeAffinity would be replaced by a user affinity override."
+    {{- if ne .Values.strategy.type "RollingUpdate" }}
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "strategy.type is a user choice."
+    {{- end }}
+    {{- if not .Values.networkPolicy.enabled }}
+    ignore-check.kube-linter.io/non-isolated-pod: "networkPolicy.enabled is false: the user chose no isolation."
+    {{- end }}
+  labels:
+    {{- include "ignition-converter.labels" . | nindent 4 }}
+  name: {{ include "ignition-converter.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  minReadySeconds: {{ .Values.minReadySeconds }}
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "ignition-converter.selectorLabels" . | nindent 6 }}
+  strategy:
+    {{- if eq .Values.strategy.type "Recreate" }}
+    type: Recreate
+    {{- else }}
+    {{- toYaml .Values.strategy | nindent 4 }}
+    {{- end }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- toYaml (merge (include "ignition-converter.labels" . | fromYaml) (deepCopy .Values.podLabels)) | nindent 8 }}
+    spec:
+      affinity:
+        {{- include "ignition-converter.affinity" . | nindent 8 }}
+      automountServiceAccountToken: false
+      containers:
+        # Flags are the binary's whole configuration (main.go): it reads no
+        # file and no variable besides these.
+        - args:
+            - --addr=:8443
+            - --cert-file=/tls/tls.crt
+            - --key-file=/tls/tls.key
+          {{- if or $memLimit .Values.extraEnv }}
+          env:
+            {{- if $memLimit }}
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          image: {{ include "ignition-converter.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # The Service keeps routing to a terminating pod until the endpoint
+          # removal propagates: keep serving meanwhile, then SIGTERM closes the
+          # listener. sleep, not exec: the image has no shell.
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          name: ignition-converter
+          ports:
+            - containerPort: 8443
+              name: https
+              protocol: TCP
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- if $memLimit }}
+          resizePolicy:
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /tls
+              name: tls
+              readOnly: true
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      enableServiceLinks: false
+      hostUsers: {{ .Values.hostUsers }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "ignition-converter.serviceAccountName" . }}
+      # preStop 5 s + the webhook's 10 s shutdown (shutdownTimeout in main.go,
+      # also the webhook timeoutSeconds) + margin.
+      terminationGracePeriodSeconds: 30
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      topologySpreadConstraints:
+        {{- include "ignition-converter.topologySpreadConstraints" . | nindent 8 }}
+      volumes:
+        - name: tls
+          secret:
+            defaultMode: 288 # 0440
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+            secretName: {{ include "ignition-converter.tlsSecretName" . }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}

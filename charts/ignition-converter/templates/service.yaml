@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    {{- include "ignition-converter.labels" . | nindent 4 }}
+  name: {{ include "ignition-converter.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - appProtocol: https
+      name: https
+      port: 443
+      protocol: TCP
+      targetPort: https
+  selector:
+    {{- include "ignition-converter.selectorLabels" . | nindent 4 }}
+  type: ClusterIP

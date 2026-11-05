@@ -1,0 +1,22 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $ingress := dict "ports" (list (dict "port" 8443 "protocol" "TCP")) }}
+{{- with .Values.networkPolicy.ingress.from }}{{ $_ := set $ingress "from" . }}{{ end }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    {{- include "ignition-converter.labels" . | nindent 4 }}
+  name: {{ include "ignition-converter.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  ingress:
+    {{- toYaml (list $ingress) | nindent 4 }}
+  podSelector:
+    matchLabels:
+      {{- include "ignition-converter.selectorLabels" . | nindent 6 }}
+  # Egress listed with no rule: every outbound connection is denied. The
+  # webhook dials nothing, not even DNS.
+  policyTypes:
+    - Egress
+    - Ingress
+{{- end }}

@@ -1,0 +1,70 @@
+{{- /*
+A private CA signs the serving certificate and is what cainjector writes into
+the webhook's caBundle, so caBundle changes only when the CA does, not on
+every serving certificate renewal (a self-signed serving certificate is its
+own CA: at each renewal the API server rejects the pods until caBundle and
+the mounted Secret have both caught up). Same chain as upstream deploy.yaml.
+*/}}
+{{- if eq .Values.tls.mode "certManager" }}
+{{- $fullname := include "ignition-converter.fullname" . }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  labels:
+    {{- include "ignition-converter.labels" . | nindent 4 }}
+  name: {{ $fullname }}-selfsigned
+  namespace: {{ .Release.Namespace }}
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    {{- include "ignition-converter.labels" . | nindent 4 }}
+  name: {{ $fullname }}-ca
+  namespace: {{ .Release.Namespace }}
+spec:
+  commonName: {{ $fullname }}-ca
+  # Ten years. A renewed CA changes caBundle at once: renew the serving
+  # certificate right after (README, TLS).
+  duration: 87600h
+  isCA: true
+  issuerRef:
+    kind: Issuer
+    name: {{ $fullname }}-selfsigned
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  secretName: {{ $fullname }}-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  labels:
+    {{- include "ignition-converter.labels" . | nindent 4 }}
+  name: {{ $fullname }}-ca
+  namespace: {{ .Release.Namespace }}
+spec:
+  ca:
+    secretName: {{ $fullname }}-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    {{- include "ignition-converter.labels" . | nindent 4 }}
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  dnsNames:
+    - {{ $fullname }}.{{ .Release.Namespace }}.svc
+    - {{ $fullname }}.{{ .Release.Namespace }}.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: {{ $fullname }}-ca
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  secretName: {{ include "ignition-converter.tlsSecretName" . }}
+{{- end }}

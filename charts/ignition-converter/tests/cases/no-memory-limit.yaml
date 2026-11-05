@@ -1,0 +1,7 @@
+values:
+  resources:
+    limits:
+      memory: null
+  extraEnv:
+    - name: GOMEMLIMIT
+      value: 100MiB

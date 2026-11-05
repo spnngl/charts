@@ -1,0 +1,63 @@
+{{- $fullname := include "ignition-converter.fullname" . }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  {{- if eq .Values.tls.mode "certManager" }}
+  annotations:
+    # cainjector fills in caBundle with the CA, not the serving certificate.
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ $fullname }}-ca
+  {{- end }}
+  labels:
+    {{- include "ignition-converter.labels" . | nindent 4 }}
+  # Cluster-scoped: the namespace keeps two releases of one name apart.
+  name: {{ $fullname }}-{{ .Release.Namespace }}
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      {{- if eq .Values.tls.mode "existingSecret" }}
+      caBundle: {{ .Values.tls.existingSecret.caBundle }}
+      {{- end }}
+      service:
+        name: {{ $fullname }}
+        namespace: {{ .Release.Namespace }}
+        path: /mutate
+        port: 443
+    # Fail closed: a Secret left in Ignition 2.x would be rejected at boot by
+    # Fedora CoreOS, far from the cause.
+    failurePolicy: Fail
+    matchConditions:
+      # Data values are base64 in the API object, so only the key is matched;
+      # the webhook checks that format is "ignition".
+      - expression: >-
+          object.type == 'cluster.x-k8s.io/secret' &&
+          has(object.data) && 'format' in object.data
+        name: ignition-bootstrap-secret
+    matchPolicy: Equivalent
+    name: {{ $fullname }}.{{ .Release.Namespace }}.svc
+    {{- with .Values.webhook.namespaceSelector }}
+    namespaceSelector:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    # Only Cluster API bootstrap Secrets. This also keeps the webhook's own
+    # TLS Secret out of scope, which would otherwise deadlock its startup.
+    objectSelector:
+      matchExpressions:
+        - key: cluster.x-k8s.io/cluster-name
+          operator: Exists
+    reinvocationPolicy: Never
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - secrets
+        scope: Namespaced
+    sideEffects: None
+    # The webhook's shutdownTimeout (main.go) matches it: a terminating pod
+    # answers every review the API server still waits for.
+    timeoutSeconds: 10
