@@ -45,6 +45,23 @@ def pin-chart [chart_dir: path, tmp_dir: path]: nothing -> path {
   $copy
 }
 
+# Normalize a render or a golden so the comparison does not depend on the Helm
+# version: blank lines dropped (Helm 3.22 differs from 3.20 and 4) and
+# documents sorted by text, so by `# Source:` path first (Helm 4 orders webhook
+# configurations before CRD kinds, Helm 3 among them by name). Goldens written
+# before the sort keep Helm's order and still match.
+def normalize []: string -> string {
+  lines
+  | where {|l| ($l | str trim) != "" }
+  | str join "\n"
+  | split row -r '(?m)^---$'
+  | str trim --char "\n"
+  | where {|doc| $doc != "" }
+  | sort
+  | each {|doc| $"---\n($doc)\n" }
+  | str join
+}
+
 # Run `helm template` for `chart_dir` with `values`; never throws.
 def render [chart_dir: path, values: record]: nothing -> record<exit_code: int, stdout: string, stderr: string> {
   let name = ($chart_dir | path basename)
@@ -53,8 +70,7 @@ def render [chart_dir: path, values: record]: nothing -> record<exit_code: int, 
     # JSON, not YAML: nushell writes `Off` unquoted and Helm reads it as a boolean.
     $values | to json | save -f $tmp
     let out = (^helm template $name $chart_dir --namespace $name -f $tmp | complete)
-    # Helm versions differ on blank lines between documents: drop them so goldens do not depend on the Helm version.
-    $out | update stdout ($out.stdout | lines | where {|l| ($l | str trim) != "" } | str join "\n" | $in + "\n")
+    $out | update stdout ($out.stdout | normalize)
   } finally { rm -f $tmp }
 }
 
@@ -74,7 +90,7 @@ def check-render [rendered: record, golden: path, update: bool]: nothing -> noth
     $out | save -f $golden
   } else if not ($golden | path exists) {
     error make {msg: $"missing golden file ($golden), run with --update"}
-  } else if (open --raw $golden) != $out {
+  } else if (open --raw $golden | normalize) != $out {
     error make {msg: $"render differs from ($golden), review the diff and run with --update"}
   }
   if ($env.CHARTTEST_OFFLINE? | is-empty) {
