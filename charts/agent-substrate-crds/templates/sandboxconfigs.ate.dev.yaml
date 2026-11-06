@@ -42,7 +42,7 @@
 "type": "date"
 }
 ],
-"name": "v1alpha1",
+"name": "v1",
 "schema": {
 "openAPIV3Schema": {
 "description": "SandboxConfig is cluster-scoped configuration describing the versions of the\nsandbox binaries for a sandbox runtime family. It is referenced by a\nWorkerPool's spec.sandboxClasses[].configRef (or resolved via the\nsandboxconfig.ate.dev/is-class-default annotation) and decouples sandbox\nbinary selection from the workload definition.",
