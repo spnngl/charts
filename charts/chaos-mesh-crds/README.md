@@ -5,7 +5,7 @@
 CustomResourceDefinitions for Chaos Mesh (chaos experiments, schedules, workflows).
 
 CRDs are copied verbatim from [chaos-mesh/chaos-mesh](https://github.com/chaos-mesh/chaos-mesh)
-at tag [`v2.8.7`](https://github.com/chaos-mesh/chaos-mesh/tree/v2.8.7) (commit `bed3ddc335600c633b2679a76ef0f07aa01ce5fb`),
+at tag [`v2.8.8`](https://github.com/chaos-mesh/chaos-mesh/tree/v2.8.8) (commit `3ffa399f44be86c12acb1b05228f8384b7ee8b31`),
 path(s) `config/crd/bases`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 

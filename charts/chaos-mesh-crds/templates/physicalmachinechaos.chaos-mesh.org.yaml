@@ -550,6 +550,14 @@
 },
 "kafka-fill": {
 "properties": {
+"authMechanism": {
+"description": "The authentication mechanism of kafka client",
+"type": "string"
+},
+"configFile": {
+"description": "The path of server config",
+"type": "string"
+},
 "host": {
 "description": "The host of kafka server",
 "type": "string"
@@ -588,6 +596,10 @@
 },
 "kafka-flood": {
 "properties": {
+"authMechanism": {
+"description": "The authentication mechanism of kafka client",
+"type": "string"
+},
 "host": {
 "description": "The host of kafka server",
 "type": "string"
@@ -621,8 +633,16 @@
 },
 "kafka-io": {
 "properties": {
+"authMechanism": {
+"description": "The authentication mechanism of kafka client",
+"type": "string"
+},
 "configFile": {
 "description": "The path of server config",
+"type": "string"
+},
+"host": {
+"description": "The host of kafka server",
 "type": "string"
 },
 "nonReadable": {
@@ -633,8 +653,20 @@
 "description": "Make kafka cluster non-writable",
 "type": "boolean"
 },
+"password": {
+"description": "The password of kafka client",
+"type": "string"
+},
+"port": {
+"description": "The port of kafka server",
+"type": "integer"
+},
 "topic": {
 "description": "The topic to attack",
+"type": "string"
+},
+"username": {
+"description": "The username of kafka client",
 "type": "string"
 }
 },
@@ -1035,8 +1067,8 @@
 "type": "string"
 },
 "redisPath": {
-"description": "The path of `redis-server` command-line tool",
-"type": "boolean"
+"description": "The directory containing the redis-server executable. Defaults to PATH lookup when empty.",
+"type": "string"
 }
 },
 "type": "object"
@@ -1060,8 +1092,8 @@
 "type": "string"
 },
 "redisPath": {
-"description": "The path of `redis-server` command-line tool",
-"type": "boolean"
+"description": "The directory containing the redis-server executable. Defaults to PATH lookup when empty.",
+"type": "string"
 }
 },
 "type": "object"
