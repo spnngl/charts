@@ -5,7 +5,7 @@
 CustomResourceDefinitions for Agent Substrate (sandbox configs, worker pools, CSI driver configs).
 
 CRDs are copied verbatim from [agent-substrate/substrate](https://github.com/agent-substrate/substrate)
-at tag [`v0.6.0`](https://github.com/agent-substrate/substrate/tree/v0.6.0) (commit `d3f2363590a11b2f50489971985ba033b4c9eff7`),
+at tag [`v1.0.0`](https://github.com/agent-substrate/substrate/tree/v1.0.0) (commit `b34fbee742906494b5eb4f1f36987176bf8770a4`),
 path(s) `manifests/ate-install/generated`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
@@ -50,9 +50,9 @@ Unknown keys are rejected (`values.schema.json`).
 
 | CRD | Kind | Group | Scope | Versions |
 |-----|------|-------|-------|----------|
-| `csidriverconfigs.ate.dev` | CSIDriverConfig | ate.dev | Cluster | **v1alpha1** |
-| `sandboxconfigs.ate.dev` | SandboxConfig | ate.dev | Cluster | **v1alpha1** |
-| `workerpools.ate.dev` | WorkerPool | ate.dev | Namespaced | **v1alpha1** |
+| `csidriverconfigs.ate.dev` | CSIDriverConfig | ate.dev | Cluster | **v1** |
+| `sandboxconfigs.ate.dev` | SandboxConfig | ate.dev | Cluster | **v1** |
+| `workerpools.ate.dev` | WorkerPool | ate.dev | Namespaced | **v1** |
 
 Bold = storage version, ~~struck~~ = not served.
 

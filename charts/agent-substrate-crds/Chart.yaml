@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for Agent Substrate (sandbox configs, worker pools,
   CSI driver configs)
 type: application
-version: 0.6.0
-appVersion: 0.6.0
+version: 1.0.0
+appVersion: 1.0.0
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/agent-substrate/substrate
 icon: >-
@@ -25,19 +25,19 @@ annotations:
   artifacthub.io/license: Apache-2.0
   artifacthub.io/crds: |
     - kind: CSIDriverConfig
-      version: v1alpha1
+      version: v1
       name: csidriverconfigs.ate.dev
       displayName: CSIDriverConfig
       description: CSIDriverConfig is the Schema for the csidriverconfigs API
     - kind: SandboxConfig
-      version: v1alpha1
+      version: v1
       name: sandboxconfigs.ate.dev
       displayName: SandboxConfig
       description: >-
         SandboxConfig is cluster-scoped configuration describing the versions of the
         sandbox binaries for a sandbox runtime family
     - kind: WorkerPool
-      version: v1alpha1
+      version: v1
       name: workerpools.ate.dev
       displayName: WorkerPool
       description: WorkerPool is the Schema for the workerpools API
@@ -48,13 +48,13 @@ annotations:
       url: https://github.com/agent-substrate/substrate
     - name: Upstream CRD source (manifests/ate-install/generated)
       url: >-
-        https://github.com/agent-substrate/substrate/tree/v0.6.0/manifests/ate-install/generated
+        https://github.com/agent-substrate/substrate/tree/v1.0.0/manifests/ate-install/generated
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/agent-substrate-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/agent-substrate/substrate
-  charts.spnngl.io/upstream-tag: v0.6.0
-  charts.spnngl.io/upstream-commit: d3f2363590a11b2f50489971985ba033b4c9eff7
+  charts.spnngl.io/upstream-tag: v1.0.0
+  charts.spnngl.io/upstream-commit: b34fbee742906494b5eb4f1f36987176bf8770a4
   artifacthub.io/changes: |
-    - Upstream CRDs updated from v0.5.0 to v0.6.0
+    - Upstream CRDs updated from v0.6.0 to v1.0.0
