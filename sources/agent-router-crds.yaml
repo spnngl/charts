@@ -17,7 +17,7 @@ version:
   # Pre-releases (-rc) are excluded by the pattern.
   tagPattern: '^v(\d+\.\d+\.\d+)$'
   allow: all
-  current: v1.2.0
+  current: v1.2.1
 sources:
   # `make apigen` writes controller-gen output straight into upstream's
   # ai-gateway-crds-helm chart as plain (untemplated) YAML; read it as files.
