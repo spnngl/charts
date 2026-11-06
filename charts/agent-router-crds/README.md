@@ -11,7 +11,7 @@ CustomResourceDefinitions for Agent Router, formerly Envoy AI Gateway (AI gatewa
 > `kubectl delete secret -n <old-namespace> -l owner=helm,name=<old-release>`.
 
 CRDs are copied verbatim from [theagentrouter/agent-router](https://github.com/theagentrouter/agent-router)
-at tag [`v1.2.0`](https://github.com/theagentrouter/agent-router/tree/v1.2.0) (commit `daa9f891a8afcb18576d4593ad18870d1d18abac`),
+at tag [`v1.2.1`](https://github.com/theagentrouter/agent-router/tree/v1.2.1) (commit `45ccd9fe75d11e10d40023a785bc7c21327718d8`),
 path(s) `manifests/charts/ai-gateway-crds-helm/templates`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
