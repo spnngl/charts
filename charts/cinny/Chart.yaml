@@ -27,7 +27,7 @@ annotations:
   # cinny.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: cinny
-      image: ghcr.io/spnngl/images/cinny:4.12.7@sha256:90ee88777d209eebcecc047391d4c5a178c5a650bc4f5076344c479d5f6a315b
+      image: ghcr.io/spnngl/images/cinny:4.12.7@sha256:ea188a763edc18fd58f4ca02eaf7aef2019bfe1c90ea255449d8446130583c8f
   artifacthub.io/links: |-
     - name: Upstream repository
       url: https://github.com/cinnyapp/cinny
