@@ -3,7 +3,7 @@ apiVersion: v2
 name: bazarr
 description: Bazarr subtitle manager for Sonarr and Radarr as a hardened single-replica StatefulSet, with SQLite or an external PostgreSQL
 type: application
-version: 0.1.7
+version: 0.1.8
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/bazarr
 appVersion: "1.6.2"
 kubeVersion: ">=1.33.0-0"
@@ -27,7 +27,7 @@ annotations:
   # bazarr.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: bazarr
-      image: ghcr.io/spnngl/images/bazarr:1.6.2@sha256:9a3499531b75486de1029c33e70b7d1e8c5201a606d9084f6a4b37278d51b7c5
+      image: ghcr.io/spnngl/images/bazarr:1.6.2@sha256:0c59ef2e10a77fe80f96c95a7180d84e1466a52303ab713ba6b29471edda3ae1
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://www.bazarr.media
