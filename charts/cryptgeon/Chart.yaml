@@ -3,7 +3,7 @@ apiVersion: v2
 name: cryptgeon
 description: Cryptgeon, a secure self-destructing notes and files service, as a hardened single-replica Deployment on an external Redis
 type: application
-version: 0.1.9
+version: 0.1.10
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/cryptgeon
 appVersion: "2.9.3"
 kubeVersion: ">=1.33.0-0"
@@ -27,7 +27,7 @@ annotations:
   # cryptgeon.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: cryptgeon
-      image: ghcr.io/spnngl/images/cryptgeon:2.9.3@sha256:f5927048429abbdc3eccbb4da14b748fa6819aee00a436b3cd680878afbd29a8
+      image: ghcr.io/spnngl/images/cryptgeon:2.9.3@sha256:9d5b19cfc5f052f17731e11fb6dd093fc122c40ba91236115943973e32d6e01a
   artifacthub.io/links: |-
     - name: Upstream repository
       url: https://github.com/cupcakearmy/cryptgeon
