@@ -3,7 +3,7 @@ apiVersion: v2
 name: sonarr
 description: Sonarr TV series collection manager as a hardened single-replica StatefulSet, with SQLite or an external PostgreSQL
 type: application
-version: 0.1.3
+version: 0.1.4
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/sonarr
 appVersion: "4.0.20.3014"
 kubeVersion: ">=1.33.0-0"
@@ -28,7 +28,7 @@ annotations:
   # sonarr.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: sonarr
-      image: ghcr.io/spnngl/images/sonarr:4.0.20.3014@sha256:4683ec038648182469b344f6a904cb94b8310e50a0b513fd6985ef0e31dbfec3
+      image: ghcr.io/spnngl/images/sonarr:4.0.20.3014@sha256:7402d90e9ff7eb11e0918b92ad51653f5931b673fe0c94300145cdd8acc3e57a
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://sonarr.tv
