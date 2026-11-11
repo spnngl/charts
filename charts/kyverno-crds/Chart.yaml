@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for Kyverno (policies, CEL policies, exceptions,
   policy reports)
 type: application
-version: 1.19.3
-appVersion: 1.19.2
+version: 1.20.0
+appVersion: 1.20.0
 kubeVersion: ">=1.25.0-0"
 home: https://kyverno.io
 icon: https://raw.githubusercontent.com/kyverno/kyverno/main/img/logo.png
@@ -143,13 +143,13 @@ annotations:
     - name: Upstream repository
       url: https://github.com/kyverno/kyverno
     - name: Upstream CRD source (config/crds)
-      url: https://github.com/kyverno/kyverno/tree/v1.19.2/config/crds
+      url: https://github.com/kyverno/kyverno/tree/v1.20.0/config/crds
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/kyverno-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/kyverno/kyverno
-  charts.spnngl.io/upstream-tag: v1.19.2
-  charts.spnngl.io/upstream-commit: e63308f1e16c05cd009ac4864be6ec25c66b49be
+  charts.spnngl.io/upstream-tag: v1.20.0
+  charts.spnngl.io/upstream-commit: f666af06e9bd310c7e730f1523c0430e90371a89
   artifacthub.io/changes: |
-    - Upstream CRDs updated from v1.19.1 to v1.19.2
+    - Upstream CRDs updated from v1.19.2 to v1.20.0

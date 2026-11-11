@@ -172,7 +172,12 @@
 "projections": {
 "items": {
 "properties": {
+"expression": {
+"minLength": 1,
+"type": "string"
+},
 "jmesPath": {
+"minLength": 1,
 "type": "string"
 },
 "name": {
@@ -180,10 +185,15 @@
 }
 },
 "required": [
-"jmesPath",
 "name"
 ],
-"type": "object"
+"type": "object",
+"x-kubernetes-validations": [
+{
+"message": "exactly one of jmesPath or expression must be set",
+"rule": "has(self.jmesPath) != has(self.expression)"
+}
+]
 },
 "type": "array"
 }
@@ -407,7 +417,12 @@
 "projections": {
 "items": {
 "properties": {
+"expression": {
+"minLength": 1,
+"type": "string"
+},
 "jmesPath": {
+"minLength": 1,
 "type": "string"
 },
 "name": {
@@ -415,10 +430,15 @@
 }
 },
 "required": [
-"jmesPath",
 "name"
 ],
-"type": "object"
+"type": "object",
+"x-kubernetes-validations": [
+{
+"message": "exactly one of jmesPath or expression must be set",
+"rule": "has(self.jmesPath) != has(self.expression)"
+}
+]
 },
 "type": "array"
 }
@@ -643,7 +663,12 @@
 "projections": {
 "items": {
 "properties": {
+"expression": {
+"minLength": 1,
+"type": "string"
+},
 "jmesPath": {
+"minLength": 1,
 "type": "string"
 },
 "name": {
@@ -651,10 +676,15 @@
 }
 },
 "required": [
-"jmesPath",
 "name"
 ],
-"type": "object"
+"type": "object",
+"x-kubernetes-validations": [
+{
+"message": "exactly one of jmesPath or expression must be set",
+"rule": "has(self.jmesPath) != has(self.expression)"
+}
+]
 },
 "type": "array"
 }

@@ -5,7 +5,7 @@
 CustomResourceDefinitions for Kyverno (policies, CEL policies, exceptions, policy reports).
 
 CRDs are copied from [kyverno/kyverno](https://github.com/kyverno/kyverno)
-at tag [`v1.19.2`](https://github.com/kyverno/kyverno/tree/v1.19.2) (commit `e63308f1e16c05cd009ac4864be6ec25c66b49be`),
+at tag [`v1.20.0`](https://github.com/kyverno/kyverno/tree/v1.20.0) (commit `f666af06e9bd310c7e730f1523c0430e90371a89`),
 path(s) `config/crds`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 

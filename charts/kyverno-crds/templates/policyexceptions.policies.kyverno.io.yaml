@@ -105,6 +105,30 @@
 "pass"
 ],
 "type": "string"
+},
+"validations": {
+"items": {
+"properties": {
+"expression": {
+"type": "string"
+},
+"message": {
+"type": "string"
+},
+"messageExpression": {
+"type": "string"
+},
+"reason": {
+"type": "string"
+}
+},
+"required": [
+"expression"
+],
+"type": "object"
+},
+"type": "array",
+"x-kubernetes-list-type": "atomic"
 }
 },
 "required": [
@@ -208,6 +232,30 @@
 "pass"
 ],
 "type": "string"
+},
+"validations": {
+"items": {
+"properties": {
+"expression": {
+"type": "string"
+},
+"message": {
+"type": "string"
+},
+"messageExpression": {
+"type": "string"
+},
+"reason": {
+"type": "string"
+}
+},
+"required": [
+"expression"
+],
+"type": "object"
+},
+"type": "array",
+"x-kubernetes-list-type": "atomic"
 }
 },
 "required": [
@@ -310,6 +358,30 @@
 "pass"
 ],
 "type": "string"
+},
+"validations": {
+"items": {
+"properties": {
+"expression": {
+"type": "string"
+},
+"message": {
+"type": "string"
+},
+"messageExpression": {
+"type": "string"
+},
+"reason": {
+"type": "string"
+}
+},
+"required": [
+"expression"
+],
+"type": "object"
+},
+"type": "array",
+"x-kubernetes-list-type": "atomic"
 }
 },
 "required": [
