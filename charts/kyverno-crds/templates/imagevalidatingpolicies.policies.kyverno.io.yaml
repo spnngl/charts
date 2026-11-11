@@ -404,6 +404,9 @@
 "type": "string"
 },
 "type": "array"
+},
+"enabled": {
+"type": "boolean"
 }
 },
 "type": "object"
@@ -1161,6 +1164,9 @@
 "type": "string"
 },
 "type": "array"
+},
+"enabled": {
+"type": "boolean"
 }
 },
 "type": "object"
@@ -2049,6 +2055,9 @@
 "type": "string"
 },
 "type": "array"
+},
+"enabled": {
+"type": "boolean"
 }
 },
 "type": "object"
@@ -2806,6 +2815,9 @@
 "type": "string"
 },
 "type": "array"
+},
+"enabled": {
+"type": "boolean"
 }
 },
 "type": "object"
@@ -3693,6 +3705,9 @@
 "type": "string"
 },
 "type": "array"
+},
+"enabled": {
+"type": "boolean"
 }
 },
 "type": "object"
@@ -4450,6 +4465,9 @@
 "type": "string"
 },
 "type": "array"
+},
+"enabled": {
+"type": "boolean"
 }
 },
 "type": "object"
