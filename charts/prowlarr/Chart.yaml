@@ -3,7 +3,7 @@ apiVersion: v2
 name: prowlarr
 description: Prowlarr indexer manager for the Servarr apps as a hardened single-replica StatefulSet, with SQLite or an external PostgreSQL
 type: application
-version: 0.1.5
+version: 0.1.6
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/prowlarr
 appVersion: "2.7.0.5723"
 kubeVersion: ">=1.33.0-0"
@@ -28,7 +28,7 @@ annotations:
   # prowlarr.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: prowlarr
-      image: ghcr.io/spnngl/images/prowlarr:2.7.0.5723@sha256:81cfacc1500cf138452b9eaed1c99f62003d562e678db7752ffe52186a371ea6
+      image: ghcr.io/spnngl/images/prowlarr:2.7.0.5723@sha256:a7da8306cc831ebe532e805db25ad9998f3954411ab6743b0ef22991d740d5a1
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://prowlarr.com
