@@ -3,7 +3,7 @@ apiVersion: v2
 name: radarr
 description: Radarr movie collection manager as a hardened single-replica StatefulSet, with SQLite or an external PostgreSQL
 type: application
-version: 0.1.5
+version: 0.1.6
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/radarr
 appVersion: "6.4.4.10685"
 kubeVersion: ">=1.33.0-0"
@@ -27,7 +27,7 @@ annotations:
   # radarr.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: radarr
-      image: ghcr.io/spnngl/images/radarr:6.4.4.10685@sha256:6db757d373ecc75d117993ec13e626176b336cdb2ae2bd8ac179a52bc2fba181
+      image: ghcr.io/spnngl/images/radarr:6.4.4.10685@sha256:ce9d56278a005569c4749943b03e5a3e4ee3bf417ef924dbeafd268acce44522
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://radarr.video
