@@ -3,7 +3,7 @@ apiVersion: v2
 name: fluffychat
 description: FluffyChat, a Matrix web client, as a hardened Deployment serving static files
 type: application
-version: 0.1.10
+version: 0.1.11
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/fluffychat
 appVersion: "2.11.3"
 kubeVersion: ">=1.33.0-0"
@@ -27,7 +27,7 @@ annotations:
   # fluffychat.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: fluffychat
-      image: ghcr.io/spnngl/images/fluffychat:2.11.3@sha256:a086b13e5f1de13695e912fac805c165a05a99b32a55b427ec0534ef96c805d8
+      image: ghcr.io/spnngl/images/fluffychat:2.11.3@sha256:d290f96e7bb19169338be872307ae07b594bb8f38231bf747fb89f4ed8f6bd04
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://fluffychat.im
