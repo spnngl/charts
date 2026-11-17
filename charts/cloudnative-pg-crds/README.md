@@ -5,7 +5,7 @@
 CustomResourceDefinitions for CloudNativePG (PostgreSQL clusters, backups, poolers, databases, publications, subscriptions, image catalogs).
 
 CRDs are copied verbatim from [cloudnative-pg/cloudnative-pg](https://github.com/cloudnative-pg/cloudnative-pg)
-at tag [`v1.30.1`](https://github.com/cloudnative-pg/cloudnative-pg/tree/v1.30.1) (commit `2a35abb4628f209d149825ef3c38011e0701ff2f`),
+at tag [`v1.30.2`](https://github.com/cloudnative-pg/cloudnative-pg/tree/v1.30.2) (commit `30cca36d32328a78dc96c51db966ce629d5b72db`),
 path(s) `config/crd/bases`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
