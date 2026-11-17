@@ -3,7 +3,7 @@ apiVersion: v2
 name: mjolnir
 description: Mjolnir Matrix moderation bot as a hardened single-replica StatefulSet
 type: application
-version: 0.1.7
+version: 0.1.8
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/mjolnir
 appVersion: "2.0.2"
 kubeVersion: ">=1.33.0-0"
@@ -27,7 +27,7 @@ annotations:
   # mjolnir.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: mjolnir
-      image: ghcr.io/spnngl/images/mjolnir:2.0.2@sha256:f2bc2a414ce8fb04a7e5beeb6ec7afbc4e9fbf236332ed7eb52a9f45c6269b9c
+      image: ghcr.io/spnngl/images/mjolnir:2.0.2@sha256:ab7c808c3a5fa882a60345da8e5d10c896c77c89bdb4a584cad95fa8876b1831
   artifacthub.io/links: |-
     - name: Upstream repository
       url: https://github.com/matrix-org/mjolnir
