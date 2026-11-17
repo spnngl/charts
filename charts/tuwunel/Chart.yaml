@@ -38,7 +38,7 @@ annotations:
     - name: cinny
       image: ghcr.io/spnngl/images/cinny:4.12.7@sha256:90ee88777d209eebcecc047391d4c5a178c5a650bc4f5076344c479d5f6a315b
     - name: livekit
-      image: ghcr.io/spnngl/images/livekit:1.13.10@sha256:54c24348f08517c174ec214a89f0fca0d953a18f9806f01e03665c819c1ef645
+      image: ghcr.io/spnngl/images/livekit:1.13.10@sha256:a9802eb700a101b1d46a57c18eca7cfec63daeccbde87f21c561ed5dac13ee57
     - name: lk-jwt-service
       image: ghcr.io/spnngl/images/lk-jwt-service:0.9.0@sha256:b777263ef2a0f20c29c813f2f278775e42e4ae31894a9a4cbb391a5218f4033e
   artifacthub.io/links: |-
