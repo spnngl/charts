@@ -5,7 +5,7 @@
 CustomResourceDefinitions for Kargo (Projects, Warehouses, Freight, Stages, Promotions).
 
 CRDs are copied verbatim from [akuity/kargo](https://github.com/akuity/kargo)
-at tag [`v1.12.5`](https://github.com/akuity/kargo/tree/v1.12.5) (commit `f9623d8e8415f4c4d18feefc4aa532bdeb173cc0`),
+at tag [`v1.12.6`](https://github.com/akuity/kargo/tree/v1.12.6) (commit `b13204661ebc835c8b2b167ac8c85bd357f5a932`),
 path(s) `charts/kargo/resources/crds`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
