@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for CloudNativePG (PostgreSQL clusters, backups,
   poolers, databases, publications, subscriptions, image catalogs)
 type: application
-version: 1.30.1
-appVersion: 1.30.1
+version: 1.30.2
+appVersion: 1.30.2
 kubeVersion: ">=1.25.0-0"
 home: https://cloudnative-pg.io
 icon: >-
@@ -89,13 +89,13 @@ annotations:
     - name: Upstream repository
       url: https://github.com/cloudnative-pg/cloudnative-pg
     - name: Upstream CRD source (config/crd/bases)
-      url: https://github.com/cloudnative-pg/cloudnative-pg/tree/v1.30.1/config/crd/bases
+      url: https://github.com/cloudnative-pg/cloudnative-pg/tree/v1.30.2/config/crd/bases
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/cloudnative-pg-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/cloudnative-pg/cloudnative-pg
-  charts.spnngl.io/upstream-tag: v1.30.1
-  charts.spnngl.io/upstream-commit: 2a35abb4628f209d149825ef3c38011e0701ff2f
+  charts.spnngl.io/upstream-tag: v1.30.2
+  charts.spnngl.io/upstream-commit: 30cca36d32328a78dc96c51db966ce629d5b72db
   artifacthub.io/changes: |
-    - Initial release, CRDs from upstream v1.30.1
+    - Upstream CRDs updated from v1.30.1 to v1.30.2
