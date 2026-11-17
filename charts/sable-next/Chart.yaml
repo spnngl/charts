@@ -3,7 +3,7 @@ apiVersion: v2
 name: sable-next
 description: Sable, a Matrix web client, as a hardened stateless Deployment serving its static app
 type: application
-version: 0.1.6
+version: 0.1.7
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/sable-next
 appVersion: "2.2.2"
 kubeVersion: ">=1.33.0-0"
@@ -27,7 +27,7 @@ annotations:
   # sable-next.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: sable-next
-      image: ghcr.io/spnngl/images/sable-next:2.2.2@sha256:86b891ec09d5ca4f19c44d0d2f5437c9a755fe31e7202a270c2235ec582b2916
+      image: ghcr.io/spnngl/images/sable-next:2.2.2@sha256:4530ee32e2aa669eef7a1cb9869729840d5d2d6df385fc07756e1a8917c906ee
   artifacthub.io/links: |-
     - name: Upstream repository
       url: https://github.com/SableClient/sable-next
