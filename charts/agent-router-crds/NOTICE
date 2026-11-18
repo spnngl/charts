@@ -1,6 +1,6 @@
 The CustomResourceDefinition manifests under templates/ were copied from
   https://github.com/theagentrouter/agent-router
-at tag v1.2.1 (commit 45ccd9fe75d11e10d40023a785bc7c21327718d8), path(s): manifests/charts/ai-gateway-crds-helm/templates
+at tag v1.3.0 (commit d63bb19f04ff775d251b8a2ad2c1fa7840c4f634), path(s): manifests/charts/ai-gateway-crds-helm/templates
 and modified by https://github.com/spnngl/charts: Helm labels, annotations and templating were
 added; server-side metadata and upstream Helm release metadata were removed.
 Upstream license: Apache-2.0 (see LICENSE in this directory).
