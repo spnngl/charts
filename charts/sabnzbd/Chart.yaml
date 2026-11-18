@@ -3,7 +3,7 @@ apiVersion: v2
 name: sabnzbd
 description: SABnzbd Usenet downloader as a hardened single-replica StatefulSet, with settings as code
 type: application
-version: 0.1.7
+version: 0.1.8
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/sabnzbd
 appVersion: "5.1.3"
 kubeVersion: ">=1.33.0-0"
@@ -27,7 +27,7 @@ annotations:
   # sabnzbd.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: sabnzbd
-      image: ghcr.io/spnngl/images/sabnzbd:5.1.3@sha256:bbbd4b6b3de7e992e40a75ba080a6c28ba771d3cfa08d65ff31054d8ee98e65a
+      image: ghcr.io/spnngl/images/sabnzbd:5.1.3@sha256:4b9aaa3bc5aeb0badd9f5f86e8680720864a7ac571b98c6fe16fac60cfd5f63c
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://sabnzbd.org
