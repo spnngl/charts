@@ -3,7 +3,7 @@ apiVersion: v2
 name: ignition-converter
 description: Admission webhook converting the Ignition 2.x user data of Cluster API bootstrap Secrets to spec 3.0 for Fedora CoreOS, running as a hardened, highly available Deployment
 type: application
-version: 0.1.6
+version: 0.1.7
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/ignition-converter
 appVersion: "0.1.2"
 kubeVersion: ">=1.33.0-0"
@@ -27,7 +27,7 @@ annotations:
   # ignition-converter.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: ignition-converter
-      image: ghcr.io/spnngl/images/ignition-converter:0.1.2@sha256:5822aa7bc602666e3270584393c46b5a73e0ab5e3a286c5d0117cde0213c79df
+      image: ghcr.io/spnngl/images/ignition-converter:0.1.2@sha256:a7b0d22abf610091d002927050fa75d02b40e89e3d50b9c66628ff2e8633c41d
   artifacthub.io/links: |-
     - name: Upstream repository
       url: https://github.com/spnngl/ignition-converter
