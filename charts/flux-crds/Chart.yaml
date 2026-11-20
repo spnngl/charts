@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for Flux (sources, kustomizations, Helm releases,
   notifications, image automation, artifact generators)
 type: application
-version: 2.10.0
-appVersion: 2.10.0
+version: 2.10.1
+appVersion: 2.10.1
 kubeVersion: ">=1.25.0-0"
 home: https://fluxcd.io
 icon: https://raw.githubusercontent.com/fluxcd/website/main/static/img/flux-icon.svg
@@ -104,13 +104,13 @@ annotations:
     - name: Upstream repository
       url: https://github.com/fluxcd/flux2
     - name: Upstream CRD source (manifests/crds)
-      url: https://github.com/fluxcd/flux2/tree/v2.10.0/manifests/crds
+      url: https://github.com/fluxcd/flux2/tree/v2.10.1/manifests/crds
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/flux-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/fluxcd/flux2
-  charts.spnngl.io/upstream-tag: v2.10.0
-  charts.spnngl.io/upstream-commit: 3fa784edd773d56630bb9f62645e08f70c2cff0a
+  charts.spnngl.io/upstream-tag: v2.10.1
+  charts.spnngl.io/upstream-commit: 23dcfe98fe672acdf44ecd9c60cbac41b57f5de8
   artifacthub.io/changes: |
-    - Upstream CRDs updated from v2.9.6 to v2.10.0
+    - Upstream CRDs updated from v2.10.0 to v2.10.1
