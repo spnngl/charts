@@ -5,7 +5,7 @@
 CustomResourceDefinitions for Agent Substrate (sandbox configs, worker pools, CSI driver configs).
 
 CRDs are copied verbatim from [agent-substrate/substrate](https://github.com/agent-substrate/substrate)
-at tag [`v1.0.0`](https://github.com/agent-substrate/substrate/tree/v1.0.0) (commit `b34fbee742906494b5eb4f1f36987176bf8770a4`),
+at tag [`v1.0.1`](https://github.com/agent-substrate/substrate/tree/v1.0.1) (commit `20778a6dbb01f13024642851bb592bf67c9fec05`),
 path(s) `manifests/ate-install/generated`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
