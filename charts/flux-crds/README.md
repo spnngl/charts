@@ -5,7 +5,7 @@
 CustomResourceDefinitions for Flux (sources, kustomizations, Helm releases, notifications, image automation, artifact generators).
 
 CRDs are copied verbatim from [fluxcd/flux2](https://github.com/fluxcd/flux2)
-at tag [`v2.10.0`](https://github.com/fluxcd/flux2/tree/v2.10.0) (commit `3fa784edd773d56630bb9f62645e08f70c2cff0a`),
+at tag [`v2.10.1`](https://github.com/fluxcd/flux2/tree/v2.10.1) (commit `23dcfe98fe672acdf44ecd9c60cbac41b57f5de8`),
 path(s) `manifests/crds`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 
