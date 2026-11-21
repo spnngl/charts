@@ -3,7 +3,7 @@ apiVersion: v2
 name: mailpit
 description: Mailpit, an email and SMTP testing tool with a web UI and an API, as a hardened single-replica Deployment
 type: application
-version: 0.1.8
+version: 0.1.9
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/mailpit
 appVersion: "1.33.1"
 kubeVersion: ">=1.33.0-0"
@@ -27,7 +27,7 @@ annotations:
   # mailpit.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: mailpit
-      image: ghcr.io/spnngl/images/mailpit:1.33.1@sha256:52098a0a39e4ef8c88bd61746c472831ecb12d7d7b093fd7911d16c08954ffa6
+      image: ghcr.io/spnngl/images/mailpit:1.33.1@sha256:af99eb7fab27e76c35a6d2943deadbc505df7209f3d6d5fab754101d65d2d66f
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://mailpit.axllent.org
