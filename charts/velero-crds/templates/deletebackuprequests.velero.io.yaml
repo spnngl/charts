@@ -17,6 +17,9 @@
 "kind": "DeleteBackupRequest",
 "listKind": "DeleteBackupRequestList",
 "plural": "deletebackuprequests",
+"shortNames": [
+"dbr"
+],
 "singular": "deletebackuprequest"
 },
 "scope": "Namespaced",

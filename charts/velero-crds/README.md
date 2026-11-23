@@ -5,7 +5,7 @@
 CustomResourceDefinitions for Velero (backups, restores, schedules, locations, data movers).
 
 CRDs are copied verbatim from [vmware-tanzu/velero](https://github.com/vmware-tanzu/velero)
-at tag [`v1.18.4`](https://github.com/vmware-tanzu/velero/tree/v1.18.4) (commit `4ee1e79a7aed367fd9b767b8219ec65bd0c96892`),
+at tag [`v1.19.0`](https://github.com/vmware-tanzu/velero/tree/v1.19.0) (commit `037f46918b63b9d4141e4051a22380802c2d615a`),
 path(s) `config/crd`, and rendered as regular Helm templates so that
 `helm upgrade` updates them (Helm's own `crds/` directory never upgrades).
 

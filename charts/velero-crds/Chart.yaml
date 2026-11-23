@@ -6,8 +6,8 @@ description: >-
   CustomResourceDefinitions for Velero (backups, restores, schedules, locations,
   data movers)
 type: application
-version: 1.18.7
-appVersion: 1.18.4
+version: 1.19.0
+appVersion: 1.19.0
 kubeVersion: ">=1.16.0-0"
 home: https://velero.io
 icon: >-
@@ -109,13 +109,13 @@ annotations:
     - name: Upstream repository
       url: https://github.com/vmware-tanzu/velero
     - name: Upstream CRD source (config/crd)
-      url: https://github.com/vmware-tanzu/velero/tree/v1.18.4/config/crd
+      url: https://github.com/vmware-tanzu/velero/tree/v1.19.0/config/crd
     - name: Chart source
       url: https://github.com/spnngl/charts/tree/main/charts/velero-crds
     - name: Verify signature and attestations
       url: https://github.com/spnngl/charts#verifying-what-you-install
   charts.spnngl.io/upstream-repo: https://github.com/vmware-tanzu/velero
-  charts.spnngl.io/upstream-tag: v1.18.4
-  charts.spnngl.io/upstream-commit: 4ee1e79a7aed367fd9b767b8219ec65bd0c96892
+  charts.spnngl.io/upstream-tag: v1.19.0
+  charts.spnngl.io/upstream-commit: 037f46918b63b9d4141e4051a22380802c2d615a
   artifacthub.io/changes: |
-    - Chart regenerated with updated tooling (upstream unchanged at v1.18.4)
+    - Upstream CRDs updated from v1.18.4 to v1.19.0
