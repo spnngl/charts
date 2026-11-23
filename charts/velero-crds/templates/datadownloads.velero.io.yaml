@@ -17,6 +17,9 @@
 "kind": "DataDownload",
 "listKind": "DataDownloadList",
 "plural": "datadownloads",
+"shortNames": [
+"dd"
+],
 "singular": "datadownload"
 },
 "scope": "Namespaced",
@@ -28,6 +31,20 @@
 "jsonPath": ".status.phase",
 "name": "Status",
 "type": "string"
+},
+{
+"description": "Requested restore type such as Full/Incremental",
+"jsonPath": ".spec.restoreType",
+"name": "Requested Restore Type",
+"priority": 10,
+"type": "string"
+},
+{
+"description": "Whether the incremental restore has fallen back to full restore",
+"jsonPath": ".status.fallbackFull",
+"name": "Fallback Full",
+"priority": 10,
+"type": "boolean"
 },
 {
 "description": "Time duration since this DataDownload was started",
@@ -47,6 +64,14 @@
 "format": "int64",
 "jsonPath": ".status.progress.totalBytes",
 "name": "Total Bytes",
+"type": "integer"
+},
+{
+"description": "Incremental bytes",
+"format": "int64",
+"jsonPath": ".status.incrementalBytes",
+"name": "Incremental Bytes",
+"priority": 10,
 "type": "integer"
 },
 {
@@ -95,6 +120,41 @@
 "description": "Cancel indicates request to cancel the ongoing DataDownload. It can be set\nwhen the DataDownload is in InProgress phase",
 "type": "boolean"
 },
+"csiSnapshot": {
+"description": "CSISnapshot provides the information of the CSI snapshot used to do the incremental restore.",
+"nullable": true,
+"properties": {
+"cleanUp": {
+"description": "CleanUp indicates request to clean up the volume snapshot after the backup/restore is completed.",
+"type": "boolean"
+},
+"driver": {
+"description": "Driver is the driver used by the VolumeSnapshotContent",
+"type": "string"
+},
+"snapshotClass": {
+"description": "SnapshotClass is the name of the snapshot class that the volume snapshot is created with",
+"type": "string"
+},
+"storageClass": {
+"description": "StorageClass is the name of the storage class of the PVC that the volume snapshot is created from",
+"type": "string"
+},
+"volumeSnapshot": {
+"description": "VolumeSnapshot is the name of the volume snapshot to be backed up",
+"type": "string"
+},
+"volumeSnapshotNamespace": {
+"description": "VolumeSnapshotNamespace is the namespece of the volume snapshot to be backed up",
+"type": "string"
+}
+},
+"required": [
+"storageClass",
+"volumeSnapshot"
+],
+"type": "object"
+},
 "dataMoverConfig": {
 "additionalProperties": {
 "type": "string"
@@ -103,7 +163,7 @@
 "type": "object"
 },
 "datamover": {
-"description": "DataMover specifies the data mover to be used by the backup.\nIf DataMover is \"\" or \"velero\", the built-in data mover will be used.",
+"description": "DataMover specifies the data mover to be used by the backup.\nIf DataMover is \"\" or \"velero\", the built-in fs data mover will be used.",
 "type": "string"
 },
 "nodeOS": {
@@ -117,6 +177,10 @@
 },
 "operationTimeout": {
 "description": "OperationTimeout specifies the time used to wait internal operations,\nbefore returning error as timeout.",
+"type": "string"
+},
+"restoreType": {
+"description": "RestoreType indicates the type of the restore.",
 "type": "string"
 },
 "snapshotID": {
@@ -135,6 +199,10 @@
 "targetVolume": {
 "description": "TargetVolume is the information of the target PVC and PV.",
 "properties": {
+"fsType": {
+"description": "FSType is the file system type of the target volume.",
+"type": "string"
+},
 "namespace": {
 "description": "Namespace is the target namespace",
 "type": "string"
@@ -159,6 +227,7 @@
 "required": [
 "backupStorageLocation",
 "operationTimeout",
+"restoreType",
 "snapshotID",
 "sourceNamespace",
 "targetVolume"
@@ -178,14 +247,31 @@
 "nullable": true,
 "type": "string"
 },
+"activities": {
+"description": "Activities contains one or more messages about what have been done for this DataDownload.",
+"items": {
+"type": "string"
+},
+"nullable": true,
+"type": "array"
+},
 "completionTimestamp": {
 "description": "CompletionTimestamp records the time a restore was completed.\nCompletion time is recorded even on failed restores.\nThe server's time is used for CompletionTimestamps",
 "format": "date-time",
 "nullable": true,
 "type": "string"
 },
+"fallbackFull": {
+"description": "FallbackFull indicates whether the incremental restore has fallen back to full restore",
+"type": "boolean"
+},
+"incrementalBytes": {
+"description": "IncrementalBytes holds the number of bytes restored incrementally since the last snapshot",
+"format": "int64",
+"type": "integer"
+},
 "message": {
-"description": "Message is a message about the DataDownload's status.",
+"description": "Message is a message describing the DataDownload when it reaches to a terminal status.",
 "type": "string"
 },
 "node": {
