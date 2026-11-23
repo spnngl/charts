@@ -1,0 +1,7 @@
+values:
+  hostTrustStore:
+    enabled: true
+    paths:
+      - etc/ssl/certs
+expect:
+  error: hostTrustStore

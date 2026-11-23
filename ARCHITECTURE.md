@@ -143,7 +143,9 @@ CRDs live in `templates/`, not `crds/`, so `helm upgrade` updates them.
   one PR; one package rule for all charts automerges minor/patch/digest
   after a 2-day release age (none on ghcr.io/quay.io: no release
   timestamp) and `bumpVersions` raises the chart `version` PATCH. Per-chart
-  rules only for exceptions (cloudflared: calver majors).
+  rules only for exceptions (cloudflared: calver majors; speculaire:
+  hand-merged, and a manager of its own for commit tags until its first
+  release, see its README).
 - `values.schema.json` is generated from `values.yaml` annotations by
   helm-schema; `README.md` by helm-docs from `README.md.gotmpl`. CI fails on
   drift of either.

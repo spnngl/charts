@@ -4,8 +4,9 @@ name: speculaire
 description: Spéculaire node agent (registry mirror, P2P image distribution and NRI image-verification gate) and its reflectors, as two DaemonSets
 type: application
 version: 0.1.0
-# renovate: datasource=docker depName=ghcr.io/spnngl/images/speculaire
-appVersion: "0.1.0"
+# Until speculaire's first release: the images repo's commit tag (README.md,
+# "Image"), tracked by its own Renovate manager.
+appVersion: "3e1010cf"
 kubeVersion: ">=1.33.0-0"
 home: https://github.com/spnngl/speculaire
 icon: https://avatars.githubusercontent.com/u/32701669?s=200
@@ -30,7 +31,7 @@ annotations:
   # speculaire.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: speculaire
-      image: ghcr.io/spnngl/images/speculaire:0.1.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
+      image: ghcr.io/spnngl/images/speculaire:3e1010cf@sha256:0000000000000000000000000000000000000000000000000000000000000000
   artifacthub.io/links: |-
     - name: Upstream repository
       url: https://github.com/spnngl/speculaire

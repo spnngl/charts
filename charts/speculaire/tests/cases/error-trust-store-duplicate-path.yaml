@@ -1,0 +1,8 @@
+values:
+  hostTrustStore:
+    enabled: true
+    paths:
+      - /etc/ssl/certs
+      - /etc/ssl/certs
+expect:
+  error: hostTrustStore
