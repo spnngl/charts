@@ -1,0 +1,196 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.description" . }}
+
+Runs [Spéculaire](https://github.com/spnngl/speculaire) on every node: a
+registry mirror on the node's loopback that the container runtime pulls
+through, peer-to-peer image distribution between nodes, and an NRI plugin
+that refuses to start containers whose image fails the verification policy.
+Two DaemonSets: `<release>-agent` on most nodes, `<release>-reflector` on the
+nodes labelled `reflector.nodeLabel` (the control plane by default). A
+reflector is an agent with `role = "reflector"`: it also tells the agents
+which peers hold which image. Nodes labelled
+`speculaire.spnngl.github.io/disabled` run neither.
+
+## Install
+
+Install into `kube-system`, next to the other node components: its Pod
+Security level allows the host network and host directories the pods need
+(another namespace must be labelled `pod-security.kubernetes.io/enforce=privileged`).
+
+```sh
+helm install speculaire oci://ghcr.io/spnngl/charts/speculaire --version <version> -n kube-system \
+  --set runtime=containerd \
+  --set-file config.toml=config.toml \
+  --set-file config.policy=policy.yaml
+```
+
+- `runtime` (`containerd` or `cri-o`) picks the node directories the pods
+  mount. Every node of a release runs the same runtime: install one release
+  per runtime, split with `nodeSelector`.
+- The runtime must have NRI enabled. Before making it require `speculaire`
+  (containerd `required_plugins`, CRI-O `nri_validator_required_plugins`),
+  set its tolerate-missing-plugins annotation key to
+  `gate.tolerateAnnotation`, which the chart puts on both pods: otherwise a
+  node whose agent stops cannot start it again.
+- CRI-O: set `auto_reload_registries = true` under `[crio.image]`. The
+  `configure` init container writes `registries.conf.d/99-speculaire.conf`
+  but cannot run `systemctl reload crio` from a pod.
+- The pods mount `/etc/kubernetes/pki/ca.crt` (the cluster CA, kubeadm's
+  path) and `/var/lib/kubelet/pki` (the kubelet client certificate, the
+  node's identity towards its peers). On another layout, point
+  `identity.ca` / `identity.certificate` in `config.toml` at a path mounted
+  with `extraVolumes` / `extraVolumeMounts`.
+
+### Config
+
+`config.toml` is the agent's config as a TOML string (a map would lose its
+integers: Helm turns every number into a float). Keys left out take the
+agent's defaults (`packaging/config.toml` in spnngl/speculaire). Set
+`reflector.url` (and the reflectors' `reflector.members`) or each node pulls
+from upstream alone. `role` is chart-owned: the reflectors get the same text
+after `role = "reflector"`.
+
+With `config.source: configMap` (default) the chart writes `config.toml`,
+`policy.yaml` (`config.policy`) and `trusted_root.json` (`config.trustedRoot`,
+with `verify.trusted_root = "/etc/speculaire/trusted_root.json"`) to a
+ConfigMap, mounted as the directory `/etc/speculaire` (never `subPath`, which
+never updates).
+
+- **Live keys** (the policy included) reload by themselves: the kubelet
+  syncs the ConfigMap within about a minute, the agent reads it within
+  `config.poll_interval`. A config change does not roll the pods.
+- **Restart keys** (marked `Restart` in `packaging/config.toml`: identity,
+  runtime paths, listener addresses, `verify.trusted_root`, ...) keep their
+  running value, with a warning in the logs, until a restart, reflectors
+  first:
+
+  ```sh
+  kubectl -n kube-system rollout restart daemonset/speculaire-reflector
+  kubectl -n kube-system rollout restart daemonset/speculaire-agent
+  ```
+
+With `config.source: host` the pods read each node's own `/etc/speculaire`
+(read-only), managed outside the chart, and `config.toml`, `config.policy`
+and `config.trustedRoot` must stay empty. The reflector nodes' own
+`config.toml` must then set `role = "reflector"`.
+
+## Image
+
+The default image is `appVersion` pinned by the digest recorded in the
+`artifacthub.io/images` annotation of `Chart.yaml` (Renovate updates both
+together). Setting `image.tag` drops that digest; add `image.digest` to pin
+the tag again (`image.digest` without `image.tag` is an error). The agents,
+the reflectors and the init container run the same image, except that
+`reflector.image.tag` (and `digest`) moves the reflectors alone.
+
+The image is built in [spnngl/images](https://github.com/spnngl/images)
+(`FROM scratch`, the static `speculaire` binary). It is signed with a key,
+not keyless like the charts, and carries a SLSA provenance attestation:
+
+```sh
+gh attestation verify oci://ghcr.io/spnngl/images/speculaire:<tag> -R spnngl/images
+cosign verify --insecure-ignore-tlog=true --new-bundle-format=false \
+  --key https://raw.githubusercontent.com/spnngl/images/main/bootc/fedora/sysroot/common/usr/share/pki/containers/spnngl-images.pub \
+  ghcr.io/spnngl/images/speculaire@<digest>
+```
+
+## Upgrade
+
+One minor version at a time, reflectors first: an upgrade that changes the
+peer protocol sets `reflector.image.tag` to the new version, waits for the
+reflectors to roll, then sets `image.tag` (or moves the chart) for the
+agents. The chart does not order the two DaemonSets by itself.
+
+## Uninstall
+
+The chart has no uninstall hook yet: `helm uninstall` removes the pods but
+leaves what `configure` wrote on each node (the mirror entry in the
+runtime's registry config, the mirror certificates), so the runtime keeps
+asking a mirror that is gone before falling back upstream. First remove
+`speculaire` from the runtime's required plugins and restart the runtime,
+then run `unconfigure` in every pod, then uninstall:
+
+```sh
+for pod in $(kubectl -n kube-system get pods -l app.kubernetes.io/name=speculaire -o name); do
+  kubectl -n kube-system exec "$pod" -c "$(kubectl -n kube-system get "$pod" -o jsonpath='{.spec.containers[0].name}')" -- \
+    /usr/bin/speculaire unconfigure --config /etc/speculaire/config.toml
+done
+helm uninstall speculaire -n kube-system
+```
+
+`unconfigure` refuses while the runtime still requires `speculaire`.
+
+## Availability and scheduling
+
+- One pod per node, every taint tolerated, `priorityClassName:
+  system-node-critical`: once the runtime requires `speculaire`, a node
+  without its agent starts no container.
+- `RollingUpdate` with `maxUnavailable: 1` and `maxSurge: 0` (two agents on a
+  node would compete for the host ports). While its agent restarts a node
+  pulls without the mirror, and under `required_plugins` starts only pods
+  carrying the tolerate annotation. `updateStrategy.type: OnDelete` gives
+  full control.
+- The `configure` init container runs at every pod start: it is idempotent,
+  and keeps the runtime's registry config in line with `config.toml`.
+- Probes on the status listener (port 7482, `metrics.address`): startup and
+  liveness `GET /livez`, readiness `GET /readyz` (the gate registered with
+  NRI, the mirror and the reflector listening). Moving `metrics.address`
+  needs the three probes overridden.
+- `terminationGracePeriodSeconds: 20`: the agent drains and exits within it.
+- No PodDisruptionBudget, Service or NetworkPolicy: the pods are one per node
+  and use the host network.
+
+## Resources
+
+Requests `50m` CPU / `128Mi` memory, no limit on purpose: an agent killed for
+memory blocks every container start on a node whose runtime requires it.
+
+## Security
+
+Root, because the agent writes the runtime's root-owned registry config and
+connects to the root-only runtime and NRI sockets. Not privileged, no
+capability, no privilege escalation, read-only root filesystem,
+`RuntimeDefault` seccomp, no host PID, no ServiceAccount token, no Service
+environment variables.
+
+The pods mount node directories, each at its node path:
+
+| Path | Access | Why |
+| --- | --- | --- |
+| `/run/containerd` or `/var/run/crio` | read-only | runtime socket (a directory: a runtime restart makes a new socket) |
+| `/var/run/nri` | read-only | NRI socket |
+| `/etc/containerd` or `/etc/containers` | read-only | runtime config |
+| `/etc/containerd/certs.d`, or `/etc/containers/registries.conf.d` and `/etc/containers/certs.d` | read-write | the mirror entry `configure` writes |
+| `/var/lib/containerd/io.containerd.content.v1.content` or `/var/lib/containers/storage/overlay-images` | read-only | images the node holds, served to peers |
+| `/var/lib/kubelet/pki` | read-only | node identity (a directory: the kubelet rotates the certificate behind a symlink) |
+| `/etc/kubernetes/pki/ca.crt` | read-only | cluster CA, this file only |
+| `/var/lib/speculaire`, `/run/speculaire` | read-write | the agent's state and cache |
+| `/etc/speculaire` | read-only | `config.source: host` only |
+
+Other directories of containerd's `config_path` (for example
+`/etc/docker/certs.d`) and CRI-O's `global_auth_file` need `extraVolumes` /
+`extraVolumeMounts`.
+
+## Network
+
+The pods use the host network: the mirror listens on `127.0.0.1:7480`, the
+status listener (`/livez`, `/readyz`, `/metrics`) on port 7482, the peer API
+on port 7481 and the reflectors on port 7483, each a port of the node
+(`config.toml` moves them). DNS is `ClusterFirst`, which on the host network
+is the node's resolver: the agent, which CoreDNS pulls through, does not
+depend on cluster DNS.
+
+## Compatibility
+
+The values schema is strict: unknown keys fail the install. A breaking change
+to values bumps the chart MAJOR version; deprecations are announced one MINOR
+version ahead. Requires Kubernetes 1.33 or later, containerd or CRI-O with NRI.
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}

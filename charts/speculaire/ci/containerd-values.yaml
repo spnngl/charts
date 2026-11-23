@@ -1,0 +1,11 @@
+# ct install: CI nodes run no speculaire-ready runtime (NRI, a registry
+# config the init container may edit), so no pod may start. The selector
+# matches no node (desired pods = 0); the chart wiring (ConfigMap,
+# ServiceAccount, DaemonSets) is still created and validated by the API server.
+nodeSelector:
+  speculaire.spnngl.dev/ci: "no-node-has-this-label"
+runtime: containerd
+config:
+  toml: |
+    [reflector]
+    url = "https://reflector.invalid:7483"

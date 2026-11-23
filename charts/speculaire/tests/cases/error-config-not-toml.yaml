@@ -1,0 +1,5 @@
+values:
+  config:
+    toml: "[verify"
+expect:
+  error: config.toml is not valid TOML

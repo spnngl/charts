@@ -1,0 +1,5 @@
+values:
+  gate:
+    tolerateAnnotation: ""
+expect:
+  error: tolerateAnnotation

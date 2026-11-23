@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://json.schemastore.org/chart.json
+apiVersion: v2
+name: speculaire
+description: Spéculaire node agent (registry mirror, P2P image distribution and NRI image-verification gate) and its reflectors, as two DaemonSets
+type: application
+version: 0.1.0
+# renovate: datasource=docker depName=ghcr.io/spnngl/images/speculaire
+appVersion: "0.1.0"
+kubeVersion: ">=1.33.0-0"
+home: https://github.com/spnngl/speculaire
+icon: https://avatars.githubusercontent.com/u/32701669?s=200
+sources:
+  - https://github.com/spnngl/charts
+  - https://github.com/spnngl/speculaire
+  - https://github.com/spnngl/images/tree/main/containers/speculaire
+keywords:
+  - registry-mirror
+  - p2p
+  - image-verification
+  - sigstore
+  - nri
+  - containerd
+  - cri-o
+maintainers:
+  - name: spnngl
+    url: https://github.com/spnngl
+annotations:
+  artifacthub.io/license: Apache-2.0
+  # The pinned digest is the default image (templates/_helpers.tpl,
+  # speculaire.image). Renovate updates tag and digest together.
+  artifacthub.io/images: |
+    - name: speculaire
+      image: ghcr.io/spnngl/images/speculaire:0.1.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  artifacthub.io/links: |-
+    - name: Upstream repository
+      url: https://github.com/spnngl/speculaire
+    - name: Image build
+      url: https://github.com/spnngl/images/tree/main/containers/speculaire
+    - name: Chart source
+      url: https://github.com/spnngl/charts/tree/main/charts/speculaire
+    - name: Verify signature and attestations
+      url: https://github.com/spnngl/charts#verifying-what-you-install

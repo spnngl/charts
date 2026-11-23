@@ -1,0 +1,525 @@
+---
+# Source: speculaire/templates/configmap.yaml
+apiVersion: v1
+data:
+  config.toml: ""
+  reflector.toml: |+
+    role = "reflector"
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: speculaire
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: speculaire
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: speculaire-0.0.0
+  name: spec
+  namespace: speculaire
+---
+# Source: speculaire/templates/daemonset.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/dnsconfig-options: "With hostNetwork and dnsPolicy ClusterFirst the kubelet gives the pod the node's resolver: the agent, which CoreDNS pulls through, must not depend on cluster DNS."
+    ignore-check.kube-linter.io/host-network: "The agent serves the node's runtime: its mirror listens on the node's loopback and its peer API on the node's address."
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "updateStrategy.type is a user choice."
+    ignore-check.kube-linter.io/non-isolated-pod: "A host-network pod is not subject to NetworkPolicy."
+    ignore-check.kube-linter.io/run-as-non-root: "The agent writes the runtime's root-owned registry config and connects to the root-only runtime and NRI sockets."
+    ignore-check.kube-linter.io/sensitive-host-mounts: "The agent reads the runtime config, the kubelet client certificate and the cluster CA, each its own read-only mount; it writes only the runtime's registry directories."
+    ignore-check.kube-linter.io/writable-host-mount: "configure writes the mirror entry into the runtime's registry directories; the agent keeps its state in /var/lib/speculaire and /run/speculaire."
+  labels:
+    app.kubernetes.io/component: agent
+    app.kubernetes.io/instance: speculaire
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: speculaire
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: speculaire-0.0.0
+  name: spec-agent
+  namespace: speculaire
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: agent
+      app.kubernetes.io/instance: speculaire
+      app.kubernetes.io/name: speculaire
+  template:
+    metadata:
+      annotations:
+        example.com/a: b
+        example.com/tolerate: "true"
+      labels:
+        app.kubernetes.io/component: agent
+        app.kubernetes.io/instance: speculaire
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: speculaire
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: speculaire-0.0.0
+        team: infra
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: example.com/reflector
+                    operator: DoesNotExist
+                  - key: speculaire.spnngl.github.io/disabled
+                    operator: DoesNotExist
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - agent
+            - --config
+            - /etc/speculaire/config.toml
+          image: "ghcr.io/spnngl/images/speculaire:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /livez
+              port: metrics
+            periodSeconds: 10
+          name: agent
+          ports:
+            - containerPort: 7482
+              name: metrics
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 1
+            httpGet:
+              path: /readyz
+              port: metrics
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 0
+            runAsNonRoot: false
+            runAsUser: 0
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 120
+            httpGet:
+              path: /livez
+              port: metrics
+            periodSeconds: 1
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/speculaire
+              name: config
+              readOnly: true
+            - mountPath: /var/run/nri
+              name: nri
+              readOnly: true
+            - mountPath: /var/lib/kubelet/pki
+              name: kubelet-pki
+              readOnly: true
+            - mountPath: /etc/kubernetes/pki/ca.crt
+              name: cluster-ca
+              readOnly: true
+            - mountPath: /var/lib/speculaire
+              name: state
+              readOnly: false
+            - mountPath: /run/speculaire
+              name: run
+              readOnly: false
+            - mountPath: /run/containerd
+              name: runtime-socket
+              readOnly: true
+            - mountPath: /etc/containerd
+              name: runtime-config
+              readOnly: true
+            - mountPath: /etc/containerd/certs.d
+              name: runtime-hosts
+              readOnly: false
+            - mountPath: /var/lib/containerd/io.containerd.content.v1.content
+              name: runtime-content
+              readOnly: true
+            - mountPath: /var/lib/kubelet/config.json
+              name: auth
+              readOnly: true
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: false
+      hostNetwork: true
+      imagePullSecrets:
+        - name: pull
+      initContainers:
+        - args:
+            - configure
+            - --config
+            - /etc/speculaire/config.toml
+          image: "ghcr.io/spnngl/images/speculaire:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          name: configure
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 0
+            runAsNonRoot: false
+            runAsUser: 0
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/speculaire
+              name: config
+              readOnly: true
+            - mountPath: /var/run/nri
+              name: nri
+              readOnly: true
+            - mountPath: /var/lib/kubelet/pki
+              name: kubelet-pki
+              readOnly: true
+            - mountPath: /etc/kubernetes/pki/ca.crt
+              name: cluster-ca
+              readOnly: true
+            - mountPath: /var/lib/speculaire
+              name: state
+              readOnly: false
+            - mountPath: /run/speculaire
+              name: run
+              readOnly: false
+            - mountPath: /run/containerd
+              name: runtime-socket
+              readOnly: true
+            - mountPath: /etc/containerd
+              name: runtime-config
+              readOnly: true
+            - mountPath: /etc/containerd/certs.d
+              name: runtime-hosts
+              readOnly: false
+            - mountPath: /var/lib/containerd/io.containerd.content.v1.content
+              name: runtime-content
+              readOnly: true
+            - mountPath: /var/lib/kubelet/config.json
+              name: auth
+              readOnly: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        runAsGroup: 0
+        runAsNonRoot: false
+        runAsUser: 0
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 20
+      volumes:
+        - configMap:
+            name: spec
+          name: config
+        - hostPath:
+            path: /var/run/nri
+            type: DirectoryOrCreate
+          name: nri
+        - hostPath:
+            path: /var/lib/kubelet/pki
+            type: Directory
+          name: kubelet-pki
+        - hostPath:
+            path: /etc/kubernetes/pki/ca.crt
+            type: File
+          name: cluster-ca
+        - hostPath:
+            path: /var/lib/speculaire
+            type: DirectoryOrCreate
+          name: state
+        - hostPath:
+            path: /run/speculaire
+            type: DirectoryOrCreate
+          name: run
+        - hostPath:
+            path: /run/containerd
+            type: Directory
+          name: runtime-socket
+        - hostPath:
+            path: /etc/containerd
+            type: Directory
+          name: runtime-config
+        - hostPath:
+            path: /etc/containerd/certs.d
+            type: DirectoryOrCreate
+          name: runtime-hosts
+        - hostPath:
+            path: /var/lib/containerd/io.containerd.content.v1.content
+            type: Directory
+          name: runtime-content
+        - hostPath:
+            path: /var/lib/kubelet/config.json
+            type: File
+          name: auth
+  updateStrategy:
+    type: OnDelete
+---
+# Source: speculaire/templates/daemonset.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/dnsconfig-options: "With hostNetwork and dnsPolicy ClusterFirst the kubelet gives the pod the node's resolver: the agent, which CoreDNS pulls through, must not depend on cluster DNS."
+    ignore-check.kube-linter.io/host-network: "The agent serves the node's runtime: its mirror listens on the node's loopback and its peer API on the node's address."
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "updateStrategy.type is a user choice."
+    ignore-check.kube-linter.io/non-isolated-pod: "A host-network pod is not subject to NetworkPolicy."
+    ignore-check.kube-linter.io/run-as-non-root: "The agent writes the runtime's root-owned registry config and connects to the root-only runtime and NRI sockets."
+    ignore-check.kube-linter.io/sensitive-host-mounts: "The agent reads the runtime config, the kubelet client certificate and the cluster CA, each its own read-only mount; it writes only the runtime's registry directories."
+    ignore-check.kube-linter.io/writable-host-mount: "configure writes the mirror entry into the runtime's registry directories; the agent keeps its state in /var/lib/speculaire and /run/speculaire."
+  labels:
+    app.kubernetes.io/component: reflector
+    app.kubernetes.io/instance: speculaire
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: speculaire
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: speculaire-0.0.0
+  name: spec-reflector
+  namespace: speculaire
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: reflector
+      app.kubernetes.io/instance: speculaire
+      app.kubernetes.io/name: speculaire
+  template:
+    metadata:
+      annotations:
+        example.com/a: b
+        example.com/tolerate: "true"
+      labels:
+        app.kubernetes.io/component: reflector
+        app.kubernetes.io/instance: speculaire
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: speculaire
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: speculaire-0.0.0
+        team: infra
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: example.com/reflector
+                    operator: Exists
+                  - key: speculaire.spnngl.github.io/disabled
+                    operator: DoesNotExist
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - agent
+            - --config
+            - /etc/speculaire/reflector.toml
+          image: "ghcr.io/spnngl/images/speculaire:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /livez
+              port: metrics
+            periodSeconds: 10
+          name: reflector
+          ports:
+            - containerPort: 7482
+              name: metrics
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 1
+            httpGet:
+              path: /readyz
+              port: metrics
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 0
+            runAsNonRoot: false
+            runAsUser: 0
+            seccompProfile:
+              type: RuntimeDefault
+          startupProbe:
+            failureThreshold: 120
+            httpGet:
+              path: /livez
+              port: metrics
+            periodSeconds: 1
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/speculaire
+              name: config
+              readOnly: true
+            - mountPath: /var/run/nri
+              name: nri
+              readOnly: true
+            - mountPath: /var/lib/kubelet/pki
+              name: kubelet-pki
+              readOnly: true
+            - mountPath: /etc/kubernetes/pki/ca.crt
+              name: cluster-ca
+              readOnly: true
+            - mountPath: /var/lib/speculaire
+              name: state
+              readOnly: false
+            - mountPath: /run/speculaire
+              name: run
+              readOnly: false
+            - mountPath: /run/containerd
+              name: runtime-socket
+              readOnly: true
+            - mountPath: /etc/containerd
+              name: runtime-config
+              readOnly: true
+            - mountPath: /etc/containerd/certs.d
+              name: runtime-hosts
+              readOnly: false
+            - mountPath: /var/lib/containerd/io.containerd.content.v1.content
+              name: runtime-content
+              readOnly: true
+            - mountPath: /var/lib/kubelet/config.json
+              name: auth
+              readOnly: true
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: false
+      hostNetwork: true
+      imagePullSecrets:
+        - name: pull
+      initContainers:
+        - args:
+            - configure
+            - --config
+            - /etc/speculaire/reflector.toml
+          image: "ghcr.io/spnngl/images/speculaire:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          name: configure
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 0
+            runAsNonRoot: false
+            runAsUser: 0
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/speculaire
+              name: config
+              readOnly: true
+            - mountPath: /var/run/nri
+              name: nri
+              readOnly: true
+            - mountPath: /var/lib/kubelet/pki
+              name: kubelet-pki
+              readOnly: true
+            - mountPath: /etc/kubernetes/pki/ca.crt
+              name: cluster-ca
+              readOnly: true
+            - mountPath: /var/lib/speculaire
+              name: state
+              readOnly: false
+            - mountPath: /run/speculaire
+              name: run
+              readOnly: false
+            - mountPath: /run/containerd
+              name: runtime-socket
+              readOnly: true
+            - mountPath: /etc/containerd
+              name: runtime-config
+              readOnly: true
+            - mountPath: /etc/containerd/certs.d
+              name: runtime-hosts
+              readOnly: false
+            - mountPath: /var/lib/containerd/io.containerd.content.v1.content
+              name: runtime-content
+              readOnly: true
+            - mountPath: /var/lib/kubelet/config.json
+              name: auth
+              readOnly: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      securityContext:
+        runAsGroup: 0
+        runAsNonRoot: false
+        runAsUser: 0
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 20
+      volumes:
+        - configMap:
+            name: spec
+          name: config
+        - hostPath:
+            path: /var/run/nri
+            type: DirectoryOrCreate
+          name: nri
+        - hostPath:
+            path: /var/lib/kubelet/pki
+            type: Directory
+          name: kubelet-pki
+        - hostPath:
+            path: /etc/kubernetes/pki/ca.crt
+            type: File
+          name: cluster-ca
+        - hostPath:
+            path: /var/lib/speculaire
+            type: DirectoryOrCreate
+          name: state
+        - hostPath:
+            path: /run/speculaire
+            type: DirectoryOrCreate
+          name: run
+        - hostPath:
+            path: /run/containerd
+            type: Directory
+          name: runtime-socket
+        - hostPath:
+            path: /etc/containerd
+            type: Directory
+          name: runtime-config
+        - hostPath:
+            path: /etc/containerd/certs.d
+            type: DirectoryOrCreate
+          name: runtime-hosts
+        - hostPath:
+            path: /var/lib/containerd/io.containerd.content.v1.content
+            type: Directory
+          name: runtime-content
+        - hostPath:
+            path: /var/lib/kubelet/config.json
+            type: File
+          name: auth
+  updateStrategy:
+    type: OnDelete

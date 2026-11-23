@@ -1,0 +1,33 @@
+{{ include "speculaire.fullname" . }} runs a Spéculaire agent on every matching node
+({{ .Values.runtime }}), and a reflector instead on the nodes labelled
+{{ .Values.reflector.nodeLabel }}. Nodes labelled
+speculaire.spnngl.github.io/disabled run neither.
+
+The pods use the host network and host directories: the namespace must allow
+privileged pods (kube-system does):
+
+  kubectl label namespace {{ .Release.Namespace }} pod-security.kubernetes.io/enforce=privileged
+
+Check the pods:
+
+  kubectl -n {{ .Release.Namespace }} get pods -l {{ include "speculaire.selectorLabels" . | replace ": " "=" | replace "\n" "," }}
+{{- if eq .Values.config.source "configMap" }}
+
+Live config keys reload within config.poll_interval after the kubelet syncs
+the ConfigMap. Restart keys need a restart of both DaemonSets:
+
+  kubectl -n {{ .Release.Namespace }} rollout restart daemonset/{{ include "speculaire.componentName" (dict "root" . "component" "reflector") }} daemonset/{{ include "speculaire.componentName" (dict "root" . "component" "agent") }}
+{{- if not (dig "reflector" "url" "" (include "speculaire.parsedConfig" . | fromJson)) }}
+
+config.toml sets no reflector.url: the agents find no peers, each node pulls
+from upstream alone.
+{{- end }}
+{{- end }}
+
+Before making the runtime require speculaire, set the runtime's NRI
+tolerate-missing-plugins annotation key to {{ .Values.gate.tolerateAnnotation }},
+or a node whose agent restarts cannot start it again.
+
+helm uninstall does not undo what the configure init container wrote on
+each node: run `speculaire unconfigure` in every pod first (chart README,
+§ Uninstall).

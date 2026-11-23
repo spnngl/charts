@@ -1,0 +1,143 @@
+{{- include "speculaire.validate" . }}
+{{- $hostPaths := include "speculaire.hostPaths" . | fromYamlArray }}
+{{- $configMap := eq .Values.config.source "configMap" }}
+{{- $volumeMounts := list }}
+{{- if $configMap }}
+{{- $volumeMounts = append $volumeMounts (dict "mountPath" "/etc/speculaire" "name" "config" "readOnly" true) }}
+{{- end }}
+{{- range $hostPaths }}
+{{- $volumeMounts = append $volumeMounts (dict "mountPath" .path "name" .name "readOnly" .readOnly) }}
+{{- end }}
+{{- $volumeMounts = concat $volumeMounts .Values.extraVolumeMounts }}
+{{- range $component := list "agent" "reflector" }}
+{{- $reflector := eq $component "reflector" }}
+{{- $config := ternary "/etc/speculaire/reflector.toml" "/etc/speculaire/config.toml" (and $reflector $configMap) }}
+{{- $image := ternary (include "speculaire.reflectorImage" $) (include "speculaire.image" $) $reflector }}
+{{- $labels := merge (dict "app.kubernetes.io/component" $component) (include "speculaire.labels" $ | fromYaml) }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    ignore-check.kube-linter.io/dnsconfig-options: "With hostNetwork and dnsPolicy ClusterFirst the kubelet gives the pod the node's resolver: the agent, which CoreDNS pulls through, must not depend on cluster DNS."
+    ignore-check.kube-linter.io/host-network: "The agent serves the node's runtime: its mirror listens on the node's loopback and its peer API on the node's address."
+    {{- if ne $.Values.updateStrategy.type "RollingUpdate" }}
+    ignore-check.kube-linter.io/no-rolling-update-strategy: "updateStrategy.type is a user choice."
+    {{- end }}
+    ignore-check.kube-linter.io/non-isolated-pod: "A host-network pod is not subject to NetworkPolicy."
+    ignore-check.kube-linter.io/run-as-non-root: "The agent writes the runtime's root-owned registry config and connects to the root-only runtime and NRI sockets."
+    ignore-check.kube-linter.io/sensitive-host-mounts: "The agent reads the runtime config, the kubelet client certificate and the cluster CA, each its own read-only mount; it writes only the runtime's registry directories."
+    ignore-check.kube-linter.io/writable-host-mount: "configure writes the mirror entry into the runtime's registry directories; the agent keeps its state in /var/lib/speculaire and /run/speculaire."
+  labels:
+    {{- toYaml $labels | nindent 4 }}
+  name: {{ include "speculaire.componentName" (dict "root" $ "component" $component) }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  selector:
+    matchLabels:
+      {{- toYaml (merge (dict "app.kubernetes.io/component" $component) (include "speculaire.selectorLabels" $ | fromYaml)) | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- toYaml (merge (dict $.Values.gate.tolerateAnnotation "true") (deepCopy $.Values.podAnnotations)) | nindent 8 }}
+      labels:
+        {{- toYaml (merge (deepCopy $labels) (deepCopy $.Values.podLabels)) | nindent 8 }}
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: {{ $.Values.reflector.nodeLabel }}
+                    operator: {{ ternary "Exists" "DoesNotExist" $reflector }}
+                  - key: speculaire.spnngl.github.io/disabled
+                    operator: DoesNotExist
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - agent
+            - --config
+            - {{ $config }}
+          image: {{ $image | quote }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          livenessProbe:
+            {{- toYaml $.Values.livenessProbe | nindent 12 }}
+          name: {{ $component }}
+          ports:
+            - containerPort: 7482
+              name: metrics
+              protocol: TCP
+          readinessProbe:
+            {{- toYaml $.Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml $.Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $.Values.securityContext | nindent 12 }}
+          startupProbe:
+            {{- toYaml $.Values.startupProbe | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            {{- toYaml $volumeMounts | nindent 12 }}
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: false
+      hostNetwork: true
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - args:
+            - configure
+            - --config
+            - {{ $config }}
+          image: {{ $image | quote }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          name: configure
+          resources:
+            {{- toYaml $.Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $.Values.securityContext | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            {{- toYaml $volumeMounts | nindent 12 }}
+      {{- with $.Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      restartPolicy: Always
+      securityContext:
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "speculaire.serviceAccountName" $ }}
+      terminationGracePeriodSeconds: {{ $.Values.terminationGracePeriodSeconds }}
+      {{- with $.Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        {{- if $configMap }}
+        - configMap:
+            name: {{ include "speculaire.fullname" $ }}
+          name: config
+        {{- end }}
+        {{- range $hostPaths }}
+        - hostPath:
+            path: {{ .path }}
+            type: {{ .type }}
+          name: {{ .name }}
+        {{- end }}
+        {{- with $.Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+  updateStrategy:
+    {{- if eq $.Values.updateStrategy.type "RollingUpdate" }}
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: {{ $.Values.updateStrategy.rollingUpdate.maxUnavailable }}
+    type: RollingUpdate
+    {{- else }}
+    type: {{ $.Values.updateStrategy.type }}
+    {{- end }}
+{{- end }}

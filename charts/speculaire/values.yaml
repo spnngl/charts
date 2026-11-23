@@ -1,0 +1,269 @@
+# yaml-language-server: $schema=values.schema.json
+# @schema.root
+# title: speculaire values
+# @schema.root
+# -- Override the chart name used in resource names and labels.
+nameOverride: ""
+# -- Override the full resource name (default `<release>-<chart>`). The DaemonSets add `-agent` and `-reflector`.
+fullnameOverride: ""
+
+image:
+  # -- Image repository, shared by the agents, the reflectors and the `configure` init container.
+  repository: ghcr.io/spnngl/images/speculaire
+  # -- Image tag. Empty: `appVersion` pinned by the digest recorded in `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.
+  tag: ""
+  # @schema
+  # type: string
+  # pattern: "^(sha256:[a-f0-9]{64})?$"
+  # @schema
+  # -- Image digest, only valid together with `image.tag`.
+  digest: ""
+  # @schema
+  # type: string
+  # enum: [Always, IfNotPresent, Never]
+  # @schema
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+# @schema
+# type: array
+# items:
+#   type: object
+#   required: [name]
+#   properties:
+#     name:
+#       type: string
+# @schema
+# -- Image pull secrets (list of `{name: <secret>}`).
+imagePullSecrets: []
+
+# @schema
+# type: string
+# enum: [containerd, cri-o]
+# @schema
+# -- Container runtime of the nodes. It picks the node directories the pods mount (socket, runtime config, registry config, image store). Every node of the release runs the same runtime: install one release per runtime, split with `nodeSelector`. A wrong value fails the `configure` init container, which names both runtime sockets.
+runtime: containerd
+
+gate:
+  # @schema
+  # type: string
+  # minLength: 1
+  # pattern: "^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$"
+  # @schema
+  # -- Pod annotation that lets the runtime start the speculaire pods while the gate is down. Set the same key in the runtime's NRI validator: containerd `tolerate_missing_plugins_annotation` under `[plugins.'io.containerd.nri.v1.nri'.default_validator]`, CRI-O `nri_validator_tolerate_missing_plugins_annotation` under `[crio.nri.default_validator]`. Without it, a node whose runtime requires `speculaire` cannot restart the agent that serves the requirement. The chart sets it to `"true"` on both pods.
+  tolerateAnnotation: speculaire.spnngl.github.io/tolerate-missing-plugins
+
+config:
+  # @schema
+  # type: string
+  # enum: [configMap, host]
+  # @schema
+  # -- Where the agent reads its config. `configMap`: the chart writes `toml`, `policy` and `trustedRoot` to a ConfigMap mounted as the directory `/etc/speculaire`. `host`: each node's own `/etc/speculaire` (read-only), and the three values below must stay empty.
+  source: configMap
+  # -- Agent config (`config.toml`), a TOML string: the agent's defaults apply to every key left out (`packaging/config.toml` in spnngl/speculaire lists them). A string, not a map, because Helm turns every number into a float. The reflectors get the same text after `role = "reflector"`, so `role` is chart-owned. Live keys reload within `config.poll_interval` after the kubelet syncs the ConfigMap (about a minute); restart keys need `kubectl rollout restart`. Set `reflector.url` for the agents to find their peers.
+  toml: ""
+  # [reflector]
+  # url = "https://reflector.example:7483"
+  # members = ["https://10.0.0.1:7483", "https://10.0.0.2:7483"]
+  # -- Image policy (`policy.yaml`, at the default `verify.policy`). Empty: no file, so no policy.
+  policy: ""
+  # -- Sigstore trusted root (`trusted_root.json`), a JSON string. Set it together with `verify.trusted_root = "/etc/speculaire/trusted_root.json"` in `toml`; empty: the agent fetches the public-good root over TUF.
+  trustedRoot: ""
+
+reflector:
+  # @schema
+  # type: string
+  # minLength: 1
+  # @schema
+  # -- Node label (key only) of the nodes that run a reflector instead of an agent. A reflector is an agent with `role = "reflector"` (it gates and mirrors its own node too). Nodes labelled `speculaire.spnngl.github.io/disabled` run neither.
+  nodeLabel: node-role.kubernetes.io/control-plane
+  image:
+    # -- Reflector image tag on `image.repository`. Empty: the agents' image. An upgrade that changes the peer protocol sets this first, then `image.tag`: reflectors stay one minor ahead of the agents.
+    tag: ""
+    # @schema
+    # type: string
+    # pattern: "^(sha256:[a-f0-9]{64})?$"
+    # @schema
+    # -- Reflector image digest, only valid together with `reflector.image.tag`.
+    digest: ""
+
+updateStrategy:
+  # @schema
+  # type: string
+  # enum: [RollingUpdate, OnDelete]
+  # @schema
+  # -- DaemonSet update strategy, for both DaemonSets. There is no `maxSurge`: two agents on a node would compete for the host ports.
+  type: RollingUpdate
+  rollingUpdate:
+    # @schema
+    # type: [integer, string]
+    # @schema
+    # -- Nodes updated at once. While its agent restarts, a node pulls without the mirror and, if its runtime requires `speculaire`, starts no container.
+    maxUnavailable: 1
+# @schema
+# type: integer
+# minimum: 0
+# @schema
+# -- Termination grace period. The agent drains its connections and exits within it.
+terminationGracePeriodSeconds: 20
+
+serviceAccount:
+  # -- Create the ServiceAccount. The pods do not use the Kubernetes API: its token is not mounted.
+  create: true
+  # -- ServiceAccount name. Empty: `<fullname>` (or `default` when `create` is false).
+  name: ""
+  # @schema
+  # type: object
+  # additionalProperties:
+  #   type: string
+  # @schema
+  # -- ServiceAccount annotations.
+  annotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Pod annotations, for both DaemonSets.
+podAnnotations: {}
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Extra pod labels, for both DaemonSets.
+podLabels: {}
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Pod security context. Overrides are merged onto these defaults. Root is required: the agent writes runtime config owned by root and connects to root-only sockets.
+podSecurityContext:
+  runAsGroup: 0
+  runAsNonRoot: false
+  runAsUser: 0
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Container security context, for the agent and the `configure` init container. Overrides are merged onto these defaults. No capability: root's file ownership is enough. On SELinux nodes that deny the runtime sockets to containers, set `seLinuxOptions: {type: spc_t}`.
+securityContext:
+  allowPrivilegeEscalation: false
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 0
+  runAsNonRoot: false
+  runAsUser: 0
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  seccompProfile:
+    type: RuntimeDefault
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Resources, for the agent and the `configure` init container. No limit on purpose: an agent killed for memory blocks every container start on a node whose runtime requires `speculaire`. Like the other maps, `requests` merges with these defaults: set a key to `null` to drop it.
+resources:
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  requests:
+    cpu: 50m
+    memory: 128Mi
+
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Startup probe, `GET /livez` on the status listener (`metrics.address`, port 7482). Two minutes for the agent to load its cache and open its listeners.
+startupProbe:
+  failureThreshold: 120
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  httpGet:
+    path: /livez
+    port: metrics
+  periodSeconds: 1
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Liveness probe, `GET /livez`: the agent's watchdog (it answers while its event loop runs).
+livenessProbe:
+  failureThreshold: 3
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  httpGet:
+    path: /livez
+    port: metrics
+  periodSeconds: 10
+# @schema
+# type: object
+# additionalProperties: true
+# @schema
+# -- Readiness probe, `GET /readyz`: ready once the gate and the mirror serve. It paces the rolling update.
+readinessProbe:
+  failureThreshold: 1
+  # @schema
+  # type: object
+  # additionalProperties: true
+  # @schema
+  httpGet:
+    path: /readyz
+    port: metrics
+  periodSeconds: 5
+
+# @schema
+# type: object
+# additionalProperties:
+#   type: string
+# @schema
+# -- Node selector, for both DaemonSets. Merged with the default `kubernetes.io/os: linux`: set that key to `null` to drop it.
+nodeSelector:
+  kubernetes.io/os: linux
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Tolerations, for both DaemonSets. Every taint by default: the agent gates every node's containers.
+tolerations:
+  - operator: Exists
+# @schema
+# type: string
+# @schema
+# -- Priority class name. The agent is a node component: without it, preemption can evict the agent the node's container starts depend on.
+priorityClassName: system-node-critical
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volumes, for both DaemonSets (for example a node directory of `containerd`'s `config_path` other than `/etc/containerd/certs.d`, or CRI-O's `global_auth_file`).
+extraVolumes: []
+# @schema
+# type: array
+# items:
+#   type: object
+# @schema
+# -- Extra volume mounts, for the agent and the `configure` init container.
+extraVolumeMounts: []

@@ -1,0 +1,5 @@
+values:
+  config:
+    source: files
+expect:
+  error: source

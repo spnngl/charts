@@ -1,0 +1,6 @@
+values:
+  reflector:
+    image:
+      digest: sha256:1111111111111111111111111111111111111111111111111111111111111111
+expect:
+  error: reflector.image.digest requires reflector.image.tag
