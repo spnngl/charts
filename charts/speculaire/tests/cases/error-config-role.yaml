@@ -1,0 +1,5 @@
+values:
+  config:
+    toml: "role = \"agent\"\n"
+expect:
+  error: config.toml must not set role

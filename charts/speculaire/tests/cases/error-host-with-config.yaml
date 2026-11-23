@@ -1,0 +1,6 @@
+values:
+  config:
+    source: host
+    policy: "policies: []"
+expect:
+  error: config.source host

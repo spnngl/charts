@@ -1,0 +1,7 @@
+values:
+  config:
+    toml: |
+      [verify]
+      trusted_root = "/etc/speculaire/trusted_root.json"
+expect:
+  error: set config.trustedRoot

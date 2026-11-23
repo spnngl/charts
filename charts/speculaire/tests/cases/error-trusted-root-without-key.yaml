@@ -1,0 +1,5 @@
+values:
+  config:
+    trustedRoot: "{}"
+expect:
+  error: config.trustedRoot needs verify.trusted_root

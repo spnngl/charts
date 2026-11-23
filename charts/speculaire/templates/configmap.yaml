@@ -1,0 +1,18 @@
+{{- if eq .Values.config.source "configMap" }}
+{{- $data := dict "config.toml" .Values.config.toml "reflector.toml" (printf "role = \"reflector\"\n\n%s" .Values.config.toml) }}
+{{- with .Values.config.policy }}
+{{- $_ := set $data "policy.yaml" . }}
+{{- end }}
+{{- with .Values.config.trustedRoot }}
+{{- $_ := set $data "trusted_root.json" . }}
+{{- end }}
+apiVersion: v1
+data:
+  {{- toYaml $data | nindent 2 }}
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "speculaire.labels" . | nindent 4 }}
+  name: {{ include "speculaire.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}

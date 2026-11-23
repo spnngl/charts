@@ -1,0 +1,12 @@
+values:
+  config:
+    toml: |
+      [verify]
+      trusted_root = "/etc/speculaire/trusted_root.json"
+
+      [reflector]
+      url = "https://reflector.example:7483"
+      members = ["https://10.0.0.1:7483"]
+    policy: |
+      policies: []
+    trustedRoot: '{"mediaType": "application/vnd.dev.sigstore.trustedroot+json;version=0.1"}'

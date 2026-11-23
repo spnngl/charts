@@ -1,0 +1,440 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "config": {
+      "additionalProperties": false,
+      "properties": {
+        "policy": {
+          "description": "[reflector]\nurl = \"https://reflector.example:7483\"\nmembers = [\"https://10.0.0.1:7483\", \"https://10.0.0.2:7483\"]\nImage policy (`policy.yaml`, at the default `verify.policy`). Empty: no file, so no policy.",
+          "type": "string"
+        },
+        "source": {
+          "description": "Where the agent reads its config. `configMap`: the chart writes `toml`, `policy` and `trustedRoot` to a ConfigMap mounted as the directory `/etc/speculaire`. `host`: each node's own `/etc/speculaire` (read-only), and the three values below must stay empty.",
+          "enum": [
+            "configMap",
+            "host"
+          ],
+          "type": "string"
+        },
+        "toml": {
+          "description": "Agent config (`config.toml`), a TOML string: the agent's defaults apply to every key left out (`packaging/config.toml` in spnngl/speculaire lists them). A string, not a map, because Helm turns every number into a float. The reflectors get the same text after `role = \"reflector\"`, so `role` is chart-owned. Live keys reload within `config.poll_interval` after the kubelet syncs the ConfigMap (about a minute); restart keys need `kubectl rollout restart`. Set `reflector.url` for the agents to find their peers.",
+          "type": "string"
+        },
+        "trustedRoot": {
+          "description": "Sigstore trusted root (`trusted_root.json`), a JSON string. Set it together with `verify.trusted_root = \"/etc/speculaire/trusted_root.json\"` in `toml`; empty: the agent fetches the public-good root over TUF.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "extraVolumeMounts": {
+      "description": "Extra volume mounts, for the agent and the `configure` init container.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extraVolumes": {
+      "description": "Extra volumes, for both DaemonSets (for example a node directory of `containerd`'s `config_path` other than `/etc/containerd/certs.d`, or CRI-O's `global_auth_file`).",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "fullnameOverride": {
+      "description": "Override the full resource name (default `\u003crelease\u003e-\u003cchart\u003e`). The DaemonSets add `-agent` and `-reflector`.",
+      "type": "string"
+    },
+    "gate": {
+      "additionalProperties": false,
+      "properties": {
+        "tolerateAnnotation": {
+          "description": "Pod annotation that lets the runtime start the speculaire pods while the gate is down. Set the same key in the runtime's NRI validator: containerd `tolerate_missing_plugins_annotation` under `[plugins.'io.containerd.nri.v1.nri'.default_validator]`, CRI-O `nri_validator_tolerate_missing_plugins_annotation` under `[crio.nri.default_validator]`. Without it, a node whose runtime requires `speculaire` cannot restart the agent that serves the requirement. The chart sets it to `\"true\"` on both pods.",
+          "minLength": 1,
+          "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "global": {
+      "description": "Global values are values that can be accessed from any chart or subchart by exactly the same name.",
+      "required": [],
+      "type": "object"
+    },
+    "image": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "description": "Image digest, only valid together with `image.tag`.",
+          "pattern": "^(sha256:[a-f0-9]{64})?$",
+          "type": "string"
+        },
+        "pullPolicy": {
+          "description": "Image pull policy.",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ],
+          "type": "string"
+        },
+        "repository": {
+          "description": "Image repository, shared by the agents, the reflectors and the `configure` init container.",
+          "type": "string"
+        },
+        "tag": {
+          "description": "Image tag. Empty: `appVersion` pinned by the digest recorded in `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "imagePullSecrets": {
+      "description": "Image pull secrets (list of `{name: \u003csecret\u003e}`).",
+      "items": {
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "livenessProbe": {
+      "additionalProperties": true,
+      "description": "Liveness probe, `GET /livez`: the agent's watchdog (it answers while its event loop runs).",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "httpGet": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "port": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "nameOverride": {
+      "description": "yaml-language-server: $schema=values.schema.json\nOverride the chart name used in resource names and labels.",
+      "type": "string"
+    },
+    "nodeSelector": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Node selector, for both DaemonSets. Merged with the default `kubernetes.io/os: linux`: set that key to `null` to drop it.",
+      "properties": {
+        "kubernetes.io/os": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "podAnnotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Pod annotations, for both DaemonSets.",
+      "required": [],
+      "type": "object"
+    },
+    "podLabels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Extra pod labels, for both DaemonSets.",
+      "required": [],
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "additionalProperties": true,
+      "description": "Pod security context. Overrides are merged onto these defaults. Root is required: the agent writes runtime config owned by root and connects to root-only sockets.",
+      "properties": {
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "priorityClassName": {
+      "description": "Priority class name. The agent is a node component: without it, preemption can evict the agent the node's container starts depend on.",
+      "type": "string"
+    },
+    "readinessProbe": {
+      "additionalProperties": true,
+      "description": "Readiness probe, `GET /readyz`: ready once the gate and the mirror serve. It paces the rolling update.",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "httpGet": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "port": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "reflector": {
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "additionalProperties": false,
+          "properties": {
+            "digest": {
+              "description": "Reflector image digest, only valid together with `reflector.image.tag`.",
+              "pattern": "^(sha256:[a-f0-9]{64})?$",
+              "type": "string"
+            },
+            "tag": {
+              "description": "Reflector image tag on `image.repository`. Empty: the agents' image. An upgrade that changes the peer protocol sets this first, then `image.tag`: reflectors stay one minor ahead of the agents.",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "nodeLabel": {
+          "description": "Node label (key only) of the nodes that run a reflector instead of an agent. A reflector is an agent with `role = \"reflector\"` (it gates and mirrors its own node too). Nodes labelled `speculaire.spnngl.github.io/disabled` run neither.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "resources": {
+      "additionalProperties": true,
+      "description": "Resources, for the agent and the `configure` init container. No limit on purpose: an agent killed for memory blocks every container start on a node whose runtime requires `speculaire`. Like the other maps, `requests` merges with these defaults: set a key to `null` to drop it.",
+      "properties": {
+        "requests": {
+          "additionalProperties": true,
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "runtime": {
+      "description": "Container runtime of the nodes. It picks the node directories the pods mount (socket, runtime config, registry config, image store). Every node of the release runs the same runtime: install one release per runtime, split with `nodeSelector`. A wrong value fails the `configure` init container, which names both runtime sockets.",
+      "enum": [
+        "containerd",
+        "cri-o"
+      ],
+      "type": "string"
+    },
+    "securityContext": {
+      "additionalProperties": true,
+      "description": "Container security context, for the agent and the `configure` init container. Overrides are merged onto these defaults. No capability: root's file ownership is enough. On SELinux nodes that deny the runtime sockets to containers, set `seLinuxOptions: {type: spc_t}`.",
+      "properties": {
+        "allowPrivilegeEscalation": {
+          "type": "boolean"
+        },
+        "capabilities": {
+          "additionalProperties": true,
+          "properties": {
+            "drop": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ],
+                "required": []
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "privileged": {
+          "type": "boolean"
+        },
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "serviceAccount": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "ServiceAccount annotations.",
+          "required": [],
+          "type": "object"
+        },
+        "create": {
+          "description": "Create the ServiceAccount. The pods do not use the Kubernetes API: its token is not mounted.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "ServiceAccount name. Empty: `\u003cfullname\u003e` (or `default` when `create` is false).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "startupProbe": {
+      "additionalProperties": true,
+      "description": "Startup probe, `GET /livez` on the status listener (`metrics.address`, port 7482). Two minutes for the agent to load its cache and open its listeners.",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer"
+        },
+        "httpGet": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "port": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "terminationGracePeriodSeconds": {
+      "description": "Termination grace period. The agent drains its connections and exits within it.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "tolerations": {
+      "description": "Tolerations, for both DaemonSets. Every taint by default: the agent gates every node's containers.",
+      "items": {
+        "required": [],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "updateStrategy": {
+      "additionalProperties": false,
+      "properties": {
+        "rollingUpdate": {
+          "additionalProperties": false,
+          "properties": {
+            "maxUnavailable": {
+              "description": "Nodes updated at once. While its agent restarts, a node pulls without the mirror and, if its runtime requires `speculaire`, starts no container.",
+              "required": [],
+              "type": [
+                "integer",
+                "string"
+              ]
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "type": {
+          "description": "DaemonSet update strategy, for both DaemonSets. There is no `maxSurge`: two agents on a node would compete for the host ports.",
+          "enum": [
+            "RollingUpdate",
+            "OnDelete"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    }
+  },
+  "required": [],
+  "title": "speculaire values",
+  "type": "object"
+}

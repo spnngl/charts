@@ -1,0 +1,27 @@
+values:
+  fullnameOverride: spec
+  gate:
+    tolerateAnnotation: example.com/tolerate
+  reflector:
+    nodeLabel: example.com/reflector
+  updateStrategy:
+    type: OnDelete
+  serviceAccount:
+    create: false
+  podAnnotations:
+    example.com/a: b
+  podLabels:
+    team: infra
+  imagePullSecrets:
+    - name: pull
+  priorityClassName: ""
+  tolerations: []
+  extraVolumes:
+    - name: auth
+      hostPath:
+        path: /var/lib/kubelet/config.json
+        type: File
+  extraVolumeMounts:
+    - name: auth
+      mountPath: /var/lib/kubelet/config.json
+      readOnly: true
