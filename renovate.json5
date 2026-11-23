@@ -36,8 +36,37 @@
             ],
             "datasourceTemplate": "docker",
             "versioningTemplate": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$"
+        },
+        {
+            "customType": "regex",
+            "description": "speculaire until its first release: spnngl/images tags the image with the first 8 characters of the built commit, which no versioning orders. The tag (`appVersion`) and the tag + digest (annotation) are treated as digests of a fixed `main` version, which the `speculaire-*` datasources resolve to the newest commit tag. The 8-hex patterns stop matching at the first version tag; then delete this manager and the datasources (charts/speculaire/README.md, Image).",
+            "managerFilePatterns": ["/^charts/speculaire/Chart\\.yaml$/"],
+            "matchStrings": [
+                "(?<depType>appVersion): \"(?<currentDigest>[0-9a-f]{8})\"",
+                "(?<depType>image): ghcr\\.io/spnngl/images/speculaire:(?<currentDigest>[0-9a-f]{8}@sha256:[a-f0-9]{64})"
+            ],
+            "depNameTemplate": "ghcr.io/spnngl/images/speculaire",
+            "currentValueTemplate": "main",
+            "datasourceTemplate": "custom.speculaire-{{depType}}",
+            "versioningTemplate": "exact"
         }
     ],
+    "customDatasources": {
+        "speculaire-appVersion": {
+            "description": "Newest 8-hex commit tag of the speculaire image, from Docker Hub's tag list (public, newest first; the same pushes as ghcr.io, whose tag list needs a token).",
+            "defaultRegistryUrlTemplate": "https://hub.docker.com/v2/repositories/loladelannoy/speculaire/tags?page_size=100&ordering=last_updated",
+            "transformTemplates": [
+                "{\"releases\": [{\"version\": \"main\", \"digest\": results[$contains(name, /^[0-9a-f]{8}$/)][0].name}]}"
+            ]
+        },
+        "speculaire-image": {
+            "description": "Same tag as `speculaire-appVersion`, with its digest: `<tag>@sha256:...`.",
+            "defaultRegistryUrlTemplate": "https://hub.docker.com/v2/repositories/loladelannoy/speculaire/tags?page_size=100&ordering=last_updated",
+            "transformTemplates": [
+                "{\"releases\": [{\"version\": \"main\", \"digest\": results[$contains(name, /^[0-9a-f]{8}$/)][0].(name & \"@\" & digest)}]}"
+            ]
+        }
+    },
     "packageRules": [
         {
             "description": "Tool and image updates: automerge minor/patch once CI is green. GitHub Actions: see the shared preset.",
@@ -78,6 +107,18 @@
                     "matchStrings": ["\\nversion:\\s*(?<version>[^\\s]+)"]
                 }
             ]
+        },
+        {
+            "description": "speculaire: the image runs as root on every node and gates every container start, so its updates are merged by hand (weekly: spnngl/images bumps the commit and rebuilds once a week).",
+            "matchDepNames": ["ghcr.io/spnngl/images/speculaire"],
+            "automerge": false
+        },
+        {
+            "description": "speculaire before its first release: its commit tag is not a version for the chart manager (see the `speculaire` manager).",
+            "matchDepNames": ["ghcr.io/spnngl/images/speculaire"],
+            "matchDatasources": ["docker"],
+            "matchCurrentValue": "/^[0-9a-f]{8}$/",
+            "enabled": false
         },
         {
             "description": "cloudflared: calver (major = year), automerge majors too.",

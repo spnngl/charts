@@ -69,6 +69,21 @@ config:
   # -- Sigstore trusted root (`trusted_root.json`), a JSON string. Set it together with `verify.trusted_root = "/etc/speculaire/trusted_root.json"` in `toml`; empty: the agent fetches the public-good root over TUF.
   trustedRoot: ""
 
+hostTrustStore:
+  # -- Mount the node's CA trust store read-only over the image's own (Alpine's Mozilla bundle), as the systemd install reads it: a CA added on the node (a private registry's, a TLS-inspecting proxy's) is then trusted for upstream registries. The agent loads roots like OpenSSL: the first bundle file found (`/etc/ssl/certs/ca-certificates.crt` on Debian/Ubuntu, `/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem` on Fedora/RHEL) and every file of `/etc/ssl/certs` and `/etc/pki/tls/certs`.
+  enabled: false
+  # @schema
+  # type: array
+  # uniqueItems: true
+  # items:
+  #   type: string
+  #   pattern: "^/"
+  # @schema
+  # -- Node directories mounted, each at the same path, when `enabled`. The default covers Debian/Ubuntu and Fedora/RHEL/Fedora CoreOS: there `/etc/ssl/certs` holds absolute symlinks into `/etc/pki/ca-trust/extracted`, which resolve inside the container, so that directory is mounted too (not all of `/etc/pki`: `tls/private` holds keys). A directory missing on the node is created empty (hostPath `DirectoryOrCreate`): keep only your layout's paths to avoid it.
+  paths:
+    - /etc/ssl/certs
+    - /etc/pki/ca-trust/extracted
+
 reflector:
   # @schema
   # type: string

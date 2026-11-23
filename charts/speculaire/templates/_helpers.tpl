@@ -147,6 +147,11 @@ and etcd keys. Returns a YAML list of {name, path, type, readOnly}.
 {{- if eq .Values.config.source "host" }}
 {{- $paths = append $paths (dict "name" "config" "path" "/etc/speculaire" "type" "Directory" "readOnly" true) }}
 {{- end }}
+{{- if .Values.hostTrustStore.enabled }}
+{{- range $i, $path := .Values.hostTrustStore.paths }}
+{{- $paths = append $paths (dict "name" (printf "trust-store-%d" $i) "path" $path "type" "DirectoryOrCreate" "readOnly" true) }}
+{{- end }}
+{{- end }}
 {{- toYaml $paths }}
 {{- end }}
 

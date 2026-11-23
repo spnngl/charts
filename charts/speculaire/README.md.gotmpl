@@ -30,9 +30,14 @@ helm install speculaire oci://ghcr.io/spnngl/charts/speculaire --version <versio
   per runtime, split with `nodeSelector`.
 - The runtime must have NRI enabled. Before making it require `speculaire`
   (containerd `required_plugins`, CRI-O `nri_validator_required_plugins`),
-  set its tolerate-missing-plugins annotation key to
-  `gate.tolerateAnnotation`, which the chart puts on both pods: otherwise a
-  node whose agent stops cannot start it again.
+  set the key of `gate.tolerateAnnotation`
+  (`speculaire.spnngl.github.io/tolerate-missing-plugins` by default), which
+  the chart puts on both pods, in the runtime's NRI `default_validator`:
+  containerd `tolerate_missing_plugins_annotation` under
+  `[plugins.'io.containerd.nri.v1.nri'.default_validator]`, CRI-O
+  `nri_validator_tolerate_missing_plugins_annotation` under
+  `[crio.nri.default_validator]`. Otherwise a node whose agent stops cannot
+  start it again.
 - CRI-O: set `auto_reload_registries = true` under `[crio.image]`. The
   `configure` init container writes `registries.conf.d/99-speculaire.conf`
   but cannot run `systemctl reload crio` from a pod.
@@ -75,11 +80,47 @@ With `config.source: host` the pods read each node's own `/etc/speculaire`
 and `config.trustedRoot` must stay empty. The reflector nodes' own
 `config.toml` must then set `role = "reflector"`.
 
+### Trust store
+
+The agent trusts the image's CA bundle (Alpine's Mozilla bundle) for
+upstream registries. `hostTrustStore.enabled: true` mounts the node's trust
+store over it, read-only, so a CA added on the node (a private registry's) is
+trusted as with the systemd install. The agent loads roots like OpenSSL: the
+first bundle file found and every file of `/etc/ssl/certs` and
+`/etc/pki/tls/certs`. `hostTrustStore.paths` lists the node directories
+mounted; the default covers both layouts:
+
+- Debian/Ubuntu: `/etc/ssl/certs/ca-certificates.crt` is a file of the first
+  directory.
+- Fedora/RHEL/Fedora CoreOS: `/etc/ssl/certs/*.crt` are absolute symlinks
+  into `/etc/pki/ca-trust/extracted`, which resolve inside the container, so
+  that directory is mounted too; the agent then reads
+  `/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem`.
+
+A listed directory missing on the node is created empty (hostPath
+`DirectoryOrCreate`): keep only your layout's paths to avoid it. Another
+layout lists its own directories, symlink targets included.
+
 ## Image
 
 The default image is `appVersion` pinned by the digest recorded in the
-`artifacthub.io/images` annotation of `Chart.yaml` (Renovate updates both
-together). Setting `image.tag` drops that digest; add `image.digest` to pin
+`artifacthub.io/images` annotation of `Chart.yaml`.
+
+Spéculaire has no release yet: spnngl/images tags its image with the first
+8 characters of the commit it builds (`3e1010cf`), and `appVersion` is that
+tag. Renovate cannot order commit tags, so a manager of its own
+(`renovate.json5`, `custom.speculaire-*`) reads the newest commit tag and its
+digest from Docker Hub's tag list (`docker.io/loladelannoy/speculaire`, the
+same digests as ghcr.io) and moves `appVersion`, the tag and the digest in
+one PR, merged by hand. At the first release: put back the
+`# renovate: datasource=docker depName=ghcr.io/spnngl/images/speculaire`
+line above `appVersion`, set `appVersion` and the annotation to the version
+tag and its digest, and delete the `speculaire` custom manager and
+custom datasources from `renovate.json5` (their 8-hex patterns stop matching
+by themselves). The shared chart manager then tracks version tags.
+
+Setting `image.tag` drops the chart's digest; add `image.digest` to pin
+the tag again (`image.digest` without `image.tag` is an error). Setting `image.tag` drops that digest; add `image.digest` to pin
 the tag again (`image.digest` without `image.tag` is an error). The agents,
 the reflectors and the init container run the same image, except that
 `reflector.image.tag` (and `digest`) moves the reflectors alone.
@@ -167,6 +208,7 @@ The pods mount node directories, each at its node path:
 | `/etc/kubernetes/pki/ca.crt` | read-only | cluster CA, this file only |
 | `/var/lib/speculaire`, `/run/speculaire` | read-write | the agent's state and cache |
 | `/etc/speculaire` | read-only | `config.source: host` only |
+| `hostTrustStore.paths` (`/etc/ssl/certs`, `/etc/pki/ca-trust/extracted`) | read-only | the node's CA trust store, `hostTrustStore.enabled` only |
 
 Other directories of containerd's `config_path` (for example
 `/etc/docker/certs.d`) and CRI-O's `global_auth_file` need `extraVolumes` /
