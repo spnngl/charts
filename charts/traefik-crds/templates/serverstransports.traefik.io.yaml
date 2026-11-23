@@ -4,7 +4,7 @@
 "metadata": {
 "annotations": {
 {{- with include "traefik-crds.crdAnnotations" . | trimPrefix "{" | trimSuffix "}" }}{{ . }},{{- end }}
-"controller-gen.kubebuilder.io/version": "v0.21.0"
+"controller-gen.kubebuilder.io/version": "v0.23.0"
 },
 "name": "serverstransports.traefik.io",
 "labels": {
@@ -25,7 +25,7 @@
 "name": "v1alpha1",
 "schema": {
 "openAPIV3Schema": {
-"description": "ServersTransport is the CRD implementation of a ServersTransport.\nIf no serversTransport is specified, the default@internal will be used.\nThe default@internal serversTransport is created from the static configuration.\nMore info: https://doc.traefik.io/traefik/v3.7/reference/routing-configuration/http/load-balancing/serverstransport/",
+"description": "ServersTransport is the CRD implementation of a ServersTransport.\nIf no serversTransport is specified, the default@internal will be used.\nThe default@internal serversTransport is created from the static configuration.\nMore info: https://doc.traefik.io/traefik/v3.8/reference/routing-configuration/http/load-balancing/serverstransport/",
 "properties": {
 "apiVersion": {
 "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
@@ -114,6 +114,19 @@
 "pattern": "^([0-9]+(ns|us|µs|ms|s|m|h)?)+$",
 "x-kubernetes-int-or-string": true
 },
+"readTimeout": {
+"anyOf": [
+{
+"type": "integer"
+},
+{
+"type": "string"
+}
+],
+"description": "ReadTimeout is the timeout for reading a response from the proxied server. The timeout between two successive read operations. The connection is closed if nothing is transmitted within this time.",
+"pattern": "^([0-9]+(ns|us|µs|ms|s|m|h)?)+$",
+"x-kubernetes-int-or-string": true
+},
 "responseHeaderTimeout": {
 "anyOf": [
 {
@@ -124,6 +137,19 @@
 }
 ],
 "description": "ResponseHeaderTimeout is the amount of time to wait for a server's response headers after fully writing the request (including its body, if any).",
+"pattern": "^([0-9]+(ns|us|µs|ms|s|m|h)?)+$",
+"x-kubernetes-int-or-string": true
+},
+"writeTimeout": {
+"anyOf": [
+{
+"type": "integer"
+},
+{
+"type": "string"
+}
+],
+"description": "WriteTimeout is the timeout for transmitting a request to the proxied server. The timeout between two successive write operations. The connection is closed if nothing is transmitted within this time.",
 "pattern": "^([0-9]+(ns|us|µs|ms|s|m|h)?)+$",
 "x-kubernetes-int-or-string": true
 }
@@ -147,8 +173,25 @@
 "description": "MinVersion defines the minimum TLS version to use when contacting backend servers.",
 "type": "string"
 },
+"peerCertSANs": {
+"description": "PeerCertSANs defines the peer cert Subject Alternative Names used to match against SAN during the peer certificate verification.",
+"items": {
+"description": "SAN represents a Subject Alternative Name.",
+"properties": {
+"type": {
+"description": "SANType is the type of the Subject Alternative Name.",
+"type": "string"
+},
+"value": {
+"type": "string"
+}
+},
+"type": "object"
+},
+"type": "array"
+},
 "peerCertURI": {
-"description": "PeerCertURI defines the peer cert URI used to match against SAN URI during the peer certificate verification.",
+"description": "PeerCertURI defines the peer cert URI used to match against SAN URI during the peer certificate verification.\n\nDeprecated: PeerCertURI is deprecated, please use the PeerCertSANs option instead.",
 "type": "string"
 },
 "rootCAs": {
