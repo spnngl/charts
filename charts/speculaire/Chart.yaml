@@ -31,7 +31,7 @@ annotations:
   # speculaire.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: speculaire
-      image: ghcr.io/spnngl/images/speculaire:3e1010cf@sha256:0000000000000000000000000000000000000000000000000000000000000000
+      image: ghcr.io/spnngl/images/speculaire:3e1010cf@sha256:f16749f3f1fba446250a319d16d06ec1c51ac4b614cd242a13116b20d5b02199
   artifacthub.io/links: |-
     - name: Upstream repository
       url: https://github.com/spnngl/speculaire
