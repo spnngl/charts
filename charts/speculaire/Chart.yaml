@@ -3,7 +3,7 @@ apiVersion: v2
 name: speculaire
 description: Spéculaire node agent (registry mirror, P2P image distribution and NRI image-verification gate) and its reflectors, as two DaemonSets
 type: application
-version: 0.3.0
+version: 0.3.1
 # Until speculaire's first release: the images repo's commit tag (README.md,
 # "Image"), tracked by its own Renovate manager.
 appVersion: "3e1010cf"
