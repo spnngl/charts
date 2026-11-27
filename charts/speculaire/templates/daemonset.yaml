@@ -6,7 +6,12 @@
 {{- $volumeMounts = append $volumeMounts (dict "mountPath" "/etc/speculaire" "name" "config" "readOnly" true) }}
 {{- end }}
 {{- range $hostPaths }}
-{{- $volumeMounts = append $volumeMounts (dict "mountPath" .path "name" .name "readOnly" .readOnly) }}
+{{- $mount := dict "mountPath" .path "name" .name "readOnly" .readOnly }}
+{{- /* A read-only hostPath is read-only below too: /run/containerd holds every container's rootfs and shm mounts. */}}
+{{- if .readOnly }}
+{{- $_ := set $mount "recursiveReadOnly" "IfPossible" }}
+{{- end }}
+{{- $volumeMounts = append $volumeMounts $mount }}
 {{- end }}
 {{- $volumeMounts = concat $volumeMounts .Values.extraVolumeMounts }}
 {{- range $component := list "agent" "reflector" }}

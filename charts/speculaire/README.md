@@ -210,6 +210,11 @@ The pods mount node directories, each at its node path:
 | `/etc/speculaire` | read-only | `config.source: host` only |
 | `hostTrustStore.paths` (`/etc/ssl/certs`, `/etc/pki/ca-trust/extracted`) | read-only | the node's CA trust store, `hostTrustStore.enabled` only |
 
+A read-only path is read-only below too (`recursiveReadOnly: IfPossible`):
+`/run/containerd` holds every container's root filesystem. On a kernel
+older than 5.12 or a runtime without recursive read-only mounts, the mounts
+below stay writable.
+
 Other directories of containerd's `config_path` (for example
 `/etc/docker/certs.d`) and CRI-O's `global_auth_file` need `extraVolumes` /
 `extraVolumeMounts`.
@@ -264,7 +269,7 @@ Kubernetes: `>=1.33.0-0`
 | image.repository | string | `"ghcr.io/spnngl/images/speculaire"` | Image repository, shared by the agents, the reflectors and the `configure` init container. |
 | image.tag | string | `""` | Image tag. Empty: `appVersion` pinned by the digest recorded in `Chart.yaml`. When set, the chart digest is not applied; add `image.digest` to pin it. |
 | imagePullSecrets | list | `[]` | Image pull secrets (list of `{name: <secret>}`). |
-| livenessProbe | object | `{"failureThreshold":3,"httpGet":{"path":"/livez","port":"metrics"},"periodSeconds":10}` | Liveness probe, `GET /livez`: the agent's watchdog (it answers while its event loop runs). |
+| livenessProbe | object | `{"failureThreshold":3,"httpGet":{"path":"/livez","port":"metrics"},"periodSeconds":10,"terminationGracePeriodSeconds":5}` | Liveness probe, `GET /livez`: the agent's watchdog (it answers while its event loop runs). A hung agent cannot drain, so the kubelet kills it after 5 s rather than `terminationGracePeriodSeconds`, and a new one runs within 40 s of the hang. |
 | nameOverride | string | `""` | Override the chart name used in resource names and labels. |
 | nodeSelector | object | `{"kubernetes.io/os":"linux"}` | Node selector, for both DaemonSets. Merged with the default `kubernetes.io/os: linux`: set that key to `null` to drop it. |
 | podAnnotations | object | `{}` | Pod annotations, for both DaemonSets. |
