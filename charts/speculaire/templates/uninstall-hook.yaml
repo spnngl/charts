@@ -1,0 +1,127 @@
+{{- /*
+helm uninstall runs `unconfigure` on every node before deleting the agents
+(speculaire D211). A DaemonSet per component runs it in an init container;
+Helm waits on Pods and Jobs only, so a pod runs `wait-daemonset`, which
+follows both DaemonSets through the API and fails, naming the node and the
+error, at the first `unconfigure` that fails: the uninstall stops there and
+the agents keep running. Weights order the objects: the wait pod's account
+first, the DaemonSets, then the wait pod.
+*/ -}}
+{{- $name := printf "%s-uninstall" (include "speculaire.fullname" . | trunc 53 | trimSuffix "-") }}
+{{- $labels := merge (dict "app.kubernetes.io/component" "uninstall") (include "speculaire.labels" . | fromYaml) }}
+{{- $hook := dict "helm.sh/hook" "pre-delete" "helm.sh/hook-delete-policy" "before-hook-creation,hook-succeeded" "helm.sh/hook-weight" "-1" }}
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  annotations:
+    {{- toYaml $hook | nindent 4 }}
+  labels:
+    {{- toYaml $labels | nindent 4 }}
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    {{- toYaml $hook | nindent 4 }}
+  labels:
+    {{- toYaml $labels | nindent 4 }}
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups:
+      - apps
+    resourceNames:
+      {{- range $component := list "agent" "reflector" }}
+      - {{ include "speculaire.componentName" (dict "root" $ "component" $component) }}-unconfigure
+      {{- end }}
+    resources:
+      - daemonsets
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    {{- toYaml $hook | nindent 4 }}
+  labels:
+    {{- toYaml $labels | nindent 4 }}
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}
+    namespace: {{ .Release.Namespace }}
+{{- range $component := list "agent" "reflector" }}
+---
+{{ include "speculaire.daemonSet" (dict "root" $ "component" $component "hook" true) }}
+{{- end }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    # Helm 4 prints the pod's log, which names each node that failed.
+    helm.sh/hook: pre-delete
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-output-log-policy: hook-failed
+    helm.sh/hook-weight: "1"
+    ignore-check.kube-linter.io/dnsconfig-options: "The pod asks the API server at the address the kubelet gives it, not by name."
+    ignore-check.kube-linter.io/no-liveness-probe: "The pod runs once, until the DaemonSets are ready."
+    ignore-check.kube-linter.io/no-node-affinity: "Any node can run it."
+    ignore-check.kube-linter.io/no-readiness-probe: "The pod runs once, until the DaemonSets are ready."
+    ignore-check.kube-linter.io/non-isolated-pod: "The pod serves nothing."
+    ignore-check.kube-linter.io/restart-policy: "Helm waits for the pod to end: its failure fails the uninstall."
+    ignore-check.kube-linter.io/run-as-non-root: "The image is the agent's, whose security context runs as root."
+  labels:
+    {{- toYaml $labels | nindent 4 }}
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  automountServiceAccountToken: true
+  containers:
+    - args:
+        - wait-daemonset
+        {{- range $component := list "agent" "reflector" }}
+        - {{ include "speculaire.componentName" (dict "root" $ "component" $component) }}-unconfigure
+        {{- end }}
+      image: {{ include "speculaire.image" . | quote }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      name: wait
+      resources:
+        {{- toYaml .Values.resources | nindent 8 }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+  enableServiceLinks: false
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.priorityClassName }}
+  priorityClassName: {{ . }}
+  {{- end }}
+  restartPolicy: Never
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  serviceAccountName: {{ $name }}
+  {{- with .Values.tolerations }}
+  tolerations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}

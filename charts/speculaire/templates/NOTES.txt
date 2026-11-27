@@ -28,6 +28,6 @@ Before making the runtime require speculaire, set the runtime's NRI
 tolerate-missing-plugins annotation key to {{ .Values.gate.tolerateAnnotation }},
 or a node whose agent restarts cannot start it again.
 
-helm uninstall does not undo what the configure init container wrote on
-each node: run `speculaire unconfigure` in every pod first (chart README,
+helm uninstall runs `speculaire unconfigure` on every node first, and stops,
+naming the node, while its runtime requires speculaire (chart README,
 § Uninstall).
