@@ -220,7 +220,7 @@ startupProbe:
 # type: object
 # additionalProperties: true
 # @schema
-# -- Liveness probe, `GET /livez`: the agent's watchdog (it answers while its event loop runs).
+# -- Liveness probe, `GET /livez`: the agent's watchdog (it answers while its event loop runs). A hung agent cannot drain, so the kubelet kills it after 5 s rather than `terminationGracePeriodSeconds`, and a new one runs within 40 s of the hang.
 livenessProbe:
   failureThreshold: 3
   # @schema
@@ -231,6 +231,7 @@ livenessProbe:
     path: /livez
     port: metrics
   periodSeconds: 10
+  terminationGracePeriodSeconds: 5
 # @schema
 # type: object
 # additionalProperties: true

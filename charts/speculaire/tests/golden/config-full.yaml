@@ -90,6 +90,7 @@ spec:
               path: /livez
               port: metrics
             periodSeconds: 10
+            terminationGracePeriodSeconds: 5
           name: agent
           ports:
             - containerPort: 7482
@@ -131,12 +132,15 @@ spec:
             - mountPath: /var/run/nri
               name: nri
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /var/lib/kubelet/pki
               name: kubelet-pki
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /etc/kubernetes/pki/ca.crt
               name: cluster-ca
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /var/lib/speculaire
               name: state
               readOnly: false
@@ -146,15 +150,18 @@ spec:
             - mountPath: /run/containerd
               name: runtime-socket
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /etc/containerd
               name: runtime-config
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /etc/containerd/certs.d
               name: runtime-hosts
               readOnly: false
             - mountPath: /var/lib/containerd/io.containerd.content.v1.content
               name: runtime-content
               readOnly: true
+              recursiveReadOnly: IfPossible
       dnsPolicy: ClusterFirst
       enableServiceLinks: false
       hostNetwork: true
@@ -190,12 +197,15 @@ spec:
             - mountPath: /var/run/nri
               name: nri
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /var/lib/kubelet/pki
               name: kubelet-pki
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /etc/kubernetes/pki/ca.crt
               name: cluster-ca
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /var/lib/speculaire
               name: state
               readOnly: false
@@ -205,15 +215,18 @@ spec:
             - mountPath: /run/containerd
               name: runtime-socket
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /etc/containerd
               name: runtime-config
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /etc/containerd/certs.d
               name: runtime-hosts
               readOnly: false
             - mountPath: /var/lib/containerd/io.containerd.content.v1.content
               name: runtime-content
               readOnly: true
+              recursiveReadOnly: IfPossible
       nodeSelector:
         kubernetes.io/os: linux
       priorityClassName: system-node-critical
@@ -335,6 +348,7 @@ spec:
               path: /livez
               port: metrics
             periodSeconds: 10
+            terminationGracePeriodSeconds: 5
           name: reflector
           ports:
             - containerPort: 7482
@@ -376,12 +390,15 @@ spec:
             - mountPath: /var/run/nri
               name: nri
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /var/lib/kubelet/pki
               name: kubelet-pki
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /etc/kubernetes/pki/ca.crt
               name: cluster-ca
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /var/lib/speculaire
               name: state
               readOnly: false
@@ -391,15 +408,18 @@ spec:
             - mountPath: /run/containerd
               name: runtime-socket
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /etc/containerd
               name: runtime-config
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /etc/containerd/certs.d
               name: runtime-hosts
               readOnly: false
             - mountPath: /var/lib/containerd/io.containerd.content.v1.content
               name: runtime-content
               readOnly: true
+              recursiveReadOnly: IfPossible
       dnsPolicy: ClusterFirst
       enableServiceLinks: false
       hostNetwork: true
@@ -435,12 +455,15 @@ spec:
             - mountPath: /var/run/nri
               name: nri
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /var/lib/kubelet/pki
               name: kubelet-pki
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /etc/kubernetes/pki/ca.crt
               name: cluster-ca
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /var/lib/speculaire
               name: state
               readOnly: false
@@ -450,15 +473,18 @@ spec:
             - mountPath: /run/containerd
               name: runtime-socket
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /etc/containerd
               name: runtime-config
               readOnly: true
+              recursiveReadOnly: IfPossible
             - mountPath: /etc/containerd/certs.d
               name: runtime-hosts
               readOnly: false
             - mountPath: /var/lib/containerd/io.containerd.content.v1.content
               name: runtime-content
               readOnly: true
+              recursiveReadOnly: IfPossible
       nodeSelector:
         kubernetes.io/os: linux
       priorityClassName: system-node-critical

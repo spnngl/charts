@@ -210,6 +210,11 @@ The pods mount node directories, each at its node path:
 | `/etc/speculaire` | read-only | `config.source: host` only |
 | `hostTrustStore.paths` (`/etc/ssl/certs`, `/etc/pki/ca-trust/extracted`) | read-only | the node's CA trust store, `hostTrustStore.enabled` only |
 
+A read-only path is read-only below too (`recursiveReadOnly: IfPossible`):
+`/run/containerd` holds every container's root filesystem. On a kernel
+older than 5.12 or a runtime without recursive read-only mounts, the mounts
+below stay writable.
+
 Other directories of containerd's `config_path` (for example
 `/etc/docker/certs.d`) and CRI-O's `global_auth_file` need `extraVolumes` /
 `extraVolumeMounts`.
