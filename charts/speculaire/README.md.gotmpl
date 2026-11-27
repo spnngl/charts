@@ -138,29 +138,42 @@ cosign verify --insecure-ignore-tlog=true --new-bundle-format=false \
 
 ## Upgrade
 
-One minor version at a time, reflectors first: an upgrade that changes the
-peer protocol sets `reflector.image.tag` to the new version, waits for the
-reflectors to roll, then sets `image.tag` (or moves the chart) for the
-agents. The chart does not order the two DaemonSets by itself.
+One minor version at a time, reflectors first. The chart does not order its
+two DaemonSets: an upgrade that changes the peer protocol takes two commands,
+the first rolling the reflectors alone:
+
+```sh
+helm upgrade speculaire <chart> -n kube-system --reuse-values --wait --set reflector.image.tag=<new>
+helm upgrade speculaire <chart> -n kube-system --reuse-values --wait --set image.tag=<new> --set reflector.image.tag=null
+```
+
+The second leaves the reflectors' image as it is, so only the agents roll.
 
 ## Uninstall
 
-The chart has no uninstall hook yet: `helm uninstall` removes the pods but
-leaves what `configure` wrote on each node (the mirror entry in the
-runtime's registry config, the mirror certificates), so the runtime keeps
-asking a mirror that is gone before falling back upstream. First remove
-`speculaire` from the runtime's required plugins and restart the runtime,
-then run `unconfigure` in every pod, then uninstall:
+`helm uninstall` first runs `speculaire unconfigure` on every node that runs
+a pod of the chart, in a `pre-delete` hook: a DaemonSet per component runs
+it in an init container, and a pod waits for both, as a ServiceAccount that
+may read them and list the namespace's pods. The nodes are then as before
+the install (no mirror entry in the runtime's registry config, no mirror
+certificates, no image pinned by the agent), and Helm deletes the agents.
 
-```sh
-for pod in $(kubectl -n kube-system get pods -l app.kubernetes.io/name=speculaire -o name); do
-  kubectl -n kube-system exec "$pod" -c "$(kubectl -n kube-system get "$pod" -o jsonpath='{.spec.containers[0].name}')" -- \
-    /usr/bin/speculaire unconfigure --config /etc/speculaire/config.toml
-done
-helm uninstall speculaire -n kube-system
-```
+`unconfigure` refuses while the runtime requires `speculaire`: once its
+agent is gone, the runtime would start no container. The wait pod then fails
+at once, naming each node and the runtime's key; Helm 4 prints its log,
+Helm 3 names the pod only (`kubectl logs`). The uninstall stops there: the
+agents keep running, but the nodes whose `unconfigure` succeeded pull
+without the mirror. Remove `speculaire` from the runtime's required plugins,
+restart the runtime and uninstall again; or, to keep Spéculaire, restart
+both DaemonSets (`kubectl rollout restart`), whose `configure` puts the
+mirror back.
 
-`unconfigure` refuses while the runtime still requires `speculaire`.
+- The hook's pods are gated like any other: under `gate.mode = "enforce"`
+  the policy must allow the chart's image, or exempt its namespace.
+- `--timeout` (5 minutes by default) bounds the hook; the wait pod gives up
+  after 4 minutes, naming each node not done and why.
+- `helm uninstall --no-hooks` skips the hook and leaves every node
+  configured: run `speculaire unconfigure` on each first.
 
 ## Availability and scheduling
 

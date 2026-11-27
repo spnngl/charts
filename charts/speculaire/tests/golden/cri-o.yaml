@@ -565,3 +565,563 @@ metadata:
     helm.sh/chart: speculaire-0.0.0
   name: speculaire
   namespace: speculaire
+---
+# Source: speculaire/templates/uninstall-hook.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    helm.sh/hook: pre-delete
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "0"
+    ignore-check.kube-linter.io/dnsconfig-options: "With hostNetwork and dnsPolicy ClusterFirst the kubelet gives the pod the node's resolver: the agent, which CoreDNS pulls through, must not depend on cluster DNS."
+    ignore-check.kube-linter.io/host-network: "The agent serves the node's runtime: its mirror listens on the node's loopback and its peer API on the node's address."
+    ignore-check.kube-linter.io/no-liveness-probe: "The container only sleeps until Helm deletes the hook."
+    ignore-check.kube-linter.io/no-readiness-probe: "The container only sleeps: ready once unconfigure has succeeded."
+    ignore-check.kube-linter.io/non-isolated-pod: "A host-network pod is not subject to NetworkPolicy."
+    ignore-check.kube-linter.io/run-as-non-root: "The agent writes the runtime's root-owned registry config and connects to the root-only runtime and NRI sockets."
+    ignore-check.kube-linter.io/sensitive-host-mounts: "The agent reads the runtime config, the kubelet client certificate and the cluster CA, each its own read-only mount; it writes only the runtime's registry directories."
+    ignore-check.kube-linter.io/writable-host-mount: "configure writes the mirror entry into the runtime's registry directories; the agent keeps its state in /var/lib/speculaire and /run/speculaire."
+  labels:
+    app.kubernetes.io/component: unconfigure-agent
+    app.kubernetes.io/instance: speculaire
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: speculaire
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: speculaire-0.0.0
+  name: speculaire-agent-unconfigure
+  namespace: speculaire
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: unconfigure-agent
+      app.kubernetes.io/instance: speculaire
+      app.kubernetes.io/name: speculaire
+  template:
+    metadata:
+      annotations:
+        speculaire.spnngl.github.io/tolerate-missing-plugins: "true"
+      labels:
+        app.kubernetes.io/component: unconfigure-agent
+        app.kubernetes.io/instance: speculaire
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: speculaire
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: speculaire-0.0.0
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: DoesNotExist
+                  - key: speculaire.spnngl.github.io/disabled
+                    operator: DoesNotExist
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - sleep
+          image: "ghcr.io/spnngl/images/speculaire:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          name: sleep
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 0
+            runAsNonRoot: false
+            runAsUser: 0
+            seccompProfile:
+              type: RuntimeDefault
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: false
+      hostNetwork: true
+      initContainers:
+        - args:
+            - unconfigure
+            - --config
+            - /etc/speculaire/config.toml
+          image: "ghcr.io/spnngl/images/speculaire:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          name: unconfigure
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 0
+            runAsNonRoot: false
+            runAsUser: 0
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/speculaire
+              name: config
+              readOnly: true
+            - mountPath: /var/run/nri
+              name: nri
+              readOnly: true
+              recursiveReadOnly: IfPossible
+            - mountPath: /var/lib/kubelet/pki
+              name: kubelet-pki
+              readOnly: true
+              recursiveReadOnly: IfPossible
+            - mountPath: /etc/kubernetes/pki/ca.crt
+              name: cluster-ca
+              readOnly: true
+              recursiveReadOnly: IfPossible
+            - mountPath: /var/lib/speculaire
+              name: state
+              readOnly: false
+            - mountPath: /run/speculaire
+              name: run
+              readOnly: false
+            - mountPath: /var/run/crio
+              name: runtime-socket
+              readOnly: true
+              recursiveReadOnly: IfPossible
+            - mountPath: /etc/containers
+              name: runtime-config
+              readOnly: true
+              recursiveReadOnly: IfPossible
+            - mountPath: /etc/containers/registries.conf.d
+              name: runtime-registries
+              readOnly: false
+            - mountPath: /etc/containers/certs.d
+              name: runtime-certs
+              readOnly: false
+            - mountPath: /var/lib/containers/storage/overlay-images
+              name: runtime-images
+              readOnly: true
+              recursiveReadOnly: IfPossible
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-node-critical
+      restartPolicy: Always
+      securityContext:
+        runAsGroup: 0
+        runAsNonRoot: false
+        runAsUser: 0
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: speculaire
+      terminationGracePeriodSeconds: 20
+      tolerations:
+        - operator: Exists
+      volumes:
+        - configMap:
+            name: speculaire
+          name: config
+        - hostPath:
+            path: /var/run/nri
+            type: DirectoryOrCreate
+          name: nri
+        - hostPath:
+            path: /var/lib/kubelet/pki
+            type: Directory
+          name: kubelet-pki
+        - hostPath:
+            path: /etc/kubernetes/pki/ca.crt
+            type: File
+          name: cluster-ca
+        - hostPath:
+            path: /var/lib/speculaire
+            type: DirectoryOrCreate
+          name: state
+        - hostPath:
+            path: /run/speculaire
+            type: DirectoryOrCreate
+          name: run
+        - hostPath:
+            path: /var/run/crio
+            type: Directory
+          name: runtime-socket
+        - hostPath:
+            path: /etc/containers
+            type: Directory
+          name: runtime-config
+        - hostPath:
+            path: /etc/containers/registries.conf.d
+            type: DirectoryOrCreate
+          name: runtime-registries
+        - hostPath:
+            path: /etc/containers/certs.d
+            type: DirectoryOrCreate
+          name: runtime-certs
+        - hostPath:
+            path: /var/lib/containers/storage/overlay-images
+            type: Directory
+          name: runtime-images
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+---
+# Source: speculaire/templates/uninstall-hook.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    helm.sh/hook: pre-delete
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "0"
+    ignore-check.kube-linter.io/dnsconfig-options: "With hostNetwork and dnsPolicy ClusterFirst the kubelet gives the pod the node's resolver: the agent, which CoreDNS pulls through, must not depend on cluster DNS."
+    ignore-check.kube-linter.io/host-network: "The agent serves the node's runtime: its mirror listens on the node's loopback and its peer API on the node's address."
+    ignore-check.kube-linter.io/no-liveness-probe: "The container only sleeps until Helm deletes the hook."
+    ignore-check.kube-linter.io/no-readiness-probe: "The container only sleeps: ready once unconfigure has succeeded."
+    ignore-check.kube-linter.io/non-isolated-pod: "A host-network pod is not subject to NetworkPolicy."
+    ignore-check.kube-linter.io/run-as-non-root: "The agent writes the runtime's root-owned registry config and connects to the root-only runtime and NRI sockets."
+    ignore-check.kube-linter.io/sensitive-host-mounts: "The agent reads the runtime config, the kubelet client certificate and the cluster CA, each its own read-only mount; it writes only the runtime's registry directories."
+    ignore-check.kube-linter.io/writable-host-mount: "configure writes the mirror entry into the runtime's registry directories; the agent keeps its state in /var/lib/speculaire and /run/speculaire."
+  labels:
+    app.kubernetes.io/component: unconfigure-reflector
+    app.kubernetes.io/instance: speculaire
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: speculaire
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: speculaire-0.0.0
+  name: speculaire-reflector-unconfigure
+  namespace: speculaire
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: unconfigure-reflector
+      app.kubernetes.io/instance: speculaire
+      app.kubernetes.io/name: speculaire
+  template:
+    metadata:
+      annotations:
+        speculaire.spnngl.github.io/tolerate-missing-plugins: "true"
+      labels:
+        app.kubernetes.io/component: unconfigure-reflector
+        app.kubernetes.io/instance: speculaire
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: speculaire
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: speculaire-0.0.0
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
+                  - key: speculaire.spnngl.github.io/disabled
+                    operator: DoesNotExist
+      automountServiceAccountToken: false
+      containers:
+        - args:
+            - sleep
+          image: "ghcr.io/spnngl/images/speculaire:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          name: sleep
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 0
+            runAsNonRoot: false
+            runAsUser: 0
+            seccompProfile:
+              type: RuntimeDefault
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: false
+      hostNetwork: true
+      initContainers:
+        - args:
+            - unconfigure
+            - --config
+            - /etc/speculaire/reflector.toml
+          image: "ghcr.io/spnngl/images/speculaire:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          name: unconfigure
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 0
+            runAsNonRoot: false
+            runAsUser: 0
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/speculaire
+              name: config
+              readOnly: true
+            - mountPath: /var/run/nri
+              name: nri
+              readOnly: true
+              recursiveReadOnly: IfPossible
+            - mountPath: /var/lib/kubelet/pki
+              name: kubelet-pki
+              readOnly: true
+              recursiveReadOnly: IfPossible
+            - mountPath: /etc/kubernetes/pki/ca.crt
+              name: cluster-ca
+              readOnly: true
+              recursiveReadOnly: IfPossible
+            - mountPath: /var/lib/speculaire
+              name: state
+              readOnly: false
+            - mountPath: /run/speculaire
+              name: run
+              readOnly: false
+            - mountPath: /var/run/crio
+              name: runtime-socket
+              readOnly: true
+              recursiveReadOnly: IfPossible
+            - mountPath: /etc/containers
+              name: runtime-config
+              readOnly: true
+              recursiveReadOnly: IfPossible
+            - mountPath: /etc/containers/registries.conf.d
+              name: runtime-registries
+              readOnly: false
+            - mountPath: /etc/containers/certs.d
+              name: runtime-certs
+              readOnly: false
+            - mountPath: /var/lib/containers/storage/overlay-images
+              name: runtime-images
+              readOnly: true
+              recursiveReadOnly: IfPossible
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-node-critical
+      restartPolicy: Always
+      securityContext:
+        runAsGroup: 0
+        runAsNonRoot: false
+        runAsUser: 0
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: speculaire
+      terminationGracePeriodSeconds: 20
+      tolerations:
+        - operator: Exists
+      volumes:
+        - configMap:
+            name: speculaire
+          name: config
+        - hostPath:
+            path: /var/run/nri
+            type: DirectoryOrCreate
+          name: nri
+        - hostPath:
+            path: /var/lib/kubelet/pki
+            type: Directory
+          name: kubelet-pki
+        - hostPath:
+            path: /etc/kubernetes/pki/ca.crt
+            type: File
+          name: cluster-ca
+        - hostPath:
+            path: /var/lib/speculaire
+            type: DirectoryOrCreate
+          name: state
+        - hostPath:
+            path: /run/speculaire
+            type: DirectoryOrCreate
+          name: run
+        - hostPath:
+            path: /var/run/crio
+            type: Directory
+          name: runtime-socket
+        - hostPath:
+            path: /etc/containers
+            type: Directory
+          name: runtime-config
+        - hostPath:
+            path: /etc/containers/registries.conf.d
+            type: DirectoryOrCreate
+          name: runtime-registries
+        - hostPath:
+            path: /etc/containers/certs.d
+            type: DirectoryOrCreate
+          name: runtime-certs
+        - hostPath:
+            path: /var/lib/containers/storage/overlay-images
+            type: Directory
+          name: runtime-images
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+---
+# Source: speculaire/templates/uninstall-hook.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    helm.sh/hook: pre-delete
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "-1"
+  labels:
+    app.kubernetes.io/component: uninstall
+    app.kubernetes.io/instance: speculaire
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: speculaire
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: speculaire-0.0.0
+  name: speculaire-uninstall
+  namespace: speculaire
+rules:
+  - apiGroups:
+      - apps
+    resourceNames:
+      - speculaire-agent-unconfigure
+      - speculaire-reflector-unconfigure
+    resources:
+      - daemonsets
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - list
+---
+# Source: speculaire/templates/uninstall-hook.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    helm.sh/hook: pre-delete
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "-1"
+  labels:
+    app.kubernetes.io/component: uninstall
+    app.kubernetes.io/instance: speculaire
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: speculaire
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: speculaire-0.0.0
+  name: speculaire-uninstall
+  namespace: speculaire
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: speculaire-uninstall
+subjects:
+  - kind: ServiceAccount
+    name: speculaire-uninstall
+    namespace: speculaire
+---
+# Source: speculaire/templates/uninstall-hook.yaml
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  annotations:
+    helm.sh/hook: pre-delete
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "-1"
+  labels:
+    app.kubernetes.io/component: uninstall
+    app.kubernetes.io/instance: speculaire
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: speculaire
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: speculaire-0.0.0
+  name: speculaire-uninstall
+  namespace: speculaire
+---
+# Source: speculaire/templates/uninstall-hook.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    # Helm 4 prints the pod's log, which names each node that failed.
+    helm.sh/hook: pre-delete
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-output-log-policy: hook-failed
+    helm.sh/hook-weight: "1"
+    ignore-check.kube-linter.io/dnsconfig-options: "The pod asks the API server at the address the kubelet gives it, not by name."
+    ignore-check.kube-linter.io/no-liveness-probe: "The pod runs once, until the DaemonSets are ready."
+    ignore-check.kube-linter.io/no-node-affinity: "Any node can run it."
+    ignore-check.kube-linter.io/no-readiness-probe: "The pod runs once, until the DaemonSets are ready."
+    ignore-check.kube-linter.io/non-isolated-pod: "The pod serves nothing."
+    ignore-check.kube-linter.io/restart-policy: "Helm waits for the pod to end: its failure fails the uninstall."
+    ignore-check.kube-linter.io/run-as-non-root: "The image is the agent's, whose security context runs as root."
+  labels:
+    app.kubernetes.io/component: uninstall
+    app.kubernetes.io/instance: speculaire
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: speculaire
+    app.kubernetes.io/version: 0.0.0
+    helm.sh/chart: speculaire-0.0.0
+  name: speculaire-uninstall
+  namespace: speculaire
+spec:
+  automountServiceAccountToken: true
+  containers:
+    - args:
+        - wait-daemonset
+        - speculaire-agent-unconfigure
+        - speculaire-reflector-unconfigure
+      image: "ghcr.io/spnngl/images/speculaire:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      imagePullPolicy: IfNotPresent
+      name: wait
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        privileged: false
+        readOnlyRootFilesystem: true
+        runAsGroup: 0
+        runAsNonRoot: false
+        runAsUser: 0
+        seccompProfile:
+          type: RuntimeDefault
+  enableServiceLinks: false
+  nodeSelector:
+    kubernetes.io/os: linux
+  priorityClassName: system-node-critical
+  restartPolicy: Never
+  securityContext:
+    runAsGroup: 0
+    runAsNonRoot: false
+    runAsUser: 0
+    seccompProfile:
+      type: RuntimeDefault
+  serviceAccountName: speculaire-uninstall
+  tolerations:
+    - operator: Exists
