@@ -3,7 +3,7 @@ apiVersion: v2
 name: configarr
 description: Configarr as a hardened CronJob that syncs TRaSH-Guides profiles and settings as code into Sonarr, Radarr and Prowlarr
 type: application
-version: 0.1.14
+version: 0.1.15
 # renovate: datasource=docker depName=ghcr.io/spnngl/images/configarr
 appVersion: "1.39.1"
 kubeVersion: ">=1.33.0-0"
@@ -29,7 +29,7 @@ annotations:
   # configarr.image). Renovate updates tag and digest together.
   artifacthub.io/images: |
     - name: configarr
-      image: ghcr.io/spnngl/images/configarr:1.39.1@sha256:fb185a28bf5f7597ddb8274e503939c3a22aed22d157202a0cc63a9c36baa975
+      image: ghcr.io/spnngl/images/configarr:1.39.1@sha256:a1584ad16bac6ef8db95bfc01ad9077e74bf14a99f62dc14d52f4df95bf91b19
   artifacthub.io/links: |-
     - name: Upstream project
       url: https://configarr.de
