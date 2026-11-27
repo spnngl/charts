@@ -1,6 +1,6 @@
 {{- /*
 helm uninstall runs `unconfigure` on every node before deleting the agents
-(speculaire D211). A DaemonSet per component runs it in an init container;
+(speculaire D212). A DaemonSet per component runs it in an init container;
 Helm waits on Pods and Jobs only, so a pod runs `wait-daemonset`, which
 follows both DaemonSets through the API and fails, naming the node and the
 error, at the first `unconfigure` that fails: the uninstall stops there and
