@@ -3,7 +3,7 @@
 
 [tools]
 # renovate: datasource=github-releases depName=nushell/nushell
-nushell = "0.116.1"
+nushell = "0.117.0"
 # renovate: datasource=github-releases depName=helm/helm
 helm = "3.22.1"
 # Helm 4 (server-side apply by default): pr.yml install tests only.
